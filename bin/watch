@@ -1,0 +1,135 @@
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+const { exec } = require('child_process');
+
+// Determine paths
+const scriptDir = __dirname;
+const projectRoot = path.resolve(scriptDir, '..');
+const projectsDir = path.join(projectRoot, 'projects');
+const modulesDir = path.join(projectRoot, 'modules');
+const distDir = path.join(projectRoot, 'dist');
+
+console.log('Starting SCAD watcher...');
+console.log(`Watching projects: ${projectsDir}`);
+console.log(`Watching modules:  ${modulesDir}`);
+
+// State
+const processingFiles = new Map();
+let rebuildAllTimeout = null;
+
+// Function to render a single file
+function renderFile(filePath) {
+  if (path.extname(filePath) !== '.scad') return;
+
+  const now = Date.now();
+  const lastTime = processingFiles.get(filePath) || 0;
+
+  // Debounce: ignore changes within 100ms
+  if (now - lastTime < 100) return;
+  processingFiles.set(filePath, now);
+
+  const relativePath = path.relative(projectsDir, filePath);
+  const outputFile = path.join(
+    distDir,
+    relativePath.replace(/\.scad$/, '.stl'),
+  );
+  const outputDir = path.dirname(outputFile);
+
+  // Create output directory if it doesn't exist
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+
+  console.log(
+    `Rendering: ${relativePath} -> ${path.relative(projectRoot, outputFile)}`,
+  );
+
+  exec(`openscad -o "${outputFile}" "${filePath}"`, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error rendering ${relativePath}:`, error);
+      console.error(stderr);
+    } else {
+      console.log(`Render complete: ${relativePath}`);
+    }
+  });
+}
+
+// Function to trigger full rebuild
+function rebuildAll() {
+  if (rebuildAllTimeout) clearTimeout(rebuildAllTimeout);
+  rebuildAllTimeout = setTimeout(() => {
+    console.log('Module changed. Re-rendering all projects...');
+    walkAndRender(projectsDir);
+  }, 200); // 200ms debounce for module changes
+}
+
+function walkAndRender(dir) {
+  if (!fs.existsSync(dir)) return;
+  fs.readdirSync(dir).forEach((f) => {
+    const fullPath = path.join(dir, f);
+    if (fs.statSync(fullPath).isDirectory()) {
+      walkAndRender(fullPath);
+    } else if (f.endsWith('.scad')) {
+      renderFile(fullPath);
+    }
+  });
+}
+
+// Watchers map to avoid duplicates
+const watchers = new Map();
+
+// Function to recursively watch directories
+function watchRecursive(dir) {
+  if (watchers.has(dir)) return;
+
+  try {
+    const watcher = fs.watch(dir, (eventType, filename) => {
+      if (!filename) return;
+      const fullPath = path.join(dir, filename);
+
+      // Check if file still exists
+      if (fs.existsSync(fullPath)) {
+        const stats = fs.statSync(fullPath);
+
+        if (stats.isDirectory()) {
+          // If new directory, watch it
+          watchRecursive(fullPath);
+        } else if (stats.isFile()) {
+          // Determine action based on location
+          if (fullPath.startsWith(modulesDir)) {
+            rebuildAll();
+          } else {
+            renderFile(fullPath);
+          }
+        }
+      }
+    });
+
+    watchers.set(dir, watcher);
+
+    // Scan children
+    fs.readdirSync(dir).forEach((child) => {
+      const childPath = path.join(dir, child);
+      if (fs.existsSync(childPath) && fs.statSync(childPath).isDirectory()) {
+        watchRecursive(childPath);
+      }
+    });
+  } catch (err) {
+    console.error(`Failed to watch ${dir}:`, err.message);
+  }
+}
+
+// Start watching
+if (fs.existsSync(projectsDir)) {
+  watchRecursive(projectsDir);
+} else {
+  console.error(`Projects directory not found: ${projectsDir}`);
+}
+
+if (fs.existsSync(modulesDir)) {
+  watchRecursive(modulesDir);
+} else {
+  console.warn(`Modules directory not found: ${modulesDir}`);
+}

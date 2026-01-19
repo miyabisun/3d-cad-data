@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+# Determine the project root directory
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$DIR/.."
+
+cd "$PROJECT_ROOT"
+
+echo "Rendering STL files..."
+
+# Find all SCAD files in projects directory
+find projects -name "*.scad" | while read -r scad_file; do
+  # Remove 'projects/' prefix to get relative path
+  relative_path="${scad_file#projects/}"
+
+  # Construct output path in dist/
+  stl_file="dist/${relative_path%.scad}.stl"
+
+  # Create directory if it doesn't exist
+  mkdir -p "$(dirname "$stl_file")"
+
+  echo "Rendering $stl_file from $scad_file"
+  openscad -o "$stl_file" "$scad_file"
+done
+
+echo "Render complete."
