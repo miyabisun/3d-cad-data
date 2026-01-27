@@ -12,9 +12,9 @@ To build and edit these projects, you need the following tools installed on your
 
 ## Directory Structure
 
-- **`projects/`**: Source `.scad` files organized by project and size (e.g., `projects/steel-rack/500x400/`).
-- **`modules/`**: Shared OpenSCAD modules/libraries (e.g., `bolts.scad`).
-- **`dist/`**: Generated `.stl` files. This directory mirrors the structure of `projects/`.
+- **`src/projects/`**: Source `.scad` files organized by project and size (e.g., `src/projects/steel-rack/500x400/`).
+- **`src/modules/`**: Shared OpenSCAD modules/libraries (e.g., `src/modules/bolts.scad`).
+- **`dist/`**: Generated `.stl` files. This directory mirrors the structure of `src/projects/`.
 - **`bin/`**: Helper scripts for building and watching files.
 
 ## Usage
@@ -27,7 +27,7 @@ To generate STL files for all projects at once, run:
 ./bin/render
 ```
 
-This script scans the `projects/` directory and outputs corresponding STL files to the `dist/` directory.
+This script scans the `src/projects/` directory and outputs corresponding STL files to the `dist/` directory.
 
 ### 2. Watch Mode (Development)
 
@@ -38,8 +38,8 @@ For a better development experience, use the watch script. It monitors files for
 ```
 
 **Behavior:**
-- **Project File Change**: If you edit a file in `projects/`, only that specific file is re-rendered.
-- **Module File Change**: If you edit a file in `modules/`, **ALL** project files are re-rendered to ensure the changes are propagated correctly.
+- **Project File Change**: If you edit a file in `src/projects/`, only that specific file is re-rendered.
+- **Module File Change**: If you edit a file in `src/modules/`, **ALL** project files are re-rendered to ensure the changes are propagated correctly.
 
 ## Coding Style
 

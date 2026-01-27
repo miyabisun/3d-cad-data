@@ -7,8 +7,8 @@ const { exec } = require('child_process');
 // Determine paths
 const scriptDir = __dirname;
 const projectRoot = path.resolve(scriptDir, '..');
-const projectsDir = path.join(projectRoot, 'projects');
-const modulesDir = path.join(projectRoot, 'modules');
+const projectsDir = path.join(projectRoot, 'src', 'projects');
+const modulesDir = path.join(projectRoot, 'src', 'modules');
 const distDir = path.join(projectRoot, 'dist');
 
 console.log('Starting SCAD watcher...');

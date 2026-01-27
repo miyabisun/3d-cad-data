@@ -1,0 +1,30 @@
+{
+  "name": "3dcad",
+  "version": "1.0.0",
+  "description": "This repository contains parametric 3D CAD models designed using [OpenSCAD](https://openscad.org/).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/miyabisun/3d-cad-data.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/miyabisun/3d-cad-data/issues"
+  },
+  "homepage": "https://github.com/miyabisun/3d-cad-data#readme",
+  "lint-staged": {
+    "src/**/*.scad": "openscad-format -i"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "openscad-format": "^1.0.0"
+  }
+}

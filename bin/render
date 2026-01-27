@@ -10,9 +10,9 @@ cd "$PROJECT_ROOT"
 echo "Rendering STL files..."
 
 # Find all SCAD files in projects directory
-find projects -name "*.scad" | while read -r scad_file; do
-  # Remove 'projects/' prefix to get relative path
-  relative_path="${scad_file#projects/}"
+find src/projects -name "*.scad" | while read -r scad_file; do
+  # Remove 'src/projects/' prefix to get relative path
+  relative_path="${scad_file#src/projects/}"
 
   # Construct output path in dist/
   stl_file="dist/${relative_path%.scad}.stl"
