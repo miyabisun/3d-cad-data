@@ -1,8 +1,8 @@
 jig_width = 10;
 hinge_length = 34;
 frame_lip = 4;
-jig_thickness = 6;
-raised_edge_height = 3.2;
+jig_thickness = 8;
+raised_edge_height = 2;
 
 total_length = hinge_length + frame_lip;
 

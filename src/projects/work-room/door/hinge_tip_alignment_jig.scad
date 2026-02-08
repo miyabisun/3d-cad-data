@@ -1,9 +1,7 @@
 jig_width = 10;
 hinge_length = 34;
 frame_lip = 4;
-base_thickness = 3;
-leaf_offset = 1.5;
-jig_thickness = base_thickness + leaf_offset;
+jig_thickness = 9;
 raised_edge_height = 2;
 
 total_length = hinge_length + frame_lip;
