@@ -1,76 +1,42 @@
 use <../../../modules/bolts.scad>;
+use <../../../modules/steel_rack.scad>;
+
 width = 147;
 height = 26;
 deps = 8;
-radius = 4;
+inner_radius = 4;
+plate_corner_radius = 8;
 
 difference() {
-  union(){
+  union() {
     translate([0, 0, height])
-    rotate([90, 180, 180])
-    long_bar(width, height, deps);
-    
+      rotate([90, 180, 180])
+      long_bar(width, height, deps);
+
     translate([0, 0, 0])
-    rotate([90, 0, 90])
-    long_bar(width, height, deps);
+      rotate([90, 0, 90])
+      long_bar(width, height, deps);
+
+    cube([30, 30, 6]);
   }
 
-  translate([deps / 2, deps / 2, 0])
-  rotate([0, 0, 180])
-  fillet_profile(radius, height * 2 + 1);
-}
+  // Inner corner fillet
+  translate([inner_radius, inner_radius, -0.1])
+    rotate([0, 0, 180])
+    fillet_profile(inner_radius, (height * 2) + 1.2);
 
-module fillet_profile(r, h) {
-  linear_extrude(height = h, center = true)
-  difference() {
-    square([r, r]);
-    circle(r = r, $fn = 64);
-  }
-}
+  // Outer corner fillet (plate)
+  translate([30 - plate_corner_radius, 30 - plate_corner_radius, -0.1])
+    linear_extrude(height = 6.2)
+    difference() {
+      square([plate_corner_radius, plate_corner_radius]);
+      circle(r = plate_corner_radius, $fn = 64);
+    }
 
-module long_bar (w, y, h) {
-  difference() {
-    translate([w / 2, y / 2, h / 2])
-    cube([w, y, h], center=true);
+  // M4 bolt + nut (plate)
+  translate([17.5, 17.5, -0.1])
+    m4_bolt_hole(h = 6.5);
 
-    translate([15, y / 2, 0])
-    union() {
-        nut_thickness = 5; // M6 nut height
-
-        // Replicates hole from z~0 to z~h
-        translate([0, 0, h / 2])
-        m6_bolt_hole(h + 1, center = true);
-
-        // Replicates nut trap at the top surface (from z=h-thickness to z=h)
-        translate([0, 0, h - nut_thickness / 2])
-        rotate([0, 0, 90])
-        m6_nut_trap(nut_thickness, center = true);
-    };
-    translate([15 + 98, y / 2, 0])
-    union() {
-        nut_thickness = 5; // M6 nut height
-
-        // Replicates hole from z~0 to z~h
-        translate([0, 0, h / 2])
-        m6_bolt_hole(h + 1, center = true);
-
-        // Replicates nut trap at the top surface (from z=h-thickness to z=h)
-        translate([0, 0, h - nut_thickness / 2])
-        rotate([0, 0, 90])
-        m6_nut_trap(nut_thickness, center = true);
-    };
-    translate([15 + 98 + 24, y / 2, 0])
-    union() {
-        nut_thickness = 5; // M6 nut height
-
-        // Replicates hole from z~0 to z~h
-        translate([0, 0, h / 2])
-        m6_bolt_hole(h + 1, center = true);
-
-        // Replicates nut trap at the top surface (from z=h-thickness to z=h)
-        translate([0, 0, h - nut_thickness / 2])
-        rotate([0, 0, 90])
-        m6_nut_trap(nut_thickness, center = true);
-    };
-  }
+  translate([17.5, 17.5, 4])
+    m4_nut_trap(h = 2.5);
 }

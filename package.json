@@ -14,7 +14,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/miyabisun/3d-cad-data/issues"
   },
@@ -23,6 +23,7 @@
     "src/**/*.scad": "openscad-format -i"
   },
   "devDependencies": {
+    "chokidar": "^5.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "openscad-format": "^1.0.0"

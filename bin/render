@@ -7,6 +7,9 @@ PROJECT_ROOT="$DIR/.."
 
 cd "$PROJECT_ROOT"
 
+# Clean dist/ before rebuild (.gitkeep preserved)
+find dist -mindepth 1 ! -name '.gitkeep' -delete 2>/dev/null || true
+
 echo "Rendering STL files..."
 
 # Find all SCAD files in projects directory

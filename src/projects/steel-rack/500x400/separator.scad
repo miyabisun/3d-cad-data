@@ -1,4 +1,4 @@
-module separator(diameter = 20, height = 3.5, bolt_diameter = 4) {
+module separator(diameter = 20, height = 3.5, bolt_diameter = 4.6) {
   difference() {
     cylinder(d = diameter, h = height, $fn = 100);
     translate([0, 0, -1])

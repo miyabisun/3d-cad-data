@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
-const { exec } = require('child_process');
+import fs from 'fs';
+import path from 'path';
+import { exec } from 'child_process';
+import { fileURLToPath } from 'url';
+import { watch } from 'chokidar';
 
-// Determine paths
-const scriptDir = __dirname;
-const projectRoot = path.resolve(scriptDir, '..');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(__dirname, '..');
 const projectsDir = path.join(projectRoot, 'src', 'projects');
 const modulesDir = path.join(projectRoot, 'src', 'modules');
 const distDir = path.join(projectRoot, 'dist');
@@ -15,121 +16,100 @@ console.log('Starting SCAD watcher...');
 console.log(`Watching projects: ${projectsDir}`);
 console.log(`Watching modules:  ${modulesDir}`);
 
-// State
-const processingFiles = new Map();
-let rebuildAllTimeout = null;
+const isScad = (filePath) => filePath.endsWith('.scad');
 
-// Function to render a single file
+function toStlPath(scadPath) {
+  const relativePath = path.relative(projectsDir, scadPath);
+  return path.join(distDir, relativePath.replace(/\.scad$/, '.stl'));
+}
+
+// --- Render ---
+
+const debounceMap = new Map();
+
 function renderFile(filePath) {
-  if (path.extname(filePath) !== '.scad') return;
-
   const now = Date.now();
-  const lastTime = processingFiles.get(filePath) || 0;
+  if (now - (debounceMap.get(filePath) || 0) < 100) return;
+  debounceMap.set(filePath, now);
 
-  // Debounce: ignore changes within 100ms
-  if (now - lastTime < 100) return;
-  processingFiles.set(filePath, now);
+  const stlFile = toStlPath(filePath);
+  const stlDir = path.dirname(stlFile);
 
-  const relativePath = path.relative(projectsDir, filePath);
-  const outputFile = path.join(
-    distDir,
-    relativePath.replace(/\.scad$/, '.stl'),
-  );
-  const outputDir = path.dirname(outputFile);
-
-  // Create output directory if it doesn't exist
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
+  if (!fs.existsSync(stlDir)) {
+    fs.mkdirSync(stlDir, { recursive: true });
   }
 
-  console.log(
-    `Rendering: ${relativePath} -> ${path.relative(projectRoot, outputFile)}`,
-  );
+  const rel = path.relative(projectRoot, stlFile);
+  console.log(`Rendering: ${rel}`);
 
-  exec(`openscad -o "${outputFile}" "${filePath}"`, (error, stdout, stderr) => {
+  exec(`openscad -o "${stlFile}" "${filePath}"`, (error, _stdout, stderr) => {
     if (error) {
-      console.error(`Error rendering ${relativePath}:`, error);
-      console.error(stderr);
+      console.error(`Error: ${rel}`, stderr);
     } else {
-      console.log(`Render complete: ${relativePath}`);
+      console.log(`Done: ${rel}`);
     }
   });
 }
 
-// Function to trigger full rebuild
+// --- Delete ---
+
+function removeStl(scadPath) {
+  const stlFile = toStlPath(scadPath);
+  if (!fs.existsSync(stlFile)) return;
+
+  fs.unlinkSync(stlFile);
+  console.log(`Deleted: ${path.relative(projectRoot, stlFile)}`);
+
+  // Remove empty parent directories up to dist/
+  let dir = path.dirname(stlFile);
+  while (dir !== distDir) {
+    const entries = fs.readdirSync(dir);
+    if (entries.length > 0) break;
+    fs.rmdirSync(dir);
+    console.log(`Removed empty dir: ${path.relative(projectRoot, dir)}`);
+    dir = path.dirname(dir);
+  }
+}
+
+// --- Rebuild all ---
+
+let rebuildTimeout = null;
+
 function rebuildAll() {
-  if (rebuildAllTimeout) clearTimeout(rebuildAllTimeout);
-  rebuildAllTimeout = setTimeout(() => {
+  if (rebuildTimeout) clearTimeout(rebuildTimeout);
+  rebuildTimeout = setTimeout(() => {
     console.log('Module changed. Re-rendering all projects...');
     walkAndRender(projectsDir);
-  }, 200); // 200ms debounce for module changes
+  }, 200);
 }
 
 function walkAndRender(dir) {
   if (!fs.existsSync(dir)) return;
-  fs.readdirSync(dir).forEach((f) => {
-    const fullPath = path.join(dir, f);
+  for (const entry of fs.readdirSync(dir)) {
+    const fullPath = path.join(dir, entry);
     if (fs.statSync(fullPath).isDirectory()) {
       walkAndRender(fullPath);
-    } else if (f.endsWith('.scad')) {
+    } else if (isScad(fullPath)) {
       renderFile(fullPath);
     }
-  });
-}
-
-// Watchers map to avoid duplicates
-const watchers = new Map();
-
-// Function to recursively watch directories
-function watchRecursive(dir) {
-  if (watchers.has(dir)) return;
-
-  try {
-    const watcher = fs.watch(dir, (eventType, filename) => {
-      if (!filename) return;
-      const fullPath = path.join(dir, filename);
-
-      // Check if file still exists
-      if (fs.existsSync(fullPath)) {
-        const stats = fs.statSync(fullPath);
-
-        if (stats.isDirectory()) {
-          // If new directory, watch it
-          watchRecursive(fullPath);
-        } else if (stats.isFile()) {
-          // Determine action based on location
-          if (fullPath.startsWith(modulesDir)) {
-            rebuildAll();
-          } else {
-            renderFile(fullPath);
-          }
-        }
-      }
-    });
-
-    watchers.set(dir, watcher);
-
-    // Scan children
-    fs.readdirSync(dir).forEach((child) => {
-      const childPath = path.join(dir, child);
-      if (fs.existsSync(childPath) && fs.statSync(childPath).isDirectory()) {
-        watchRecursive(childPath);
-      }
-    });
-  } catch (err) {
-    console.error(`Failed to watch ${dir}:`, err.message);
   }
 }
 
-// Start watching
-if (fs.existsSync(projectsDir)) {
-  watchRecursive(projectsDir);
-} else {
-  console.error(`Projects directory not found: ${projectsDir}`);
-}
+// --- Watcher setup ---
 
-if (fs.existsSync(modulesDir)) {
-  watchRecursive(modulesDir);
-} else {
-  console.warn(`Modules directory not found: ${modulesDir}`);
-}
+// usePolling for WSL compatibility (inotify doesn't work on /mnt/c)
+const watcherOptions = {
+  ignoreInitial: true,
+  usePolling: true,
+  interval: 500,
+};
+
+watch(projectsDir, watcherOptions)
+  .on('add', (fp) => isScad(fp) && renderFile(fp))
+  .on('change', (fp) => isScad(fp) && renderFile(fp))
+  .on('unlink', (fp) => isScad(fp) && removeStl(fp));
+
+watch(modulesDir, watcherOptions)
+  .on('add', (fp) => isScad(fp) && rebuildAll())
+  .on('change', (fp) => isScad(fp) && rebuildAll())
+  .on('unlink', (fp) => isScad(fp) && rebuildAll());
