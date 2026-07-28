@@ -41,6 +41,27 @@ For a better development experience, use the watch script. It monitors files for
 - **Project File Change**: If you edit a file in `src/projects/`, only that specific file is re-rendered.
 - **Module File Change**: If you edit a file in `src/modules/`, **ALL** project files are re-rendered to ensure the changes are propagated correctly.
 
+### 3. Web Viewer
+
+Start the browser-based STL viewer to inspect files generated under `dist/`:
+
+```bash
+./bin/serve
+```
+
+The viewer listens on port `8080` by default. Set `PORT` or pass a port as the
+first argument to use a different one:
+
+```bash
+PORT=3000 ./bin/serve
+./bin/serve 3000
+```
+
+Open `http://localhost:8080` on this machine, or
+`http://<Manjaro-IP>:8080` from a phone or another computer on the same LAN.
+The model list and the displayed geometry update automatically when STL files
+are added, changed, or removed.
+
 ## Coding Style
 
 - Indentation: 2 spaces
