@@ -1,6 +1,6 @@
 {
   "name": "3dcad",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "This repository contains parametric 3D CAD models designed using [OpenSCAD](https://openscad.org/).",
   "main": "index.js",
   "scripts": {
