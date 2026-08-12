@@ -12,10 +12,10 @@ find dist -mindepth 1 ! -name '.gitkeep' -delete 2>/dev/null || true
 
 echo "Rendering STL files..."
 
-# Find all SCAD files in projects directory
-find src/projects -name "*.scad" | while read -r scad_file; do
-  # Remove 'src/projects/' prefix to get relative path
-  relative_path="${scad_file#src/projects/}"
+# Find all SCAD files in the assets directory
+find assets -name "*.scad" | while read -r scad_file; do
+  # Remove 'assets/' prefix to get relative path
+  relative_path="${scad_file#assets/}"
 
   # Construct output path in dist/
   stl_file="dist/${relative_path%.scad}.stl"

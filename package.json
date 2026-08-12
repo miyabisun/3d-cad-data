@@ -4,7 +4,7 @@
   "description": "This repository contains parametric 3D CAD models designed using [OpenSCAD](https://openscad.org/).",
   "main": "index.js",
   "scripts": {
-    "test": "bash test/use-scad-live.sh",
+    "test": "bash -n bin/render && node --check bin/watch && node --check bin/serve",
     "prepare": "husky"
   },
   "repository": {
@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/miyabisun/3d-cad-data#readme",
   "lint-staged": {
-    "src/**/*.scad": "openscad-format -i"
+    "{assets,modules}/**/*.scad": "openscad-format -i"
   },
   "devDependencies": {
     "chokidar": "^5.0.0",

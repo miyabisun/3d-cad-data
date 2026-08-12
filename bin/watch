@@ -8,8 +8,8 @@ import { watch } from 'chokidar';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
-const projectsDir = path.join(projectRoot, 'src', 'projects');
-const modulesDir = path.join(projectRoot, 'src', 'modules');
+const projectsDir = path.join(projectRoot, 'assets');
+const modulesDir = path.join(projectRoot, 'modules');
 const distDir = path.join(projectRoot, 'dist');
 
 console.log('Starting SCAD watcher...');

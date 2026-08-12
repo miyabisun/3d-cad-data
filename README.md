@@ -1,30 +1,26 @@
 # 3D CAD Data
 
 OpenSCADの設計データをGitで管理するrepositoryです。編集する正本は
-`src/projects/`と`src/modules/`に置きます。scad-live用に別の場所へコピーする
-必要はありません。
+`assets/`と`modules/`に置きます。このrepositoryはscad-liveのベースキャンプ
+規約（`assets/`・`modules/`・`dist/`）に従っています。
 
 ## scad-liveで使う
 
-初回だけ、home-server repositoryの`systemd/README.md`にあるscad-liveの
-インストール手順を実行します。
-
-このrepositoryへ戻り、次を実行します。
+このrepositoryのrootで実行するだけです。
 
 ```sh
-./bin/use-scad-live
+cd /path/to/3d-cad-data
+scad-live
 ```
 
-これでscad-liveはこのrepositoryを直接監視します。`src/projects/`の`.scad`を編集し、
-<http://127.0.0.1:8080>を開いてください。生成したSTLは`dist/`へ入り、Gitには
-追加されません。
-
-別のrepositoryへ切り替えたい場合は、切り替え先でも`./bin/use-scad-live`を実行します。
+`assets/`の`.scad`を編集し、<http://127.0.0.1:8080>を開いてください。生成した
+STLは`dist/`へ入り、Gitには追加されません。systemdでの常駐はhome-server
+repositoryの`systemd/README.md`を参照してください。
 
 ## ディレクトリ
 
-- `src/projects/`: projectごとの`.scad`
-- `src/modules/`: 共有OpenSCAD module
+- `assets/`: projectごとの`.scad`
+- `modules/`: 共有OpenSCAD module
 - `dist/`: 生成したSTL（Git管理外）
 
 ## 手動実行
