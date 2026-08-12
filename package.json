@@ -4,7 +4,7 @@
   "description": "This repository contains parametric 3D CAD models designed using [OpenSCAD](https://openscad.org/).",
   "main": "index.js",
   "scripts": {
-    "test": "bash -n bin/render && node --check bin/watch && node --check bin/serve",
+    "test": "bash -n bin/render && test ! -e bin/watch && test ! -e bin/serve && test ! -e src/viewer",
     "prepare": "husky"
   },
   "repository": {
@@ -23,10 +23,8 @@
     "{assets,modules}/**/*.scad": "openscad-format -i"
   },
   "devDependencies": {
-    "chokidar": "^5.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "openscad-format": "^1.0.0",
-    "three": "^0.185.1"
+    "openscad-format": "^1.0.0"
   }
 }

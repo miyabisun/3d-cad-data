@@ -31,11 +31,4 @@ scad-liveを使わず単発で全projectを変換する場合:
 ./bin/render
 ```
 
-既存のNode.js製watcher/viewerを使う場合は`npm install`後に実行します。
-
-```sh
-./bin/watch
-./bin/serve
-```
-
 OpenSCAD fileは2space indentationで、commit時に`openscad-format`を適用します。
