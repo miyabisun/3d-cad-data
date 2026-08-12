@@ -4,15 +4,15 @@ set -euo pipefail
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 PROJECT_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
 CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
-ENV_FILE="$CONFIG_HOME/scad-live/env"
+ENV_FILE="$CONFIG_HOME/scad-live/.env"
 UNIT_DIR="$CONFIG_HOME/systemd/user"
 SYSTEMCTL=${SYSTEMCTL:-systemctl}
 
 if [ ! -f "$ENV_FILE" ] ||
    [ ! -f "$UNIT_DIR/scad-live-watch.service" ] ||
    [ ! -f "$UNIT_DIR/scad-live-server.service" ]; then
-  echo 'scad-live is not set up. Run this first from the home-server repository:' >&2
-  echo '  make -C systemd setup-scad-live' >&2
+  echo 'scad-live is not set up. Follow the "scad-live" install steps in the' >&2
+  echo 'home-server repository, systemd/README.md, first.' >&2
   exit 1
 fi
 

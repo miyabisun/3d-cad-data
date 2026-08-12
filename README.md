@@ -6,11 +6,8 @@ OpenSCADの設計データをGitで管理するrepositoryです。編集する�
 
 ## scad-liveで使う
 
-初回だけ、home-server側でscad-liveをsetupします。
-
-```sh
-make -C systemd setup-scad-live
-```
+初回だけ、home-server repositoryの`systemd/README.md`にあるscad-liveの
+インストール手順を実行します。
 
 このrepositoryへ戻り、次を実行します。
 
