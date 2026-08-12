@@ -23,7 +23,7 @@ repositoryの`systemd/README.md`を参照してください。
 - `modules/`: 共有OpenSCAD module
 - `dist/`: 生成したSTL（Git管理外）
 - `print/`: BambuStudioのプロジェクト（`.3mf`、Git管理）
-- `ledger/`: `.3mf`の台帳（OKF bundle。詳細は[ledger/index.md](ledger/index.md)）
+- `ledger/`: `.3mf`と設計思想の台帳（OKF bundle。詳細は[ledger/index.md](ledger/index.md)）
 
 ## 印刷（Windows + BambuStudio）
 

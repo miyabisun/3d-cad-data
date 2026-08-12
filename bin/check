@@ -21,6 +21,7 @@ head -5 "$ROOT/ledger/index.md" | grep -q '^okf_version: "0.2"$' \
 [ -f "$ROOT/ledger/log.md" ] || err "ledger/log.md not found"
 [ -d "$ROOT/print" ] || err "print/ not found (SMB 3dp-3mf の共有対象)"
 [ -d "$ROOT/ledger/prints" ] || err "ledger/prints/ not found"
+[ -d "$ROOT/ledger/designs" ] || err "ledger/designs/ not found"
 
 # frontmatter (先頭の --- ... --- 区間) から key の値を取り出す
 fm_get() {
@@ -28,29 +29,44 @@ fm_get() {
     | sed -n "s/^$2: *//p" | head -1
 }
 
+# Print / Design 共通の concept 検査。検査後の status を CHECK_STATUS に返す
+check_common() {
+  concept=$1 rel=$2 want_type=$3
+  base=$(basename "$concept" .md)
+
+  case "$base" in
+    *[!a-z0-9-]* | -* | *-)
+      err "$rel: filename must be kebab-case"
+      ;;
+  esac
+
+  [ "$(fm_get "$concept" type)" = "$want_type" ] \
+    || err "$rel: type must be $want_type"
+  [ -n "$(fm_get "$concept" title)" ] || err "$rel: missing title"
+  [ -n "$(fm_get "$concept" description)" ] || err "$rel: missing description"
+
+  CHECK_STATUS=$(fm_get "$concept" status)
+  case "$CHECK_STATUS" in
+    draft | active | retired) ;;
+    *) err "$rel: status must be draft/active/retired (got '$CHECK_STATUS')" ;;
+  esac
+}
+
+# path component に '..'・'.'・空を含むものを拒否する。0 = 安全
+path_has_traversal() {
+  case "/$1/" in
+    */../* | */./* | *//*) return 0 ;;
+  esac
+  return 1
+}
+
 declare -A artifact_owner
 
 for concept in "$ROOT"/ledger/prints/*.md; do
   [ -e "$concept" ] || continue
   rel_concept=${concept#"$ROOT"/}
-  base=$(basename "$concept" .md)
-
-  case "$base" in
-    *[!a-z0-9-]* | -* | *-)
-      err "$rel_concept: filename must be kebab-case"
-      ;;
-  esac
-
-  [ "$(fm_get "$concept" type)" = "Print" ] \
-    || err "$rel_concept: type must be Print"
-  [ -n "$(fm_get "$concept" title)" ] || err "$rel_concept: missing title"
-  [ -n "$(fm_get "$concept" description)" ] || err "$rel_concept: missing description"
-
-  status=$(fm_get "$concept" status)
-  case "$status" in
-    draft | active | retired) ;;
-    *) err "$rel_concept: status must be draft/active/retired (got '$status')" ;;
-  esac
+  check_common "$concept" "$rel_concept" Print
+  status=$CHECK_STATUS
 
   # artifact と content_sha256 は retired を含む全 status で必須 (identity の契約)。
   # retired が免除されるのは「実体の存在」と「現在実体との hash 一致」だけ
@@ -60,13 +76,10 @@ for concept in "$ROOT"/ledger/prints/*.md; do
     print/*.3mf) ;;
     *) err "$rel_concept: artifact must be a print/**.3mf path (got '$artifact')"; continue ;;
   esac
-  # path traversal を拒否する ('..'・'.'・空の path component)
-  case "/$artifact/" in
-    */../* | */./* | *//*)
-      err "$rel_concept: artifact must not contain '..', '.' or empty components (got '$artifact')"
-      continue
-      ;;
-  esac
+  if path_has_traversal "$artifact"; then
+    err "$rel_concept: artifact must not contain '..', '.' or empty components (got '$artifact')"
+    continue
+  fi
   if [ -n "${artifact_owner[$artifact]:-}" ]; then
     err "$rel_concept: artifact '$artifact' is already owned by ${artifact_owner[$artifact]}"
   else
@@ -97,6 +110,42 @@ while IFS= read -r -d '' f; do
   [ -n "${artifact_owner[$rel]:-}" ] \
     || err "$rel: no ledger concept (ledger/prints/ に台帳を作る)"
 done < <(find "$ROOT/print" -name '*.3mf' -print0 2>/dev/null)
+
+declare -A scope_owner
+
+for concept in "$ROOT"/ledger/designs/*.md; do
+  [ -e "$concept" ] || continue
+  rel_concept=${concept#"$ROOT"/}
+  check_common "$concept" "$rel_concept" Design
+  status=$CHECK_STATUS
+
+  # scope は retired を含む全 status で必須 (対象 identity の契約)
+  scope=$(fm_get "$concept" scope)
+  [ -n "$scope" ] || { err "$rel_concept: missing scope"; continue; }
+  case "$scope" in
+    assets/*) ;;
+    *) err "$rel_concept: scope must be an assets/** path (got '$scope')"; continue ;;
+  esac
+  if path_has_traversal "$scope"; then
+    err "$rel_concept: scope must not contain '..', '.' or empty components (got '$scope')"
+    continue
+  fi
+  if [ -n "${scope_owner[$scope]:-}" ]; then
+    err "$rel_concept: scope '$scope' is already owned by ${scope_owner[$scope]}"
+  else
+    scope_owner[$scope]=$rel_concept
+  fi
+
+  # user 発言の verbatim 保持は Design の provenance 契約
+  grep -q '^## user 原文 (verbatim)$' "$concept" \
+    || err "$rel_concept: missing '## user 原文 (verbatim)' section"
+
+  # retired は対象 assets 亡き後も履歴として残る。実在検査は現役だけ。
+  # scope は design area = directory の契約 (通常ファイルは不可)
+  if [ "$status" != "retired" ]; then
+    [ -d "$ROOT/$scope" ] || err "$rel_concept: scope '$scope' is not an existing directory"
+  fi
+done
 
 if [ "$fail" -ne 0 ]; then
   exit 1

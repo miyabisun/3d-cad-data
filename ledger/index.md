@@ -2,12 +2,18 @@
 okf_version: "0.2"
 ---
 
-# 3D print ledger
+# 3D CAD ledger
 
-`print/`のBambuStudioプロジェクト（`.3mf`）の台帳。`.3mf`はzipバイナリで
-Gitのdiffが読めないため、意味・状態・経緯はここが正本として持つ。
-1つの`.3mf`につき1つのconcept（`prints/<slug>.md`）を対応させ、frontmatterの
-`artifact`（repo rootからの相対path）と`content_sha256`で対象を固定する。
+このrepositoryの「コードから読めない意味」の台帳。2種類のconceptを持つ。
+
+- **Print**（`prints/<slug>.md`）: `print/`のBambuStudioプロジェクト（`.3mf`）
+  の台帳。`.3mf`はzipバイナリでGitのdiffが読めないため、意味・状態・経緯は
+  ここが正本として持つ。1つの`.3mf`につき1つのconceptを対応させ、
+  `artifact`（repo rootからの相対path）と`content_sha256`で対象を固定する
+- **Design**（`designs/<slug>.md`）: 構造物の設計思想の台帳。なぜこの構成を
+  選び・何を実現し・次にどこへ伸ばすかを、userの発言由来で持つ。形状の実装は
+  `.scad`が正本、部品の機能説明はassetsのREADMEが持ち、`.scad`のコメントは
+  幾何の注記に留める（設計意図をコメント欄に書かない）
 
 ## まず読む
 
@@ -24,19 +30,46 @@ Gitのdiffが読めないため、意味・状態・経緯はここが正本と�
 
 ## conceptのfrontmatter
 
+共通field（retiredを含め必須。`tags`のみfield自体がoptional）:
+
 | field | 内容 |
 |---|---|
-| `type` | `Print`固定 |
+| `type` | `Print`または`Design` |
 | `title` | 人間向けの名前 |
 | `description` | 1行説明 |
-| `status` | `draft`（調整中）/ `active`（現役）/ `retired`（引退） |
-| `tags` | 任意の分類（field自体もoptional。他はretiredを含め必須） |
+| `status` | `draft` / `active` / `retired`（意味はtype別、下記） |
+| `tags` | 任意の分類 |
+
+Print固有:
+
+| field | 内容 |
+|---|---|
 | `artifact` | 対象`.3mf`のrepo rootからの相対path（例: `print/hinge.3mf`） |
 | `content_sha256` | 台帳更新時点の`.3mf`のsha256（`sha256sum`で採取） |
 
 印刷条件（プリンタ・フィラメント・ノズル等）は`.3mf`自体が保持するため
 frontmatterには持たない。経緯・調整メモ・印刷結果は本文に自由に書く。
 
+Design固有:
+
+| field | 内容 |
+|---|---|
+| `scope` | 対象のassets配下のdirectory（例: `assets/steel-rack/500x400`）。1 design area = 1 scopeで重複させない |
+
+statusの意味: Printは`draft`=調整中 / `active`=現役 / `retired`=引退。
+Designは`draft`=思想・対象が調整中 / `active`=現在有効な設計判断 /
+`retired`=履歴のみ。**将来構想を含んでいてもactiveのままでよい**（activeは
+「完成」ではなく「現在有効な思想」）。
+
+Designの本文はuserの当該発言を`## user 原文 (verbatim)`見出しの下に改変せず
+引用で保持し（`bin/check`が見出しの存在を検査する）、整理・解説は別の節に
+書く。参照URLは「userが参照した調達先・候補リンク」として保持し、リンク先の
+可変な商品情報を確定事実にしない。
+
 ## Print
 
 （まだ無い）
+
+## Design
+
+- [スチールラック 500x400](designs/steel-rack-500x400.md) - 汎用L字アングルとアクリル天板で安価に組む自作ラック。接合部を3Dプリントで埋め、将来はスライドレール式のPCケースへ展開する

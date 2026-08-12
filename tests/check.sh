@@ -11,7 +11,7 @@ trap 'rm -rf "$WORK"' EXIT
 
 make_fixture() {
   root="$WORK/$1"
-  mkdir -p "$root/print" "$root/ledger/prints"
+  mkdir -p "$root/print" "$root/ledger/prints" "$root/ledger/designs"
   printf -- '---\nokf_version: "0.2"\n---\n\n# ledger\n' > "$root/ledger/index.md"
   printf '# log\n' > "$root/ledger/log.md"
   echo "$root"
@@ -35,6 +35,26 @@ content_sha256: $sha
 ---
 
 body
+EOF
+}
+
+make_design() {
+  path=$1 status=$2 scope=$3
+  cat > "$path" <<EOF
+---
+type: Design
+title: test design
+description: test design concept
+status: $status
+tags: [test]
+scope: $scope
+---
+
+# test design
+
+## user 原文 (verbatim)
+
+> test statement
 EOF
 }
 
@@ -130,5 +150,81 @@ artifact: print/unhashed.3mf
 body
 EOF
 expect "retired missing sha" fail "$root"
+
+# 11. scope が実在する Design は PASS
+root=$(make_fixture design-valid)
+mkdir -p "$root/assets/frame"
+make_design "$root/ledger/designs/frame.md" active assets/frame
+expect "valid design" pass "$root"
+
+# 12. designs/ に置かれた type 違い (Print) は FAIL
+root=$(make_fixture design-wrong-type)
+mkdir -p "$root/assets/frame"
+make_concept "$root/ledger/designs/mistyped.md" active print/x.3mf \
+  "$(printf 'x' | sha256sum | cut -d' ' -f1)"
+expect "design with wrong type" fail "$root"
+
+# 13. scope 欠落は FAIL (retired でも必須)
+root=$(make_fixture design-no-scope)
+cat > "$root/ledger/designs/scopeless.md" <<'EOF'
+---
+type: Design
+title: scopeless
+description: design without scope
+status: retired
+---
+
+## user 原文 (verbatim)
+
+> test
+EOF
+expect "design missing scope" fail "$root"
+
+# 14. assets/ の外へ抜ける scope (path traversal) は FAIL
+root=$(make_fixture design-traversal)
+mkdir -p "$root/evil"
+make_design "$root/ledger/designs/evil.md" active "assets/../evil"
+expect "design scope traversal" fail "$root"
+
+# 15. 現役 Design の scope 不在は FAIL
+root=$(make_fixture design-ghost-scope)
+make_design "$root/ledger/designs/ghost.md" active assets/ghost
+expect "design scope not found" fail "$root"
+
+# 16. retired Design は scope が消えていても PASS
+root=$(make_fixture design-retired)
+make_design "$root/ledger/designs/old.md" retired assets/gone
+expect "retired design without scope dir" pass "$root"
+
+# 17. 同一 scope を持つ Design の重複は FAIL (1 design area = 1 scope)
+root=$(make_fixture design-dup)
+mkdir -p "$root/assets/frame"
+make_design "$root/ledger/designs/one.md" active assets/frame
+make_design "$root/ledger/designs/two.md" active assets/frame
+expect "duplicate design scope" fail "$root"
+
+# 18. scope が通常ファイルを指す Design は FAIL (design area = directory の契約)
+root=$(make_fixture design-file-scope)
+mkdir -p "$root/assets"
+printf 'cube(1);\n' > "$root/assets/single.scad"
+make_design "$root/ledger/designs/single.md" active assets/single.scad
+expect "design scope is a file" fail "$root"
+
+# 19. user 原文 (verbatim) 見出しの欠落は FAIL (provenance の契約)
+root=$(make_fixture design-no-verbatim)
+mkdir -p "$root/assets/frame"
+cat > "$root/ledger/designs/hearsay.md" <<'EOF'
+---
+type: Design
+title: hearsay
+description: design without verbatim statement
+status: active
+tags: [test]
+scope: assets/frame
+---
+
+# summary only
+EOF
+expect "design missing verbatim" fail "$root"
 
 echo "ledger check tests passed"
