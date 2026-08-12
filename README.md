@@ -1,68 +1,48 @@
-# 3D CAD Data (OpenSCAD Projects)
+# 3D CAD Data
 
-This repository contains parametric 3D CAD models designed using [OpenSCAD](https://openscad.org/).
+OpenSCADの設計データをGitで管理するrepositoryです。編集する正本は
+`src/projects/`と`src/modules/`に置きます。scad-live用に別の場所へコピーする
+必要はありません。
 
-## Prerequisites
+## scad-liveで使う
 
-To build and edit these projects, you need the following tools installed on your system:
+初回だけ、home-server側でscad-liveをsetupします。
 
-- **[OpenSCAD](https://openscad.org/downloads.html)**: The core 3D modeling tool. Ensure the `openscad` command is available in your PATH.
-- **Node.js**: Required to run the file watcher script (`bin/watch`).
-- **Bash**: Required to run the build shell scripts.
+```sh
+make -C systemd setup-scad-live
+```
 
-## Directory Structure
+このrepositoryへ戻り、次を実行します。
 
-- **`src/projects/`**: Source `.scad` files organized by project and size (e.g., `src/projects/steel-rack/500x400/`).
-- **`src/modules/`**: Shared OpenSCAD modules/libraries (e.g., `src/modules/bolts.scad`).
-- **`dist/`**: Generated `.stl` files. This directory mirrors the structure of `src/projects/`.
-- **`bin/`**: Helper scripts for building and watching files.
+```sh
+./bin/use-scad-live
+```
 
-## Usage
+これでscad-liveはこのrepositoryを直接監視します。`src/projects/`の`.scad`を編集し、
+<http://127.0.0.1:8080>を開いてください。生成したSTLは`dist/`へ入り、Gitには
+追加されません。
 
-### 1. Rendering (Build)
+別のrepositoryへ切り替えたい場合は、切り替え先でも`./bin/use-scad-live`を実行します。
 
-To generate STL files for all projects at once, run:
+## ディレクトリ
 
-```bash
+- `src/projects/`: projectごとの`.scad`
+- `src/modules/`: 共有OpenSCAD module
+- `dist/`: 生成したSTL（Git管理外）
+
+## 手動実行
+
+scad-liveを使わず単発で全projectを変換する場合:
+
+```sh
 ./bin/render
 ```
 
-This script scans the `src/projects/` directory and outputs corresponding STL files to the `dist/` directory.
+既存のNode.js製watcher/viewerを使う場合は`npm install`後に実行します。
 
-### 2. Watch Mode (Development)
-
-For a better development experience, use the watch script. It monitors files for changes and automatically re-renders them.
-
-```bash
+```sh
 ./bin/watch
-```
-
-**Behavior:**
-- **Project File Change**: If you edit a file in `src/projects/`, only that specific file is re-rendered.
-- **Module File Change**: If you edit a file in `src/modules/`, **ALL** project files are re-rendered to ensure the changes are propagated correctly.
-
-### 3. Web Viewer
-
-Start the browser-based STL viewer to inspect files generated under `dist/`:
-
-```bash
 ./bin/serve
 ```
 
-The viewer listens on port `8080` by default. Set `PORT` or pass a port as the
-first argument to use a different one:
-
-```bash
-PORT=3000 ./bin/serve
-./bin/serve 3000
-```
-
-Open `http://localhost:8080` on this machine, or
-`http://<Manjaro-IP>:8080` from a phone or another computer on the same LAN.
-The model list and the displayed geometry update automatically when STL files
-are added, changed, or removed.
-
-## Coding Style
-
-- Indentation: 2 spaces
-- Format: Prettier (configured via `.prettierrc` for JavaScript files)
+OpenSCAD fileは2space indentationで、commit時に`openscad-format`を適用します。

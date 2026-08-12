@@ -4,7 +4,7 @@
   "description": "This repository contains parametric 3D CAD models designed using [OpenSCAD](https://openscad.org/).",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "bash test/use-scad-live.sh",
     "prepare": "husky"
   },
   "repository": {
