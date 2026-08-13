@@ -48,7 +48,7 @@ render rear assets/steel-rack/500x400/slide_rail_outer_rear.scad
 # 六角穴の向きの機械検査: helper の断面を軸方向へ投影して bbox を測る。
 # 期待値は二面幅/対角 (= 二面幅/cos30) のペアで、向きが逆なら縦横が入れ替わり赤になる。
 # - hex_x_flat_up(10): 部品Z方向 (2D X) = 二面幅10.00、部品Y方向 (2D Y) = 対角11.55
-# - hex_y_point_up(3): 部品X方向 (2D X) = 二面幅3.00、部品Z方向 (2D Y) = 対角3.46
+# - hex_y_flat_up(3): 部品X方向 (2D X) = 対角3.46、部品Z方向 (2D Y) = 二面幅3.00
 check_hex() {
   name=$1 helper=$2 flat=$3 want_x=$4 want_y=$5
   cat > "$WORK/hex_$name.scad" <<EOF
@@ -77,7 +77,7 @@ PYEOF
 # rotate([0,-90,0]): 部品X軸→2D法線。2D X=部品Z(反転)、2D Y=部品Y
 check_hex m6_flat_up hex_x_flat_up 10 10.00 11.55 "0, -90, 0"
 # rotate([90,0,0]): 部品Y軸→2D法線。2D X=部品X、2D Y=部品Z(反転)
-check_hex screw_point_up hex_y_point_up 3 3.00 3.46 "90, 0, 0"
+check_hex screw_flat_up hex_y_flat_up 3 3.46 3.00 "90, 0, 0"
 
 # 共通契約 (台帳 designs/steel-rack-500x400.md の確定値)
 for name in front rear; do
@@ -94,11 +94,14 @@ for name in front rear; do
   expect_echo $name 'angle_t = 2.2'
 done
 
-# 派生値の回帰固定: 8mm余白を flat-up の実半径 (対角/2 = 5.7735) で導出した値。
-# helper だけ flat-up のまま導出を二面幅/2 へ戻す退行 (実余白7.23mm) を検知する
+# 派生値の回帰固定: 8mm余白を flat-up の実半径 (対角/2) で導出した値。
+# helper だけ flat-up のまま導出を二面幅/2 へ戻す退行を検知する
+# (M6: 対角/2 = 5.7735、木ネジ: 対角/2 = 1.7321)
 for name in front rear; do
   expect_echo $name 'm6_y = 27.7735, short_len = 41.547'
 done
+expect_echo front 'arm_end = 107.732'
+expect_echo rear 'arm_end = 182.232'
 
 # 木ネジ位置: 各パーツ自身の datum (そのアングル外側面) 基準
 expect_echo front 'screw_x = [34, 98]'

@@ -35,24 +35,25 @@ hex_x_flat_up(flat_d, l)
     rotate([ 0, 90, 0 ]) rotate([ 0, 0, 90 ]) hex_hole(flat_d = flat_d, h = l);
 }
 
-// 六角プリズム: 軸Y・断面の頂点が上下 (point-up)
+// 六角プリズム: 軸Y・上下の辺が水平 (flat-up)。M6と同じくブリッジ天井
 module
-hex_y_point_up(flat_d, l)
+hex_y_flat_up(flat_d, l)
 {
-    rotate([ 90, 0, 0 ]) rotate([ 0, 0, 90 ]) hex_hole(flat_d = flat_d, h = l);
+    rotate([ 90, 0, 0 ]) hex_hole(flat_d = flat_d, h = l);
 }
 
 module
 slide_rail_outer_bracket(screw_x, name = "bracket")
 {
-    // flat-up配置ではY方向の穴半径は対角/2 (= 二面幅/(2*cos30))。
+    // flat-up配置では水平方向の穴半径は対角/2 (= 二面幅/(2*cos30))。
     // 8mm余白の契約はこの実半径に対して守る
     m6_nut_diag = m6_nut_flat / cos(30);
+    screw_diag = screw_flat / cos(30);
     // 短辺のY寸法: 長辺厚 + 内側R + 余白 + M6六角(対角) + 余白
     m6_y = flange_t + inner_r + edge_margin + m6_nut_diag / 2;
     short_len = m6_y + m6_nut_diag / 2 + edge_margin;
-    // 長辺のX終端: 最奥の木ネジ穴の縁 (二面幅3の半分) + 余白
-    arm_end = max(screw_x) + screw_flat / 2 + edge_margin;
+    // 長辺のX終端: 最奥の木ネジ穴の縁 (対角の半分) + 余白
+    arm_end = max(screw_x) + screw_diag / 2 + edge_margin;
 
     echo(str("CONTRACT ", name, ": height = ", bracket_height));
     echo(str("CONTRACT ", name, ": flange_t = ", flange_t));
@@ -80,9 +81,9 @@ slide_rail_outer_bracket(screw_x, name = "bracket")
            "M6 hole too close to the inner corner");
     assert(short_len - (m6_y + m6_nut_diag / 2) >= edge_margin,
            "M6 hole too close to the short-flange edge");
-    assert(arm_end - (max(screw_x) + screw_flat / 2) >= edge_margin,
+    assert(arm_end - (max(screw_x) + screw_diag / 2) >= edge_margin,
            "screw hole too close to the arm end");
-    assert(min(screw_x) - screw_flat / 2 >= angle_t + flange_t,
+    assert(min(screw_x) - screw_diag / 2 >= angle_t + flange_t,
            "screw hole overlaps the short flange");
 
     difference()
@@ -125,10 +126,10 @@ slide_rail_outer_bracket(screw_x, name = "bracket")
                 hex_x_flat_up(m6_nut_flat, m6_stage_depth + 0.1);
         }
 
-        // 木ネジの六角穴 (軸Y・point-up): レール側からガード内4mmまで
+        // 木ネジの六角穴 (軸Y・flat-up): レール側からガード内4mmまで
         for (x = screw_x) {
             translate([ x, screw_hex_depth / 2 - 0.05, screw_z ])
-                hex_y_point_up(screw_flat, screw_hex_depth + 0.1);
+                hex_y_flat_up(screw_flat, screw_hex_depth + 0.1);
         }
     }
 }
