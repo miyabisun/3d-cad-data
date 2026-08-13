@@ -45,6 +45,40 @@ expect_echo() {
 render front assets/steel-rack/500x400/slide_rail_outer_front.scad
 render rear assets/steel-rack/500x400/slide_rail_outer_rear.scad
 
+# 六角穴の向きの機械検査: helper の断面を軸方向へ投影して bbox を測る。
+# 期待値は二面幅/対角 (= 二面幅/cos30) のペアで、向きが逆なら縦横が入れ替わり赤になる。
+# - hex_x_flat_up(10): 部品Z方向 (2D X) = 二面幅10.00、部品Y方向 (2D Y) = 対角11.55
+# - hex_y_point_up(3): 部品X方向 (2D X) = 二面幅3.00、部品Z方向 (2D Y) = 対角3.46
+check_hex() {
+  name=$1 helper=$2 flat=$3 want_x=$4 want_y=$5
+  cat > "$WORK/hex_$name.scad" <<EOF
+use <$ROOT/modules/slide_rail_outer_bracket.scad>
+projection() rotate([ $6 ]) $helper($flat, 5);
+EOF
+  if ! openscad -o "$WORK/hex_$name.svg" "$WORK/hex_$name.scad" > /dev/null 2>&1; then
+    err "hex orientation: $name failed to render"
+    return
+  fi
+  python3 - "$WORK/hex_$name.svg" "$name" "$want_x" "$want_y" <<'PYEOF' || fail=1
+import re, sys
+src = open(sys.argv[1]).read()
+name, want_x, want_y = sys.argv[2], float(sys.argv[3]), float(sys.argv[4])
+pts = re.findall(r'(-?\d+\.?\d*),(-?\d+\.?\d*)', re.search(r'd="([^"]+)"', src).group(1))
+xs = [float(a) for a, b in pts]
+ys = [float(b) for a, b in pts]
+span_x, span_y = max(xs) - min(xs), max(ys) - min(ys)
+ok = abs(span_x - want_x) < 0.05 and abs(span_y - want_y) < 0.05
+print(f"hex orientation {name}: span=({span_x:.2f},{span_y:.2f}) want=({want_x},{want_y})"
+      + ("" if ok else " FAIL"))
+sys.exit(0 if ok else 1)
+PYEOF
+}
+
+# rotate([0,-90,0]): 部品X軸→2D法線。2D X=部品Z(反転)、2D Y=部品Y
+check_hex m6_flat_up hex_x_flat_up 10 10.00 11.55 "0, -90, 0"
+# rotate([90,0,0]): 部品Y軸→2D法線。2D X=部品X、2D Y=部品Z(反転)
+check_hex screw_point_up hex_y_point_up 3 3.00 3.46 "90, 0, 0"
+
 # 共通契約 (台帳 designs/steel-rack-500x400.md の確定値)
 for name in front rear; do
   expect_echo $name 'height = 45'
@@ -58,6 +92,12 @@ for name in front rear; do
   expect_echo $name 'guard_d = 14'
   expect_echo $name 'edge_margin = 8'
   expect_echo $name 'angle_t = 2.2'
+done
+
+# 派生値の回帰固定: 8mm余白を flat-up の実半径 (対角/2 = 5.7735) で導出した値。
+# helper だけ flat-up のまま導出を二面幅/2 へ戻す退行 (実余白7.23mm) を検知する
+for name in front rear; do
+  expect_echo $name 'm6_y = 27.7735, short_len = 41.547'
 done
 
 # 木ネジ位置: 各パーツ自身の datum (そのアングル外側面) 基準
