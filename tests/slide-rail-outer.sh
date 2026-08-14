@@ -84,10 +84,10 @@ check_hex m4_flat_up hex_y_flat_up 4.4 5.08 4.40 "90, 0, 0"
 # echo/helper 検査だけでは検知できない production 形状の退行
 # (窪みの削除・開口面の反転・ガードの復活など) をここで捉える。
 check_section() {
-  name=$1 cut_y=$2 spec=$3
+  stl=$1 name=$2 cut_y=$3 spec=$4
   cat > "$WORK/sec_$name.scad" <<EOF
 projection(cut = true) rotate([ 90, 0, 0 ]) translate([ 0, -$cut_y, 0 ])
-  import("$WORK/front.stl");
+  import("$WORK/$stl.stl");
 EOF
   if ! openscad -o "$WORK/sec_$name.svg" "$WORK/sec_$name.scad" > /dev/null 2>&1; then
     err "section $name: failed to render"
@@ -126,11 +126,13 @@ PYEOF
 }
 
 # y=4 (通し区間): M4通し六角 4.4 (対角5.08) が補正後の座標に開く
-check_section pass 4 "hex 37 22.5 5.08 4.40; hex 101.5 22.5 5.08 4.40"
+check_section front pass 4 "hex 37 22.5 5.08 4.40; hex 101.5 22.5 5.08 4.40"
 # y=8.6 (窪み区間): M4ナット窪み 7.4 (対角8.54) が内側面 y=10 側に開く
-check_section pocket 8.6 "hex 37 22.5 8.54 7.40; hex 101.5 22.5 8.54 7.40"
+check_section front pocket 8.6 "hex 37 22.5 8.54 7.40; hex 101.5 22.5 8.54 7.40"
 # y=13 (旧ガード区間): 長辺の外 (x>12.3) に形状が無い = ガードが復活していない
-check_section no-guard 13 "max_x 12.3"
+check_section front no-guard 13 "max_x 12.3"
+# rear も補正後の座標 (自 datum 基準 79.5/176) に通しが開く
+check_section rear rear-pass 4 "hex 79.5 22.5 5.08 4.40; hex 176 22.5 5.08 4.40"
 
 # 共通契約 (台帳 designs/steel-rack-500x400.md の確定値)
 for name in front rear; do
@@ -155,15 +157,15 @@ for name in front rear; do
   expect_echo $name 'm6_y = 28.0044, short_len = 42.0089'
 done
 expect_echo front 'arm_end = 113.772'
-expect_echo rear 'arm_end = 184.772'
+expect_echo rear 'arm_end = 188.272'
 
 # M4ネジ位置: 各パーツ自身の datum (そのアングル外側面) 基準。
-# front は実プリントの座標ズレ補正済み ([34,98] + [3, 3.5])
+# 両パーツとも実プリントの座標ズレ補正済み (各穴を自 datum から +3 / +3.5)
 expect_echo front 'screw_x = [37, 101.5]'
-expect_echo rear 'screw_x = [76.5, 172.5]'
+expect_echo rear 'screw_x = [79.5, 176]'
 
 # rear はラック手前 datum への正規化値も宣言する (400 - x)
-expect_echo rear 'screw_x_front_datum = [227.5, 323.5]'
+expect_echo rear 'screw_x_front_datum = [224, 320.5]'
 
 if [ "$fail" -ne 0 ]; then
   exit 1

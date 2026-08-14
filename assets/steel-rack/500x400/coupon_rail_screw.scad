@@ -12,7 +12,7 @@ width = 24;
 height = 12;
 thickness = 10;
 pass_flat = 4.4; // M4呼び4.0 + 0.4
-nut_flat = 7.4;  // JIS二面幅7.0 + 0.4 (実測は未)
+nut_flat = 7.4;  // ナット実測6.8 + 実効0.6
 nut_depth = 2.8;
 
 assert((height - nut_flat) / 2 >= 2,

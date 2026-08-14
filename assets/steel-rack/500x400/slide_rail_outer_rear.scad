@@ -6,7 +6,10 @@ use <../../../modules/slide_rail_outer_bracket.scad>
 // 印刷向き: L断面をビルドプレートへ寝かせる (層と平行に荷重を受ける)。
 // 左右のレールには上下反転で同じ部品を使う (Z対称)。
 
-screw_x = [ 76.5, 172.5 ];
+// 初版 [76.5, 172.5] は実プリントで手前側と同じ座標ズレが判明し、
+// 各穴をL字の底面から遠ざかる方向 (+X) へ 1個目+3mm・2個目+3.5mm 補正した
+// (経緯は ledger/designs/steel-rack-500x400.md)
+screw_x = [ 79.5, 176 ];
 rack_depth = 400;
 
 echo(str("CONTRACT rear: screw_x_front_datum = ",
