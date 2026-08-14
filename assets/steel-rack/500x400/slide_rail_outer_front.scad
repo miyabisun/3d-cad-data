@@ -6,6 +6,8 @@ use <../../../modules/slide_rail_outer_bracket.scad>
 // 印刷向き: L断面をビルドプレートへ寝かせる (層と平行に荷重を受ける)。
 // 左右のレールには上下反転で同じ部品を使う (Z対称)。
 
-screw_x = [ 34, 98 ];
+// 初版 [34, 98] は実プリントで座標ズレが判明し、1個目+3mm・2個目+3.5mm
+// 奥へ補正した (経緯は ledger/designs/steel-rack-500x400.md)
+screw_x = [ 37, 101.5 ];
 
 slide_rail_outer_bracket(screw_x = screw_x, name = "front");
