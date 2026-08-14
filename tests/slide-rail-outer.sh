@@ -127,17 +127,121 @@ PYEOF
 
 # y=4 (通し区間): M4通し六角 4.4 (対角5.08) が補正後の座標に開く
 check_section front pass 4 "hex 37 22.5 5.08 4.40; hex 101.5 22.5 5.08 4.40"
-# y=8.6 (窪み区間): M4ナット窪み 7.4 (対角8.54) が内側面 y=10 側に開く
-check_section front pocket 8.6 "hex 37 22.5 8.54 7.40; hex 101.5 22.5 8.54 7.40"
-# y=13 (旧ガード区間): 長辺の外 (x>12.3) に形状が無い = ガードが復活していない
+# y=6.5 (窪み区間 y∈[5.2,8]): M4ナット窪み 7.4 (対角8.54) が内側面 y=8 側に開く
+check_section front pocket 6.5 "hex 37 22.5 8.54 7.40; hex 101.5 22.5 8.54 7.40"
+# y=13 (旧ガード区間): 長辺の外 (x>12.3) に形状が無い = ガードが復活していない。
+# ナット回廊 (x 7.2..12.2) の切り欠きはこの断面を z 帯で分断するが、
+# どの loop も x=12.2 (短辺背面) を超えない
 check_section front no-guard 13 "max_x 12.3"
 # rear も補正後の座標 (自 datum 基準 79.5/176) に通しが開く
 check_section rear rear-pass 4 "hex 79.5 22.5 5.08 4.40; hex 176 22.5 5.08 4.40"
+
+# M6ナット挿入回廊の開通検査: ナット高さの水平断面 (X-Y、2D生yは-部品y) を実測。
+# x=13 の Y-Z 断面では切り欠きが bbox を変えず検知できないため、水平断面で
+# - clear: fillet 帯 (x 12.35..16.45) に長辺外面 (y=8、逃げ溝含め+0.05) を
+#   超える材料が無い = fillet が局所カットされナットが +X から直進できる
+# - island: 短辺の上部 (y>=16) が回廊+通し穴で分断されて孤立 loop になる
+#   = ナット窪みが短辺を貫いている
+# 回廊を塞ぐ退行では fillet の弧 (y 最大 11.4) が clear 検査に掛かり赤になる
+check_corridor() {
+  stl=$1 name=$2 cut_z=$3
+  cat > "$WORK/cor_$name.scad" <<EOF
+projection(cut = true) translate([ 0, 0, -$cut_z ]) import("$WORK/$stl.stl");
+EOF
+  if ! openscad -o "$WORK/cor_$name.svg" "$WORK/cor_$name.scad" > /dev/null 2>&1; then
+    err "corridor $name: failed to render"
+    return
+  fi
+  python3 - "$WORK/cor_$name.svg" "$name" <<'PYEOF' || fail=1
+import re, sys
+src = open(sys.argv[1]).read()
+name = sys.argv[2]
+loops = []
+worst = None
+for sub in re.search(r'd="([^"]+)"', src).group(1).split("M")[1:]:
+    pts = [(float(a), -float(b)) for a, b in re.findall(r'(-?\d+\.?\d*),(-?\d+\.?\d*)', sub)]
+    loops.append(pts)
+    for x, y in pts:
+        if 12.35 < x < 16.45 and (worst is None or y > worst):
+            worst = y
+ok = True
+if worst is not None and worst > 8.05:
+    print(f"corridor {name}: fillet band not cleared (max y = {worst:.2f})")
+    ok = False
+if not any(min(y for _, y in pts) >= 16 for pts in loops):
+    print(f"corridor {name}: nut slot does not sever the short flange")
+    ok = False
+print(f"corridor {name}: {'ok' if ok else 'FAIL'}")
+sys.exit(0 if ok else 1)
+PYEOF
+}
+
+check_corridor front corridor-lo 10.5
+check_corridor front corridor-hi 34.5
+
+# M6 実穴の絶対位置検査: production STL の Y-Z 断面 (x=9.7、ナット窪み区間)。
+# CONTRACT echo は自己申告のため、レール面 (y=0) から M6 穴中心までの実距離と
+# 部品外端 (短辺の外縁 y=28.0089) を実形状で直接測定する。M6 穴の translate
+# だけがずれる退行 (echo・導出値は正のまま) をここで捉える。
+# rotate([0,-90,0]) の写像は SVG 生値で x = -部品Z、y = -部品Y (実測で確認済み)。
+# 穴 bbox は Y に六角対角 12.0089、下端はさらに逃げ溝 0.2 が付くため、
+# 中心は「bbox 上端 - 対角/2」で測る (= m6_y。逃げ溝の影響を受けない)
+check_m6_position() {
+  stl=$1 name=$2
+  cat > "$WORK/m6p_$name.scad" <<EOF
+projection(cut = true) rotate([ 0, -90, 0 ]) translate([ -9.7, 0, 0 ])
+  import("$WORK/$stl.stl");
+EOF
+  if ! openscad -o "$WORK/m6p_$name.svg" "$WORK/m6p_$name.scad" > /dev/null 2>&1; then
+    err "m6 position $name: failed to render"
+    return
+  fi
+  python3 - "$WORK/m6p_$name.svg" "$name" <<'PYEOF' || fail=1
+import re, sys
+src = open(sys.argv[1]).read()
+name = sys.argv[2]
+loops = []  # (y_min, y_max, z_min, z_max) 部品座標
+for sub in re.search(r'd="([^"]+)"', src).group(1).split("M")[1:]:
+    pts = [(-float(b), -float(a)) for a, b in re.findall(r'(-?\d+\.?\d*),(-?\d+\.?\d*)', sub)]
+    ys = [p[0] for p in pts]
+    zs = [p[1] for p in pts]
+    loops.append((min(ys), max(ys), min(zs), max(zs)))
+ok = True
+# 部品外形: レール面 y=0 から短辺外縁 y=28.0089 まで
+body = max(loops, key=lambda l: l[1] - l[0])
+if abs(body[0] - 0) > 0.05 or abs(body[1] - 28.0089) > 0.05:
+    print(f"m6 position {name}: body y=[{body[0]:.4f},{body[1]:.4f}] want [0,28.0089]")
+    ok = False
+# M6 ナット六角 ×2: bbox (対角12.0089 + 逃げ溝0.2) × (二面幅10.40)
+diag = 12.0089
+for cz in (10.5, 34.5):
+    hole = [l for l in loops
+            if abs((l[2] + l[3]) / 2 - cz) < 0.1 and abs((l[3] - l[2]) - 10.40) < 0.05
+            and abs((l[1] - l[0]) - (diag + 0.2)) < 0.05]
+    if not hole:
+        print(f"m6 position {name}: nut hex at z={cz} not found")
+        ok = False
+        continue
+    m6_y = hole[0][1] - diag / 2  # レール面から実穴中心までの実距離
+    if abs(m6_y - 14.0044) > 0.1:
+        print(f"m6 position {name}: z={cz} measured m6_y = {m6_y:.4f} want 14.0044")
+        ok = False
+    else:
+        print(f"m6 position {name}: z={cz} m6_y = {m6_y:.4f}")
+print(f"m6 position {name}: {'ok' if ok else 'FAIL'}")
+sys.exit(0 if ok else 1)
+PYEOF
+}
+
+check_m6_position front m6-front
+check_m6_position rear m6-rear
 
 # 共通契約 (台帳 designs/steel-rack-500x400.md の確定値)
 for name in front rear; do
   expect_echo $name 'height = 45'
   expect_echo $name 'flange_t = 10'
+  expect_echo $name 'arm_t = 8'
+  expect_echo $name 'rail_offset = 14'
   expect_echo $name 'inner_r = 4'
   expect_echo $name 'm6_z = [10.5, 34.5]'
   expect_echo $name 'm6_pass_flat = 6.4'
@@ -150,11 +254,12 @@ for name in front rear; do
   expect_echo $name 'angle_t = 2.2'
 done
 
-# 派生値の回帰固定: 8mm余白を flat-up の実半径 (対角/2) で導出した値。
-# helper だけ flat-up のまま導出を二面幅/2 へ戻す退行を検知する
+# 派生値の回帰固定: 8mm余白を flat-up の実半径 (対角/2) で導出した値から
+# rail_offset=14 を引き、M6実穴の絶対位置を保ったままレール面を外へ出した値。
+# helper だけ flat-up のまま導出を二面幅/2 へ戻す退行や offset の欠落を検知する
 # (M6ナット10.4: 対角/2 = 6.0044、M4ナット7.4: 対角/2 = 4.2724)
 for name in front rear; do
-  expect_echo $name 'm6_y = 28.0044, short_len = 42.0089'
+  expect_echo $name 'm6_y = 14.0044, short_len = 28.0089'
 done
 expect_echo front 'arm_end = 113.772'
 expect_echo rear 'arm_end = 188.272'
