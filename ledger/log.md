@@ -64,3 +64,11 @@
   局所カット。m6_y 14.0044・短辺28.0089、ケース幅前提は410→412mm）。
   試験片`coupon_rail_screw.scad`も8mm厚へ追随し、回廊の開通検査を
   テストへ追加した。
+- **Update**: スライドレール内側のケース支持部品を実装した
+  （`modules/slide_rail_inner_block.scad` +
+  `assets/steel-rack/500x400/slide_rail_inner_{support,rear_l,rear_r}.scad`、
+  検証は`tests/slide-rail-inner.sh`）。「ド真ん中を手前に配置して奥だけ
+  帳尻合わせ」というuserの号令でユニーク設計は5→**3設計・物理6個**
+  （対称型1つで手前L/R・中央L/Rの4個 + 奥用L/R各1個）。ブロック42×14×14・
+  M4穴±14/z=7・スタンドオフ10×10×34（偏心0 / +14）で、柱の支持面は
+  ケース端39mmから2mm奥まった41mmに来る。
