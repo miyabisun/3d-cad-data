@@ -175,17 +175,28 @@ for name in support rear_l rear_r; do
 done
 
 # y=7 (通し区間): M4通し六角 二面幅4.4 (対角5.08) が X=±14・Z=7 に2つ。
-# この断面は柱 (y 0..10) を通るため外形は Z=34 まで伸びる
+# この断面は柱 (y 2..12) を通るため外形は Z=34 まで伸びる
 for name in support rear_l rear_r; do
   check_section $name "$name-pass" 7 \
     "hex -14 7 5.08 4.40; hex 14 7 5.08 4.40; outline -21 21 0 34"
 done
 
-# y=12.6 (ナット窪み帯 11.2..14 の中): ナット六角 二面幅7.4 (対角8.54) が
-# 同じ位置に開く。柱 (y 0..10) の外なので外形はブロックだけ = Z ∈ [0,14]
+# y=1.4 (ナット窪み帯 0..2.8 の中): ナット六角 二面幅7.4 (対角8.54) が
+# X=±14・Z=7 に開く。窪みはレール接触面 (y=0) 側にあり、レール板が
+# ナットの背中を押さえて脱落を防ぐ。柱 (y 2..12) の外なので外形は
+# ブロックだけ = Z ∈ [0,14]
 for name in support rear_l rear_r; do
-  check_section $name "$name-pocket" 12.6 \
+  check_section $name "$name-pocket" 1.4 \
     "hex -14 7 8.54 7.40; hex 14 7 8.54 7.40; outline -21 21 0 14"
+done
+
+# y=12.6 (ケース側の面 y=14 の手前): 通し六角 二面幅4.4 (対角5.08) だけが
+# 開く。窪みが以前どおり y=14 側にあればこの位置の loop は対角8.54になり
+# span 一致に失敗するため、この断面がナット窪み反転の直接検証になる。
+# 柱 (y 2..12) の外なので外形はブロックだけ
+for name in support rear_l rear_r; do
+  check_section $name "$name-through" 12.6 \
+    "hex -14 7 5.08 4.40; hex 14 7 5.08 4.40; outline -21 21 0 14"
 done
 
 # z=13 (ブロック上部・六角穴より上): ブロック断面 42×14 が1つだけ
@@ -194,10 +205,11 @@ for name in support rear_l rear_r; do
 done
 
 # z=25 (ブロック上・柱だけの帯): 10×10 の柱が1本。X 範囲が standoff_offset の
-# 実測になり、対称型は偏心0、奥用L/Rは +14 / -14 の鏡像対であることが確定する
-check_plan support support-standoff 25 "loops 1; rect -5 5 0 10"
-check_plan rear_l rear_l-standoff 25 "loops 1; rect 9 19 0 10"
-check_plan rear_r rear_r-standoff 25 "loops 1; rect -19 -9 0 10"
+# 実測になり、対称型は偏心0、奥用L/Rは +14 / -14 の鏡像対であることが確定する。
+# Y 範囲 [2, 12] は柱をレール接触面から 2mm 離した standoff_setback の実測
+check_plan support support-standoff 25 "loops 1; rect -5 5 2 12"
+check_plan rear_l rear_l-standoff 25 "loops 1; rect 9 19 2 12"
+check_plan rear_r rear_r-standoff 25 "loops 1; rect -19 -9 2 12"
 
 # 共通契約 (台帳 designs/steel-rack-500x400.md の確定値)
 expect_echo support 'CONTRACT inner_support'
@@ -217,6 +229,8 @@ for name in support rear_l rear_r; do
   expect_echo $name "CONTRACT $part: m4_nut_flat = 7.4"
   expect_echo $name "CONTRACT $part: m4_nut_depth = 2.8"
   expect_echo $name "CONTRACT $part: standoff = [10, 10, 34]"
+  # 柱をレール接触面から離す量 (実物フィードバックの暫定値・現物合わせ予定)
+  expect_echo $name "CONTRACT $part: standoff_setback = 2"
 done
 
 # スタンドオフの偏心: 対称型は0 (鏡像不変で手前L/R・中央L/Rの4個に共用)、

@@ -26,6 +26,10 @@ m4_nut_flat = 7.4; // M4ナット窪み六角の二面幅 (ナット実測6.8 + 
 m4_nut_depth = 2.8;   // M4ナット窪みの深さ
 standoff = 10;        // 柱の一辺 (10×10)
 standoff_height = 34; // 柱の全高 = ブロック14 + 上へ20突出
+// 柱をレール接触面 (y=0) から離す量。実物合わせで「スライドレールから
+// 突起を多少離す必要がある」と判明したため導入した暫定値で、現物合わせ
+// 予定 (2026-08-15のuserフィードバック)
+standoff_setback = 2;
 
 // standoff_offset: 柱の中心をブロック中心からずらす量 (X)。
 // 対称型は 0 で X 鏡像不変になり、奥用はケース端との2mm逃げから +14。
@@ -50,6 +54,7 @@ slide_rail_inner_block(standoff_offset = 0, name = "inner")
              name,
              ": standoff = ",
              [ standoff, standoff, standoff_height ]));
+    echo(str("CONTRACT ", name, ": standoff_setback = ", standoff_setback));
 
     // 穴と窪みがブロックに収まる契約 (1e-9 は浮動小数の丸め猶予)
     assert(m4_dx + m4_nut_diag / 2 <= block_len / 2 + 1e-9,
@@ -62,7 +67,10 @@ slide_rail_inner_block(standoff_offset = 0, name = "inner")
     // 柱がブロックのX範囲に収まる契約 (奥用の偏心で端から出ない)
     assert(abs(standoff_offset) + standoff / 2 <= block_len / 2 + 1e-9,
            "standoff runs past the block end");
-    assert(standoff <= block_depth, "standoff is deeper than the block");
+    // 柱がブロックのY範囲に収まる契約。離隔を取れるのは最大4mmで、
+    // それ以上離すならブロックから柱がはみ出すので支持方法の再設計になる
+    assert(standoff_setback + standoff <= block_depth,
+           "standoff runs past the block back face");
 
     difference()
     {
@@ -72,20 +80,21 @@ slide_rail_inner_block(standoff_offset = 0, name = "inner")
             translate([ -block_len / 2, 0, 0 ])
                 cube([ block_len, block_depth, block_height ]);
 
-            // スタンドオフ: ケースを浮かせて受ける柱。レール接触面
-            // (y=0) とツライチで、ブロックより20mm高い
-            translate([ standoff_offset - standoff / 2, 0, 0 ])
+            // スタンドオフ: ケースを浮かせて受ける柱。レール接触面から
+            // standoff_setback だけ離して立て、ブロックより20mm高い
+            translate([ standoff_offset - standoff / 2, standoff_setback, 0 ])
                 cube([ standoff, standoff, standoff_height ]);
         }
 
-        // M4小トラスネジの穴 (軸Y・flat-up): 外側ブラケットと同じ向きで、
-        // 通しはレール側 (y=0) から全厚を貫通し、終わり際 (y=14の面) に
-        // 深さ2.8mmのナット窪み。ネジはレール内側から刺さり、ナットが
-        // 窪みの底で受けてレール板とブロックを共締めする
+        // M4小トラスネジの穴 (軸Y・flat-up): 通し二面幅4.4が全厚を貫通し、
+        // レール接触面 (y=0) 側に深さ2.8mmのナット窪みが開く。ナットを
+        // 窪みへ入れてからレールへ当てるとレール板が背中を押さえるので
+        // 脱落せず、ネジはケース側 (y=14の面) から刺して締める。締結は
+        // ナットとレール板の圧接 + シャンクのせん断で受ける
         for (x = [ -m4_dx, m4_dx ]) {
             translate([ x, block_depth / 2, m4_z ])
                 hex_y_flat_up(m4_pass_flat, block_depth + 0.2);
-            translate([ x, block_depth - m4_nut_depth / 2 + 0.05, m4_z ])
+            translate([ x, m4_nut_depth / 2 - 0.05, m4_z ])
                 hex_y_flat_up(m4_nut_flat, m4_nut_depth + 0.1);
         }
     }
