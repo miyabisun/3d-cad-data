@@ -9,8 +9,8 @@ use <../../../modules/slide_rail_inner_block.scad>
 // datum と向きの規約は鏡像前 (rear_l) と同じ: X=0 は奥ペアの中点、
 // 部品ローカル +X = ラック手前方向。鏡像後の実位置では柱は -X 側に寄る。
 
-// 偏心は rear_l と同じ値 (導出: ケース端39 + 逃げ2 + 柱の半分5 - 奥ペア中点32)
-standoff_offset = 14;
+// 偏心は rear_l と同じ値 (導出: ケース端39 + 逃げ2 + 柱の半分12 - 奥ペア中点32)
+standoff_offset = 21;
 
 mirror([ 1, 0, 0 ]) slide_rail_inner_block(standoff_offset = standoff_offset,
                                            name = "inner_rear_r");
