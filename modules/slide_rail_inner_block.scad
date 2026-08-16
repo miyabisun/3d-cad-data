@@ -15,12 +15,14 @@ use <slide_rail_outer_bracket.scad>
 // レール壁と土台を貫通し、土台のケース側の面 (y=10) のナット窪みでナットが
 // 受けて「頭｜レール壁｜土台｜ナット」を締め上げる。柱はこの窪みの正面に
 // 立つので、窪みの六角をそのまま外へ24mm押し出して柱を貫通させ、六角
-// トンネルにする (柱の側面には「＜」形の切り欠きとして現れる)。
+// トンネルにする (柱の側面には六角の穴として現れる)。
 //
 // 印刷向き: ブロックを底面 (z=0) でビルドプレートへ置く。M4軸は水平になり、
 // 六角穴はすべて flat-up (天井が短い水平ブリッジ) で外側ブラケットと揃う。
-// 柱は地面から m4_z までを削り落とし、z=7 から立ち上がる (足痩せの切り欠き
-// 方式は柱がプリントできず廃止。2026-08-16の実物フィードバック)。
+// 柱は地面 (z=0) から立ち上がる。ナットと干渉するのは六角トンネルの帯
+// (z 3.3..10.7) だけなので、そこを抜けば残りは接地したままでよい。柱の下端を
+// 地面から7mm削り落とす方式は柱が宙に浮いてプリントできず廃止
+// (「3Dプリンターは地面から生えていないとプリント出来ない」2026-08-16のuser指摘)。
 
 block_len = 42; // X: 穴間28 + 14
 // Y: M4×10 がケース側から通し7.2 + 窪み2.8 でナットへ全掛かりする厚さ。
@@ -49,10 +51,6 @@ standoff_setback = 2;
 // minkowski ではなく 2D 輪郭を linear_extrude して垂直エッジだけ丸める
 corner_r = 2;
 arc_fn = 64; // 円弧の分割数 (このリポジトリの既存慣行)
-// 柱の下端。地面から M4軸の高さまでは柱としてプリントできないため削り落とす
-// (「地面から7mmまでの部分を柱から削り落とす」2026-08-16のuser指示)。
-// 柱は土台 (z 0..14) と z 7..14 で重なって接合する
-column_z0 = m4_z;
 // ナット窪みの切削長: 土台の窪み2.8 + 柱の一辺24。窪みの六角をそのまま
 // 外へ押し出して柱を貫通させ、ナットの逃げになる六角トンネルにする
 m4_nut_cut = m4_nut_depth + standoff;
@@ -65,15 +63,17 @@ rounded_rect_2d(w, d, r)
         square([ w - 2 * r, d - 2 * r ]);
 }
 
-// 土台の2D輪郭: ナット側 (y=0) の2隅だけ r で落とし、ケース側 (y=d) は
-// 直角のまま残す (落とすのはナット側だけ、というuser指示)
+// 土台の2D輪郭: ナットのあるケース側 (y=d) の2隅だけ r で落とし、レール
+// 接触面側 (y=0) は直角のまま残す。丸めるのはナットのある方向だけ、という
+// user指示 — y=0 を丸めると当たり面が減ってガタつき、y=d が尖ると手に刺さる
+// (ナットを y=d へ移した際に追随し損ねていた。2026-08-16の実物指摘)
 module
 block_profile_2d(w, d, r)
 {
     union()
     {
         rounded_rect_2d(w, d, r);
-        translate([ 0, r ]) square([ w, d - r ]);
+        square([ w, d - r ]);
     }
 }
 
@@ -99,7 +99,6 @@ slide_rail_inner_block(standoff_offset = 0, name = "inner")
              [ standoff, standoff, standoff_height ]));
     echo(str("CONTRACT ", name, ": standoff_setback = ", standoff_setback));
     echo(str("CONTRACT ", name, ": corner_r = ", corner_r));
-    echo(str("CONTRACT ", name, ": column_z0 = ", column_z0));
 
     // 柱は土台より大きく、X も Y もはみ出す。接合が成立するのは
     // 重なり幅で、フィレットで削れる分 (両端 corner_r) を超えて正であること
@@ -124,10 +123,6 @@ slide_rail_inner_block(standoff_offset = 0, name = "inner")
     // フィレットが各接触寸法を食い尽くさない契約
     assert(2 * corner_r <= min(standoff, block_depth, block_len),
            "corner_r is too large for the block/standoff profiles");
-    // 柱と土台の Z 方向の接合契約: 削り落とした柱の下端が土台の上端より
-    // 十分下にあり、重なりがフィレット2つ分より広く残ること
-    assert(block_height - column_z0 >= 2 * corner_r,
-           "standoff and block barely overlap in Z");
     // ナット窪みの押し出しが柱を貫通する契約 (途中で止まるとナットの
     // 逃げが塞がれる)
     assert(block_depth - m4_nut_depth + m4_nut_cut >=
@@ -139,18 +134,19 @@ slide_rail_inner_block(standoff_offset = 0, name = "inner")
         union()
         {
             // ネジ穴ブロック: レール(内)の側面へ当てて共締めする本体。
-            // 垂直エッジのうちナット側の2本だけ R (2D輪郭を押し出す)
+            // 垂直エッジのうちナットのあるケース側 (y=10) の2本だけ R
+            // (2D輪郭を押し出す)
             translate([ -block_len / 2, 0, 0 ])
                 linear_extrude(height = block_height)
                     block_profile_2d(block_len, block_depth, corner_r);
 
             // スタンドオフ: ケースを浮かせて受ける柱。レール接触面から
             // standoff_setback だけ離して立て、ブロックより20mm高く、
-            // ブロックの背面より16mmケース側へ張り出す。下端は column_z0
-            // (地面から7mmを削り落とす)。垂直エッジは四隅とも R
-            translate(
-                [ standoff_offset - standoff / 2, standoff_setback, column_z0 ])
-                linear_extrude(height = standoff_height - column_z0)
+            // ブロックの背面より16mmケース側へ張り出す。下端は地面 (z=0)
+            // まで下ろす (宙に浮くとプリントできない)。ナットと当たる帯は
+            // 下の六角トンネルが抜く。垂直エッジは四隅とも R
+            translate([ standoff_offset - standoff / 2, standoff_setback, 0 ])
+                linear_extrude(height = standoff_height)
                     rounded_rect_2d(standoff, standoff, corner_r);
         }
 
@@ -161,7 +157,8 @@ slide_rail_inner_block(standoff_offset = 0, name = "inner")
         // 窪みをレール接触面 (y=0) 側に開けると土台の肉だけを締める
         // 自己締結になりレールを挟めない (2026-08-16の実物指摘で superseded)。
         // 窪みの六角は y=7.2 から m4_nut_cut だけ外へ押し出して柱を貫通し、
-        // 柱の側面に「＜」形の切り欠きを開ける六角トンネルになる
+        // 柱の側面には六角の穴 (二面幅7.4・z 3.3..10.7) が開く六角トンネルに
+        // なる。柱は接地しているのでこの帯の上下には材料が残る
         for (x = [ -m4_dx, m4_dx ]) {
             translate([ x, block_depth / 2, m4_z ])
                 hex_y_flat_up(m4_pass_flat, block_depth + 0.2);
