@@ -54,6 +54,9 @@ render rear_r assets/steel-rack/500x400/slide_rail_inner_rear_r.scad
 # spec の節:
 #   hex <cx> <cz> <span_x> <span_z> — 指定位置に指定 bbox の loop がある
 #   outline <x1> <x2> <z1> <z2>     — 最大 loop (外形) の bbox
+#   solid <x> <z> / void <x> <z>    — 指定点に材料が有る/無い
+# solid/void は全 loop を偶奇規則で数える内外判定なので、穴・窪み・切り欠きの
+# 中は外側 (材料無し) になる。bbox では見えない「肉の抜け」を直接測る
 check_section() {
   stl=$1 name=$2 cut_y=$3 spec=$4
   cat > "$WORK/sec_$name.scad" <<EOF
@@ -70,15 +73,32 @@ src = open(sys.argv[1]).read()
 name, spec = sys.argv[2], sys.argv[3]
 loops = []
 for sub in re.search(r'd="([^"]+)"', src).group(1).split("M")[1:]:
-    pts = [(float(a), float(b)) for a, b in re.findall(r'(-?\d+\.?\d*),(-?\d+\.?\d*)', sub)]
-    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
-    loops.append((min(xs), max(xs), min(ys), max(ys)))
+    loops.append([(float(a), float(b)) for a, b
+                  in re.findall(r'(-?\d+\.?\d*),(-?\d+\.?\d*)', sub)])
+
+
+def bbox(pts):
+    xs, zs = [p[0] for p in pts], [p[1] for p in pts]
+    return (min(xs), max(xs), min(zs), max(zs))
+
+
+def inside(x, z):  # 偶奇規則 (+X 方向へ ray を飛ばして交差数を数える)
+    hits = 0
+    for pts in loops:
+        for i in range(len(pts)):
+            x1, z1 = pts[i]
+            x2, z2 = pts[(i + 1) % len(pts)]
+            if (z1 > z) != (z2 > z) and x < x1 + (z - z1) * (x2 - x1) / (z2 - z1):
+                hits += 1
+    return hits % 2 == 1
+
+
 ok = True
 for cond in spec.split(";"):
     kind, *args = cond.split()
     if kind == "hex":  # hex <cx> <cz> <span_x> <span_z>
         cx, cz, sx, sz = map(float, args)
-        hit = [l for l in loops
+        hit = [l for l in map(bbox, loops)
                if abs((l[0] + l[1]) / 2 - cx) < 0.1 and abs((l[2] + l[3]) / 2 - cz) < 0.1
                and abs((l[1] - l[0]) - sx) < 0.05 and abs((l[3] - l[2]) - sz) < 0.05]
         if not hit:
@@ -89,11 +109,18 @@ for cond in spec.split(";"):
             print(f"section {name}: hex x=[{l[0]:.3f},{l[1]:.3f}] z=[{l[2]:.3f},{l[3]:.3f}]")
     elif kind == "outline":  # outline <x1> <x2> <z1> <z2>
         x1, x2, z1, z2 = map(float, args)
-        body = max(loops, key=lambda l: (l[1] - l[0]) * (l[3] - l[2]))
+        body = max(map(bbox, loops), key=lambda l: (l[1] - l[0]) * (l[3] - l[2]))
         print(f"section {name}: outline x=[{body[0]:.3f},{body[1]:.3f}]"
               f" z=[{body[2]:.3f},{body[3]:.3f}]")
         if any(abs(a - b) > 0.05 for a, b in zip(body, (x1, x2, z1, z2))):
             print(f"section {name}: outline want x=[{x1},{x2}] z=[{z1},{z2}]")
+            ok = False
+    elif kind in ("solid", "void"):  # <x> <z>
+        x, z = map(float, args)
+        got = inside(x, z)
+        print(f"section {name}: ({x},{z}) is {'solid' if got else 'void'}")
+        if got != (kind == "solid"):
+            print(f"section {name}: want {kind} at ({x},{z})")
             ok = False
 print(f"section {name}: {'ok' if ok else 'FAIL'}")
 sys.exit(0 if ok else 1)
@@ -107,8 +134,16 @@ PYEOF
 #   sharp <cx> <cy>            — 指定の角位置に頂点がある (直角のまま)
 #   nosharp <cx> <cy>          — 指定の角位置の 0.5mm 以内に頂点が無い (R済み)
 #   arc <cx> <cy> <r> <n>      — 中心(cx,cy)・半径 r の弧上に n 個以上の頂点
+#   solid <cx> <cy> / void <cx> <cy> — 指定点に材料が有る/無い
+#   void_rect <x1> <x2> <y1> <y2>    — 矩形領域の内部が完全に空 (材料ゼロ)
 # sharp/nosharp/arc は最大 loop (外形) の頂点だけを見る。
-# 「角の鋭点が無い」+「弧上に頂点が載る」の2条件で垂直フィレットを実測する
+# 「角の鋭点が無い」+「弧上に頂点が載る」の2条件で垂直フィレットを実測する。
+# solid/void は全 loop を偶奇規則で数える内外判定 (穴・切り欠きの中は材料無し)。
+# void_rect は幾何交差で領域の空を測る: 全 loop の全辺と矩形の線分交差が0本
+# (= 材料の境界が領域へ入って来ない) かつ、5点の偶奇判定がすべて外側
+# (= 領域が材料に包含されていない) のときだけ空とみなす。点や格子の
+# サンプリングでは「サンプルの隙間に薄壁が残る」退行を見逃すため、
+# 空隙の連続性はこの交差判定で測る
 check_plan() {
   stl=$1 name=$2 cut_z=$3 spec=$4
   cat > "$WORK/plan_$name.scad" <<EOF
@@ -131,6 +166,39 @@ for sub in re.search(r'd="([^"]+)"', src).group(1).split("M")[1:]:
 def bbox(pts):
     xs, ys = [p[0] for p in pts], [p[1] for p in pts]
     return (min(xs), max(xs), min(ys), max(ys))
+
+
+def inside(x, y):  # 偶奇規則 (+X 方向へ ray を飛ばして交差数を数える)
+    hits = 0
+    for pts in loops:
+        for i in range(len(pts)):
+            x1, y1 = pts[i]
+            x2, y2 = pts[(i + 1) % len(pts)]
+            if (y1 > y) != (y2 > y) and x < x1 + (y - y1) * (x2 - x1) / (y2 - y1):
+                hits += 1
+    return hits % 2 == 1
+
+
+# 線分 pq が矩形の内部を正の長さで通るか (Liang-Barsky のクリッピング)。
+# 矩形は境界を eps だけ内側へ縮めてあるので、切断面と重なるだけの辺
+# (= 領域の縁そのもの) は交差扱いにならない
+def seg_crosses(p, q, x1, x2, y1, y2):
+    dx, dy = q[0] - p[0], q[1] - p[1]
+    t0, t1 = 0.0, 1.0
+    for den, num in ((-dx, p[0] - x1), (dx, x2 - p[0]),
+                     (-dy, p[1] - y1), (dy, y2 - p[1])):
+        if den == 0:
+            if num < 0:  # 辺が境界と平行で、矩形の外側にある
+                return False
+        else:
+            t = num / den
+            if den < 0:
+                t0 = max(t0, t)
+            else:
+                t1 = min(t1, t)
+            if t0 > t1:
+                return False
+    return t1 > t0
 
 
 body = max(loops, key=lambda p: (bbox(p)[1] - bbox(p)[0]) * (bbox(p)[3] - bbox(p)[2]))
@@ -169,6 +237,40 @@ for cond in spec.split(";"):
         if len(on) < n:
             print(f"plan {name}: arc ({cx},{cy}) r={r} wants >= {n} vertices")
             ok = False
+    elif kind in ("solid", "void"):  # <cx> <cy>
+        cx, cy = map(float, args)
+        got = inside(cx, cy)
+        print(f"plan {name}: ({cx},{cy}) is {'solid' if got else 'void'}")
+        if got != (kind == "solid"):
+            print(f"plan {name}: want {kind} at ({cx},{cy})")
+            ok = False
+    elif kind == "void_rect":  # <x1> <x2> <y1> <y2>
+        x1, x2, y1, y2 = map(float, args)
+        # 領域の縁に載るだけの辺 (切断面そのもの) を交差扱いしないための許容。
+        # STL/SVG の座標は有効6桁で書かれ実測で ~2e-5mm ずれるので、それを
+        # 十分超え、かつ検出したい薄壁 (0.2mm 級) より桁違いに小さい 1e-3 を取る
+        eps = 1e-3
+        rect = (x1 + eps, x2 - eps, y1 + eps, y2 - eps)
+        # (1) 材料の境界が領域内へ入ってくるか: 全 loop の全辺 × 矩形の交差。
+        #     頂点が領域内にある場合もその頂点を端点とする辺が引っ掛かる
+        edges = [(pts[i], pts[(i + 1) % len(pts)])
+                 for pts in loops for i in range(len(pts))]
+        crossing = [e for e in edges if seg_crosses(e[0], e[1], *rect)]
+        # (2) 辺が1本も入らないなら領域は「全部材料」か「全部空」のどちらか。
+        #     偶奇判定 (4隅 + 中心) で materialに包含されている側を弾く
+        probes = [(rect[0], rect[2]), (rect[1], rect[2]), (rect[0], rect[3]),
+                  (rect[1], rect[3]), ((x1 + x2) / 2, (y1 + y2) / 2)]
+        filled = [p for p in probes if inside(*p)]
+        print(f"plan {name}: void_rect x=[{x1},{x2}] y=[{y1},{y2}]:"
+              f" {len(crossing)} crossing edges, {len(filled)}/5 probes solid")
+        if crossing or filled:
+            if crossing:
+                print(f"plan {name}: material boundary enters the rect at"
+                      f" {[tuple(round(v, 4) for v in e[0]) for e in crossing[:5]]}"
+                      f"{' ...' if len(crossing) > 5 else ''}")
+            if filled:
+                print(f"plan {name}: material fills the rect at {filled[:5]}")
+            ok = False
 print(f"plan {name}: {'ok' if ok else 'FAIL'}")
 sys.exit(0 if ok else 1)
 PYEOF
@@ -206,36 +308,77 @@ check_bbox support -21 21 0 26 0 34
 check_bbox rear_l -21 33 0 26 0 34
 check_bbox rear_r -33 21 0 26 0 34
 
-# y=5 / y=9 (通し区間・ケース側の面 y=10 の手前): M4通し六角 二面幅4.4
-# (対角5.08) が X=±14・Z=7 に2つだけ開く。窪みが以前のように y=10 側に
-# あればこの位置の loop は対角8.54になり span 一致に失敗するため、
-# この2断面がナット窪みの向き (レール接触面側) の直接検証になる。
-# どちらも柱 (y 2..26) を通るため外形は Z=34 まで伸びる
-for cut in 5 9; do
-  check_section support "support-pass$cut" $cut \
-    "hex -14 7 5.08 4.40; hex 14 7 5.08 4.40; outline -21 21 0 34"
-  check_section rear_l "rear_l-pass$cut" $cut \
-    "hex -14 7 5.08 4.40; hex 14 7 5.08 4.40; outline -21 33 0 34"
-  check_section rear_r "rear_r-pass$cut" $cut \
-    "hex -14 7 5.08 4.40; hex 14 7 5.08 4.40; outline -33 21 0 34"
-done
-
-# y=1.4 (ナット窪み帯 0..2.8 の中): ナット六角 二面幅7.4 (対角8.54) が
-# X=±14・Z=7 に開く。窪みはレール接触面 (y=0) 側にあり、レール板が
-# ナットの背中を押さえて脱落を防ぐ。柱 (y 2..26) の外なので外形は
-# ブロックだけ = Z ∈ [0,14]。X 端は土台ナット側の R2 に食われて
-# 21 - (2 - sqrt(2^2 - 0.6^2)) = 20.907 まで縮む
+# y=1.4 / y=5 (通し区間・ナット窪み帯 7.2..10 の手前): M4通し六角 二面幅4.4
+# (対角5.08) が X=±14・Z=7 に2つだけ開く。窪みが以前のようにレール接触面
+# (y=0) 側にあればこの位置の loop は対角8.54になり span 一致に失敗するため、
+# 特に y=1.4 が「窪みがレール側に無い」ことの直接検証になる。
+# y=1.4 は柱 (y 2..26) の手前なので外形はブロックだけ = Z ∈ [0,14] で、
+# X 端は土台ナット側の R2 に食われて 21 - (2 - sqrt(2^2 - 0.6^2)) = 20.907。
+# y=5 は柱を通るため外形は Z=34 まで伸びる
 for name in support rear_l rear_r; do
-  check_section $name "$name-pocket" 1.4 \
-    "hex -14 7 8.54 7.40; hex 14 7 8.54 7.40; outline -20.907 20.907 0 14"
+  check_section $name "$name-pass1.4" 1.4 \
+    "hex -14 7 5.08 4.40; hex 14 7 5.08 4.40; outline -20.907 20.907 0 14"
+done
+# y=5 / y=7.1 は通し六角だけ、y=7.3 / y=8.6 (ナット窪み帯 7.2..10 の中) は
+# ナット六角 二面幅7.4 (対角8.54)。窪みの底が 7.2 = 通し7.2 + 窪み2.8 で
+# M4×10 がナットへ全掛かりする配分の実測になる。窪みはケース側 (y=10 の面)
+# 開口で、M4ボルトはレールの向こう側から刺さって「頭｜レール壁｜土台｜
+# ナット」を締め上げる。どの断面も柱 (y 2..26) を通るので外形は Z=34 まで
+# (check_section は name/stl/spec を書き潰すので、部品名は part で持つ)
+for part in support rear_l rear_r; do
+  case $part in
+    support) col_outline="outline -21 21 0 34" ;;
+    rear_l) col_outline="outline -21 33 0 34" ;;
+    rear_r) col_outline="outline -33 21 0 34" ;;
+  esac
+  for cut in 5 7.1; do
+    check_section $part "$part-pass$cut" $cut \
+      "hex -14 7 5.08 4.40; hex 14 7 5.08 4.40; $col_outline"
+  done
+  for cut in 7.3 8.6; do
+    check_section $part "$part-pocket$cut" $cut \
+      "hex -14 7 8.54 7.40; hex 14 7 8.54 7.40; $col_outline"
+  done
 done
 
-# y=20 (ブロック y 0..10 の外・柱の張り出し帯): 柱の断面だけが残り、
-# Z ∈ [0,34] に連続して存在する = 柱が z=0 まで下りて接地している直接検証。
-# X 範囲は柱24 の実測 (偏心 0 / +21 / -21)
-check_section support support-column 20 "outline -12 12 0 34"
-check_section rear_l rear_l-column 20 "outline 9 33 0 34"
-check_section rear_r rear_r-column 20 "outline -33 -9 0 34"
+# y=20 (ブロック y 0..10 の外・柱の張り出し帯): 柱の断面だけが残る。
+# 柱は地面から m4_z (7mm) までを削り落としてあるので Z ∈ [7,34]。
+# ナット窪みを外へ24mm押し出した六角トンネルがここを貫くので、M4位置には
+# 六角の断面 (二面幅7.4 = z 3.3..10.7 のうち柱に残る z 7..10.7) が void で
+# 現れる。柱の側面から見ると「＜」形の切り欠きになる。
+# z=8 での六角の半幅は 4.2724 - 2.1362*(1/3.7) = 3.695 なので、
+# support では x=-11 がトンネルの中・x=-9 は柱の材料
+check_section support support-column 20 \
+  "outline -12 12 7 34;
+   void -11 8; void 11 8; solid -9 8; solid 0 8;
+   solid -11 12; solid 11 12; solid 0 33"
+check_section rear_l rear_l-column 20 \
+  "outline 9 33 7 34;
+   void 14 8; solid 9.5 8; solid 19 8;
+   solid 14 12; solid 32 8"
+check_section rear_r rear_r-column 20 \
+  "outline -33 -9 7 34;
+   void -14 8; solid -9.5 8; solid -19 8;
+   solid -14 12; solid -32 8"
+
+# z=5 (地面から柱を削り落とした帯): 土台 (Y 0..10) だけが残り、柱の足元
+# (Y 10..26) には材料が無い =「地面から7mmまでを柱から削り落とす」の直接検証。
+# 通し六角が土台を全厚貫通するので loop は左・中央・右の3本
+check_plan support support-floor 5 "loops 3; void_rect -12 12 10 26"
+check_plan rear_l rear_l-floor 5 "loops 3; void_rect 9 33 10 26"
+check_plan rear_r rear_r-floor 5 "loops 3; void_rect -33 -9 10 26"
+
+# z=8 (柱の帯・M4軸の1mm上): 柱が土台の上に載り、ナット窪みを外へ24mm
+# 押し出した六角トンネルが柱を Y 方向に貫いて void になる。トンネルの半幅は
+# z=8 で 3.695 (上記の導出) なので、x = m4_dx ∓ 3.695 から柱の側面までの帯が
+# 柱の全奥行き (Y 10..26) にわたって空であること = トンネルの開通を測る
+check_plan support support-tunnel 8 \
+  "void_rect -12 -10.305 10 26; void_rect 10.305 12 10 26;
+   solid 0 18; solid -9 18; solid 9 18"
+check_plan rear_l rear_l-tunnel 8 \
+  "void_rect 10.305 17.695 10 26; solid 9.5 18; solid 20 18"
+check_plan rear_r rear_r-tunnel 8 \
+  "void_rect -17.695 -10.305 10 26; solid -9.5 18; solid -20 18"
 
 # z=13 (ブロック上部・六角穴より上): 土台 42×10 に柱 (y 2..26) が繋がった
 # 1つの loop。ナット側 (y=0) の2隅だけ R2 で、ケース側 (y=10) の隅は直角の
@@ -291,12 +434,14 @@ for name in support rear_l rear_r; do
   expect_echo $name "CONTRACT $part: m4_pass_flat = 4.4"
   expect_echo $name "CONTRACT $part: m4_nut_flat = 7.4"
   expect_echo $name "CONTRACT $part: m4_nut_depth = 2.8"
-  # 柱はケース四隅のネジ穴を跨ぐ 24×24 で、土台から16mm張り出して接地する
+  # 柱はケース四隅のネジ穴を跨ぐ 24×24 で、上端は z=34
   expect_echo $name "CONTRACT $part: standoff = [24, 24, 34]"
   # 柱をレール接触面から離す量 (実物フィードバックの暫定値・現物合わせ予定)
   expect_echo $name "CONTRACT $part: standoff_setback = 2"
   # 垂直エッジのRだけ (上下の水平エッジはプリント難度のため未加工)
   expect_echo $name "CONTRACT $part: corner_r = 2"
+  # 柱の下端 = 地面から m4_z までを削り落とした高さ
+  expect_echo $name "CONTRACT $part: column_z0 = 7"
 done
 
 # スタンドオフの偏心: 対称型は0 (鏡像不変で手前L/R・中央L/Rの4個に共用)、

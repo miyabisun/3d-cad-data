@@ -11,10 +11,16 @@ use <slide_rail_outer_bracket.scad>
 // ブロックは穴中心 (部品 z = 7) で取り付くため、下端はレール下端から
 // 約5.2mm浮く。ブロックの脇に立つ24×24の柱でケースを浮かせて受ける。
 //
+// M4継手は「レール + 土台の挟み込み」: ボルトはレールの向こう側から
+// レール壁と土台を貫通し、土台のケース側の面 (y=10) のナット窪みでナットが
+// 受けて「頭｜レール壁｜土台｜ナット」を締め上げる。柱はこの窪みの正面に
+// 立つので、窪みの六角をそのまま外へ24mm押し出して柱を貫通させ、六角
+// トンネルにする (柱の側面には「＜」形の切り欠きとして現れる)。
+//
 // 印刷向き: ブロックを底面 (z=0) でビルドプレートへ置く。M4軸は水平になり、
 // 六角穴はすべて flat-up (天井が短い水平ブリッジ) で外側ブラケットと揃う。
-// 柱もブロックと同じ z=0 から立ち上がってビルドプレートへ接地する
-// (張り出した柱を宙に浮かせるとプリント成功率が著しく落ちる。userの判断)。
+// 柱は地面から m4_z までを削り落とし、z=7 から立ち上がる (足痩せの切り欠き
+// 方式は柱がプリントできず廃止。2026-08-16の実物フィードバック)。
 
 block_len = 42; // X: 穴間28 + 14
 // Y: M4×10 がケース側から通し7.2 + 窪み2.8 でナットへ全掛かりする厚さ。
@@ -28,6 +34,8 @@ m4_z = 7; // ブロック中心の高さ。レール横穴の12.2mmに合わせ�
 m4_pass_flat = 4.4; // M4小トラスネジ通し六角の二面幅
 m4_nut_flat = 7.4; // M4ナット窪み六角の二面幅 (ナット実測6.8 + 実効0.6)
 m4_nut_depth = 2.8; // M4ナット窪みの深さ
+// flat-up配置では水平方向の穴半径は対角/2 (= 二面幅/(2*cos30))
+m4_nut_diag = m4_nut_flat / cos(30);
 // 柱の一辺 (24×24)。旧10×10ではケース四隅のネジ穴に落ち込んで支持に
 // ならなかったため、穴を跨げる24へ広げた (2026-08-16の実物フィードバック)
 standoff = 24;
@@ -41,6 +49,13 @@ standoff_setback = 2;
 // minkowski ではなく 2D 輪郭を linear_extrude して垂直エッジだけ丸める
 corner_r = 2;
 arc_fn = 64; // 円弧の分割数 (このリポジトリの既存慣行)
+// 柱の下端。地面から M4軸の高さまでは柱としてプリントできないため削り落とす
+// (「地面から7mmまでの部分を柱から削り落とす」2026-08-16のuser指示)。
+// 柱は土台 (z 0..14) と z 7..14 で重なって接合する
+column_z0 = m4_z;
+// ナット窪みの切削長: 土台の窪み2.8 + 柱の一辺24。窪みの六角をそのまま
+// 外へ押し出して柱を貫通させ、ナットの逃げになる六角トンネルにする
+m4_nut_cut = m4_nut_depth + standoff;
 
 // 四隅を r で丸めた矩形の2D輪郭 (原点が左下・X方向 w・Y方向 d)
 module
@@ -68,9 +83,6 @@ block_profile_2d(w, d, r)
 module
 slide_rail_inner_block(standoff_offset = 0, name = "inner")
 {
-    // flat-up配置では水平方向の穴半径は対角/2 (= 二面幅/(2*cos30))
-    m4_nut_diag = m4_nut_flat / cos(30);
-
     echo(str("CONTRACT ",
              name,
              ": block = ",
@@ -87,6 +99,7 @@ slide_rail_inner_block(standoff_offset = 0, name = "inner")
              [ standoff, standoff, standoff_height ]));
     echo(str("CONTRACT ", name, ": standoff_setback = ", standoff_setback));
     echo(str("CONTRACT ", name, ": corner_r = ", corner_r));
+    echo(str("CONTRACT ", name, ": column_z0 = ", column_z0));
 
     // 柱は土台より大きく、X も Y もはみ出す。接合が成立するのは
     // 重なり幅で、フィレットで削れる分 (両端 corner_r) を超えて正であること
@@ -111,6 +124,15 @@ slide_rail_inner_block(standoff_offset = 0, name = "inner")
     // フィレットが各接触寸法を食い尽くさない契約
     assert(2 * corner_r <= min(standoff, block_depth, block_len),
            "corner_r is too large for the block/standoff profiles");
+    // 柱と土台の Z 方向の接合契約: 削り落とした柱の下端が土台の上端より
+    // 十分下にあり、重なりがフィレット2つ分より広く残ること
+    assert(block_height - column_z0 >= 2 * corner_r,
+           "standoff and block barely overlap in Z");
+    // ナット窪みの押し出しが柱を貫通する契約 (途中で止まるとナットの
+    // 逃げが塞がれる)
+    assert(block_depth - m4_nut_depth + m4_nut_cut >=
+               standoff_setback + standoff,
+           "nut cut does not tunnel through the standoff");
 
     difference()
     {
@@ -123,24 +145,28 @@ slide_rail_inner_block(standoff_offset = 0, name = "inner")
                     block_profile_2d(block_len, block_depth, corner_r);
 
             // スタンドオフ: ケースを浮かせて受ける柱。レール接触面から
-            // standoff_setback だけ離して z=0 から立て、ブロックより20mm
-            // 高く、ブロックの背面より16mmケース側へ張り出す。
-            // 垂直エッジは四隅とも R
-            translate([ standoff_offset - standoff / 2, standoff_setback, 0 ])
-                linear_extrude(height = standoff_height)
+            // standoff_setback だけ離して立て、ブロックより20mm高く、
+            // ブロックの背面より16mmケース側へ張り出す。下端は column_z0
+            // (地面から7mmを削り落とす)。垂直エッジは四隅とも R
+            translate(
+                [ standoff_offset - standoff / 2, standoff_setback, column_z0 ])
+                linear_extrude(height = standoff_height - column_z0)
                     rounded_rect_2d(standoff, standoff, corner_r);
         }
 
         // M4小トラスネジの穴 (軸Y・flat-up): 通し二面幅4.4が全厚を貫通し、
-        // レール接触面 (y=0) 側に深さ2.8mmのナット窪みが開く。ナットを
-        // 窪みへ入れてからレールへ当てるとレール板が背中を押さえるので
-        // 脱落せず、ネジはケース側 (y=10の面) から刺して締める。締結は
-        // ナットとレール板の圧接 + シャンクのせん断で受ける
+        // ケース側の面 (y=10) に深さ2.8mmのナット窪みが開く。ボルトは
+        // レールの向こう側から刺さってレール壁と土台を貫通し、窪みの
+        // ナットとで「頭｜レール壁｜土台｜ナット」を挟んで締め上げる。
+        // 窪みをレール接触面 (y=0) 側に開けると土台の肉だけを締める
+        // 自己締結になりレールを挟めない (2026-08-16の実物指摘で superseded)。
+        // 窪みの六角は y=7.2 から m4_nut_cut だけ外へ押し出して柱を貫通し、
+        // 柱の側面に「＜」形の切り欠きを開ける六角トンネルになる
         for (x = [ -m4_dx, m4_dx ]) {
             translate([ x, block_depth / 2, m4_z ])
                 hex_y_flat_up(m4_pass_flat, block_depth + 0.2);
-            translate([ x, m4_nut_depth / 2 - 0.05, m4_z ])
-                hex_y_flat_up(m4_nut_flat, m4_nut_depth + 0.1);
+            translate([ x, block_depth - m4_nut_depth + m4_nut_cut / 2, m4_z ])
+                hex_y_flat_up(m4_nut_flat, m4_nut_cut);
         }
     }
 }
