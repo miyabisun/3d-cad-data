@@ -11,15 +11,17 @@ use <../../modules/slide_rail_outer_bracket.scad>
 //
 // 座標系 (部品自身の datum):
 //   X = 0 がクランプ取付座の左右中心。-X がイヤホン側、+X がピンマイク側
-//   Y = 0 がクランプ板への当たり面。+Y が手前 (デスクの外側) 向き
-//   Z = 0 が部品底面 (デスク接触面)。+Z が上
+//   Y = 0 がクランプ板への当たり面。-Y へ本体 (取付座とポケット) が伸びる。
+//     +Y 側はクランプ板 4.2 を逃がす帯と、その左右でデスク面 (y=4.2) へ
+//     当たる段になる
+//   Z = 0 が部品底面。+Z が上で、上端は 40 の一平面 (クランプ板と同じ高さ)
 // M8 の中心は取付座の中央 = (X, Z) = (0, 20) で、クランプ板 40×24 の
 // 中央のメスネジと一致する。
 //
 // 印刷向き: 底面 (z=0) をビルドプレートへ置き、ポケットの開口を上へ向ける。
 // 壁・ポケット・切り欠きはすべて垂直面で、水平な天井を持つのは M8 の
 // 六角穴だけ (flat-up = 天井が短い水平ブリッジ) になる。外側の垂直エッジは
-// R2 で落とし、デスク接触面 (底面) の水平エッジは未加工のまま残す。
+// R2 で落とし、底面の水平エッジは未加工のまま残す。
 
 // --- 実測値 (すべて現物合わせ前提の暫定値) ---
 clamp_plate_w = 24;  // クランプ立ち上がり板の横幅 (X)
@@ -42,8 +44,12 @@ usb_slot_front = 7.5; // 前壁内面から長穴の手前側まで
 usb_slot_back = 16.0; // 前壁内面から長穴の奥側まで (前面9・奥面15の再計算値)
 usb_slot_r = 2; // 長穴の角丸 (ケーブルの角が丸いので角丸で足りる)
 
-wall = 3;    // ポケットの側壁厚
-floor_t = 3; // ポケットの床厚
+wall = 3; // ポケットの側壁厚
+// ポケットの床厚。上端をクランプ板の上端 (Z40) と同じ一平面へ揃えるのが
+// 必須要件なので、収納深さ (34 / 32) を変えずに床の厚みで高さの差を吸収する。
+// 増えるのはインフィルだけなので重量・材料の問題にはならない (user 判断)
+ear_floor_t = 6;
+mic_floor_t = 8;
 pocket_r = 4; // ポケット内側コーナーのR (ケースの角が丸いため)
 corner_r = 2; // 外側垂直エッジのR (角が刺さると痛いという user 指示)
 arc_fn = 64; // 円弧の分割数 (このリポジトリの既存慣行)
@@ -63,6 +69,9 @@ m8_head_diag = m8_head_flat / cos(30);
 seat_w = clamp_plate_w;
 seat_h = clamp_plate_h;
 m8_z = seat_h / 2;
+// クランプ板を逃がす帯の幅。板 24 に対してクリアランスは総量 0.4 (片側0.2)
+// で取る。左右それぞれへ 0.4 振ると帯が 24.8 になり、板が帯の中で泳ぐ
+clamp_slot_w = clamp_plate_w + clearance;
 
 ear_inner = [ ear_case[0] + clearance, ear_case[1] + clearance ]; // 61.4×29.9
 ear_depth = ear_case[2];
@@ -73,15 +82,16 @@ mic_channel = [ mic_adapter[0] + clearance, mic_adapter[1] + clearance ];
 
 ear_out_w = ear_inner[0] + 2 * wall;
 ear_out_d = ear_inner[1] + 2 * wall;
-ear_out_h = ear_depth + floor_t;
+ear_out_h = ear_depth + ear_floor_t;
 ear_x0 = -seat_w / 2 - ear_out_w; // 左ポケットの左端
 
 // 背面側は「外壁 wall + チャンネル奥行き」を確保する。チャンネルは背面壁の
 // 中に彫るのではなく、背面壁を厚くしてその中を通す (外壁3mmは残る)
 mic_out_w = mic_inner[0] + 2 * wall;
 mic_out_d = mic_inner[1] + mic_channel[1] + 2 * wall;
-mic_out_h = mic_depth + floor_t;
+mic_out_h = mic_depth + mic_floor_t;
 mic_x0 = seat_w / 2; // 右ポケットの左端 (取付座の右端と共有)
+outer_w = ear_out_w + seat_w + mic_out_w; // 部品全体の横幅 178.6
 
 ear_cav = [ ear_x0 + wall, wall ]; // 左ポケット内寸の原点 (X, Y)
 mic_cav = [ mic_x0 + wall, wall + mic_channel[1] ]; // 右ポケット内寸の原点
@@ -98,21 +108,81 @@ rounded_rect_2d(w, d, r)
         square([ w - 2 * r, d - 2 * r ]);
 }
 
-// 外形の2D輪郭。取付座と、指定されたポケットの外形を2Dで足してから
+// 以下の module は「作図の向き」で書く: クランプ当たり面を y=0、ポケットの
+// 奥行きを +y、クランプ板とデスクのある側を -y に取る。完成形状は
+// earphone_mic_holder() の mirror で当たり面を保ったまま前後を返し、部品が
+// デスクの奥側へ回った実際の取り付け向きになる。
+
+// 外形の2D輪郭。取付座・両ポケット・デスク側の段を2Dで足してから
 // opening (縮めてから膨らませる) を掛け、凸の角だけを R2 に丸める。
 // 凹の角 (座とポケットの取り合い) は opening では丸まらないので、接合部の
 // 肉は full 断面のまま残る — 各ブロックを個別に丸めて突き合わせると
-// 接触面が R の分だけ痩せて折れやすくなるため、この順序で作る
+// 接触面が R の分だけ痩せて折れやすくなるため、この順序で作る。
+// クランプ板の逃げは opening の後に切る。板の角は直角なので、逃げの角も
+// 直角のまま残す
 module
-footprint_2d(with_ear, with_mic)
+footprint_2d()
 {
-    offset(r = corner_r, $fn = arc_fn) offset(r = -corner_r, $fn = arc_fn)
+    difference()
     {
-        translate([ -seat_w / 2, 0 ]) square([ seat_w, mount_t ]);
-        if (with_ear)
+        offset(r = corner_r, $fn = arc_fn) offset(r = -corner_r, $fn = arc_fn)
+        {
+            translate([ -seat_w / 2, 0 ]) square([ seat_w, mount_t ]);
             translate([ ear_x0, 0 ]) square([ ear_out_w, ear_out_d ]);
-        if (with_mic)
             translate([ mic_x0, 0 ]) square([ mic_out_w, mic_out_d ]);
+            // デスク側の段: 全幅にわたってクランプ板の厚みの分だけ -y へ
+            // 回り込ませる。当たり面のままだと、クランプ板の無い左右が
+            // 板厚 4.2 の分だけデスク面から浮く
+            translate([ ear_x0, -clamp_plate_t ])
+                square([ outer_w, clamp_plate_t ]);
+        }
+        // クランプ板の逃げ: 段のうち中央 24.4 の帯だけを板の厚み分だけ
+        // 抜き、そこへ板を挟み込む。-1 は切削の抜き代
+        translate([ -clamp_slot_w / 2, -clamp_plate_t - 1 ])
+            square([ clamp_slot_w, clamp_plate_t + 1 ]);
+    }
+}
+
+// 作図の向きの本体。上端が一平面 Z40 になったので、外形は全高 40 の一様な
+// 押し出し1本で足りる (右35 → 左37 → 座40 と段になっていた旧構成は
+// superseded)
+module
+holder_body()
+{
+    difference()
+    {
+        linear_extrude(height = seat_h) footprint_2d();
+
+        // 左ポケット: イヤホンケースの内寸 61.4×29.9・深さ34 (上開き)
+        translate([ ear_cav[0], ear_cav[1], ear_floor_t ])
+            linear_extrude(height = ear_depth + 1)
+                rounded_rect_2d(ear_inner[0], ear_inner[1], pocket_r);
+
+        // 左ポケット床の USB-C 長穴: 横中央 14mm 幅、前壁内面から
+        // 7.5〜16.0mm。ケーブルは下から刺さる
+        translate([ ear_cav_cx - usb_slot_w / 2, usb_slot_y, -0.5 ])
+            linear_extrude(height = ear_floor_t + 1) rounded_rect_2d(
+                usb_slot_w, usb_slot_back - usb_slot_front, usb_slot_r);
+
+        // 右ポケット: ピンマイクケースの内寸 81.2×38.1・深さ32 (上開き)
+        translate([ mic_cav[0], mic_cav[1], mic_floor_t ])
+            linear_extrude(height = mic_depth + 1)
+                rounded_rect_2d(mic_inner[0], mic_inner[1], pocket_r);
+
+        // 凸のチャンネル: 背面中央に 12.7×8.7。背面壁の全高と床を貫通させ、
+        // L字変換器を付けたまま上からストンと落として、ケーブルを下へ抜く。
+        // 床のそれ以外はケースの受けとして残る。+0.5 はポケット内寸との
+        // 重ね代 (切削同士を面で接触させると退化した稜が残るため)
+        translate([ mic_cav_cx - mic_channel[0] / 2, wall, -0.5 ])
+            cube([ mic_channel[0], mic_channel[1] + 0.5, seat_h + 1 ]);
+
+        // M8皿ネジ (軸Y・flat-up): 通し六角が取付座を貫通し、外面 (y=mount_t)
+        // 側に皿用の六角カウンターボアが深さ4.5で開く。ネジは部品の外側から
+        // クランプ板の M8 メスへ入り、部品をクランプ板の面へ引き付ける
+        translate([ 0, mount_t / 2, m8_z ])
+            hex_y_flat_up(m8_pass_flat, mount_t + 0.2);
+        translate([ 0, mount_t - m8_head_depth / 2 + 0.05, m8_z ])
+            hex_y_flat_up(m8_head_flat, m8_head_depth + 0.1);
     }
 }
 
@@ -140,11 +210,14 @@ earphone_mic_holder()
     echo(str("CONTRACT earphone_mic_holder: usb_slot_from_front = ",
              [ usb_slot_front, usb_slot_back ]));
     echo(str("CONTRACT earphone_mic_holder: wall = ", wall));
-    echo(str("CONTRACT earphone_mic_holder: floor_t = ", floor_t));
+    echo(str("CONTRACT earphone_mic_holder: floor_t = ",
+             [ ear_floor_t, mic_floor_t ]));
     echo(str("CONTRACT earphone_mic_holder: pocket_r = ", pocket_r));
     echo(str("CONTRACT earphone_mic_holder: corner_r = ", corner_r));
+    echo(str("CONTRACT earphone_mic_holder: desk_step = ",
+             [ clamp_slot_w, clamp_plate_t ]));
     echo(str("CONTRACT earphone_mic_holder: outer = ",
-             [ ear_out_w + seat_w + mic_out_w, mic_out_d, seat_h ]));
+             [ outer_w, mic_out_d + clamp_plate_t, seat_h ]));
 
     // 皿ネジの配分 (1e-9 は浮動小数の丸め猶予)。座が厚すぎると軸部が
     // クランプ板の M8 メスへ届かず、薄すぎると皿の座面が抜ける
@@ -172,50 +245,18 @@ earphone_mic_holder()
            "USB slot runs past the pocket floor");
     assert(usb_slot_w + 2 * pocket_r <= ear_inner[0],
            "USB slot is too wide for the pocket floor");
+    // 上端はクランプ板の上端と同じ一平面であること (必須要件)。深さは
+    // 変えずに床で吸収するので、床を動かしたらここで止まる
+    assert(ear_out_h == seat_h && mic_out_h == seat_h,
+           "pocket tops must be flush with the clamp plate top");
+    // クランプ板の逃げがポケットの内寸まで届かないこと (床と壁を抜かない)
+    assert(clamp_slot_w / 2 <= mic_x0 + wall,
+           "clamp relief reaches into the pockets");
 
-    difference()
-    {
-        // 3つの外形を底面から各々の高さまで押し出して重ねる。低い方の輪郭は
-        // 高い方の輪郭に包含される (opening は単調) ので、結果は
-        // 「右35 → 左37 → 座40」と段になった1つの塊になる
-        union()
-        {
-            linear_extrude(height = mic_out_h) footprint_2d(true, true);
-            linear_extrude(height = ear_out_h) footprint_2d(true, false);
-            linear_extrude(height = seat_h) footprint_2d(false, false);
-        }
-
-        // 左ポケット: イヤホンケースの内寸 61.4×29.9・深さ34 (上開き)
-        translate([ ear_cav[0], ear_cav[1], floor_t ])
-            linear_extrude(height = ear_depth + 1)
-                rounded_rect_2d(ear_inner[0], ear_inner[1], pocket_r);
-
-        // 左ポケット床の USB-C 長穴: 横中央 14mm 幅、前壁内面から
-        // 7.5〜16.0mm。ケーブルは下から刺さる
-        translate([ ear_cav_cx - usb_slot_w / 2, usb_slot_y, -0.5 ])
-            linear_extrude(height = floor_t + 1) rounded_rect_2d(
-                usb_slot_w, usb_slot_back - usb_slot_front, usb_slot_r);
-
-        // 右ポケット: ピンマイクケースの内寸 81.2×38.1・深さ32 (上開き)
-        translate([ mic_cav[0], mic_cav[1], floor_t ])
-            linear_extrude(height = mic_depth + 1)
-                rounded_rect_2d(mic_inner[0], mic_inner[1], pocket_r);
-
-        // 凸のチャンネル: 背面中央に 12.7×8.7。背面壁の全高と床を貫通させ、
-        // L字変換器を付けたまま上からストンと落として、ケーブルを下へ抜く。
-        // 床のそれ以外はケースの受けとして残る。+0.5 はポケット内寸との
-        // 重ね代 (切削同士を面で接触させると退化した稜が残るため)
-        translate([ mic_cav_cx - mic_channel[0] / 2, wall, -0.5 ])
-            cube([ mic_channel[0], mic_channel[1] + 0.5, mic_out_h + 1 ]);
-
-        // M8皿ネジ (軸Y・flat-up): 通し六角が取付座を貫通し、外面 (y=mount_t)
-        // 側に皿用の六角カウンターボアが深さ4.5で開く。ネジは部品の外側から
-        // クランプ板の M8 メスへ入り、部品をクランプ板の面へ引き付ける
-        translate([ 0, mount_t / 2, m8_z ])
-            hex_y_flat_up(m8_pass_flat, mount_t + 0.2);
-        translate([ 0, mount_t - m8_head_depth / 2 + 0.05, m8_z ])
-            hex_y_flat_up(m8_head_flat, m8_head_depth + 0.1);
-    }
+    // 完成形状は当たり面 (y=0) を保ったまま前後を返す。デスクの手前ではなく
+    // 奥側へクランプを付ける取り付け向きに変わったため、本体は当たり面の
+    // 裏 (-Y) 側へ伸び、デスク側の段が +Y 側に立つ
+    mirror([ 0, 1, 0 ]) holder_body();
 }
 
 earphone_mic_holder();

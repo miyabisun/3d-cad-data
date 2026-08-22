@@ -63,7 +63,7 @@ expect_echo() {
 check_section() {
   stl=$1 name=$2 cut_y=$3 spec=$4
   cat > "$WORK/sec_$name.scad" <<EOF
-projection(cut = true) rotate([ 90, 0, 0 ]) translate([ 0, -$cut_y, 0 ])
+projection(cut = true) rotate([ 90, 0, 0 ]) translate([ 0, -($cut_y), 0 ])
   import("$WORK/$stl.stl");
 EOF
   if ! openscad -o "$WORK/sec_$name.svg" "$WORK/sec_$name.scad" > /dev/null 2>&1; then
@@ -409,79 +409,109 @@ render holder assets/game-desk/earphone_mic_holder.scad
 # ---------------------------------------------------------------------------
 # 1. 取付界面: クランプ板 40×24 を覆う取付座に、M8 通し六角 (二面幅8.4・
 #    対角9.70) と皿用六角カウンターボア (二面幅16.0・対角18.48・深さ4.5) が
-#    同心で開く。皿ネジは部品の外側 (y=6) から入るので、カウンターボアは
-#    外面側だけに在り、クランプ接触面 (y=0) 側には無い。
-#    y=1.4 (座残り肉 1.5 の中) では通し六角だけ、y=1.6 (カウンターボアの底
-#    1.5 のすぐ外) では二面幅16.0 — この 0.2mm の跨ぎが深さ4.5の実測になる
+#    同心で開く。本体はクランプ当たり面 (y=0) から -Y へ伸びる (デスクの
+#    奥側へ回した向き) ので、座は y -6..0 に在り、皿ネジは外面 (y=-6) から
+#    入る。カウンターボアは外面側だけに在り、当たり面 (y=0) 側には無い。
+#    y=-1.4 (座残り肉 1.5 の中) では通し六角だけ、y=-1.6 (カウンターボアの底
+#    のすぐ外) では二面幅16.0 — この 0.2mm の跨ぎが深さ4.5の実測になる
 # ---------------------------------------------------------------------------
-check_section holder mount-pass1.4 1.4 "loop 0 20 9.70 8.40; void 0 20; solid 0 5"
-check_section holder mount-bore1.6 1.6 "loop 0 20 18.48 16.00; void 0 20; solid 0 5"
-check_section holder mount-bore5.5 5.5 "loop 0 20 18.48 16.00"
-# 取付座そのもの: 両ポケットの天端より上 (z=38) では座だけが残り、
-# 幅24 (X ∈ [-12,12])・厚さ6 (Y ∈ [0,6]) の1本の輪郭になる。
-# bbox の z 上端 40 と合わせて「座の面が 40×24 を覆う」ことの実測
-check_plan holder mount-seat 38 "loops 1; rect -12 12 0 6"
+check_section holder mount-pass1.4 -1.4 \
+  "loop 0 20 9.70 8.40; void 0 20; solid 0 5"
+check_section holder mount-bore1.6 -1.6 \
+  "loop 0 20 18.48 16.00; void 0 20; solid 0 5"
+check_section holder mount-bore5.5 -5.5 "loop 0 20 18.48 16.00"
+# 取付座の板厚 6 (皿ボア4.5 + 残り肉1.5): 座は当たり面から y=-6 までで、
+# その先 (y=-6.5) は両ポケットのブロックに挟まれた凹みになり材料が無い。
+# 皿ネジの頭とドライバーはこの凹みから入る
+check_plan holder mount-seat 38 "solid 0 -5.5; void 0 -6.5"
 
 # ---------------------------------------------------------------------------
-# 2. ポケット: 左 (イヤホン) 61.4×29.9×34深、右 (ピンマイク) 81.2×38.1×32深。
-#    内側コーナーは R4、床厚は 3。
+# 2. デスク側の段: クランプ板の厚み 4.2 は、中央 24.4 (板24 + クリアランス
+#    0.4・片側0.2) の帯だけを逃がし、その外側の左右はデスク面 (y=4.2) まで
+#    回り込ませる。左右が板厚の分だけ浮くのを止めるための段である。
 # ---------------------------------------------------------------------------
-# z=8 (両ポケットの中・M8の穴帯 z 15.8..24.2 より下): 外形1本 + 左内寸1本 +
+# y=2 (逃げの中) の X-Z 断面: 中央の帯が全高 z 0..40 にわたって空で、その
+# 直外側 (|x| = 13) には材料が在る。前後の反転が抜ければ帯に座の肉が現れ、
+# 段が本体側を向けば y=2 に材料が無くなる — どちらでも red になる
+check_section holder desk-step 2 \
+  "outline 12.2 99.2 0 40;
+   void_rect -12.2 12.2 0 40;
+   solid -13 20; solid 13 20; solid -79 5; solid 98 5"
+# z=38 の平面: 逃げの幅 24.4 と深さ 4.2 を4隅の頂点として実測する。逃げは
+# opening の後に切るので角は直角のまま残る (板の角と合う)。
+# solid 0 -3 は「当たり面 y=0 の裏 (-Y) に座が在る」= 前後反転の実測
+check_plan holder desk-step 38 \
+  "void_rect -12.2 12.2 0 4.2;
+   sharp -12.2 0; sharp 12.2 0; sharp -12.2 4.2; sharp 12.2 4.2;
+   solid -13 2; solid 13 2; solid 0 -3"
+
+# ---------------------------------------------------------------------------
+# 3. ポケット: 左 (イヤホン) 61.4×29.9×34深、右 (ピンマイク) 81.2×38.1×32深。
+#    内側コーナーは R4。上端を Z40 の一平面へ揃えたので、深さを変えずに
+#    床で吸収した (左6・右8)。本体は -Y 側なので Y の符号は負になる
+# ---------------------------------------------------------------------------
+# z=30 (両ポケットの中・皿ボアの帯 z 12..28 より上): 外形1本 + 左内寸1本 +
 # 右内寸1本 = 3 loop。右の内寸 loop は凸断面なので bbox の Y は
 # 38.1 + チャンネル 8.7 = 46.8。
 # 水平断面を M8 の高さ (z=20) で取ると通し六角が取付座を左右に断ち切って
 # 外形が2 loop に割れるため、ポケットの実測は穴帯の外で行う
-check_plan holder pockets 8 \
+check_plan holder pockets 30 \
   "loops 3;
-   loop -45.7 17.95 61.4 29.9;
-   loop 55.6 26.4 81.2 46.8;
-   arc -72.4 7 4 8; arc -19 7 4 8; arc -72.4 28.9 4 8; arc -19 28.9 4 8;
-   arc 19 15.7 4 8; arc 92.2 15.7 4 8; arc 19 45.8 4 8; arc 92.2 45.8 4 8;
-   nosharp -76.4 3; nosharp -15 3; nosharp -76.4 32.9; nosharp -15 32.9;
-   nosharp 15 11.7; nosharp 96.2 11.7; nosharp 15 49.8; nosharp 96.2 49.8"
-# 右ポケットの凸チャンネル: 背面中央に 12.7 × 8.7。cavity 背面 (y=11.7) から
-# 外壁の内面 (y=3) までが全幅にわたって空で、その左右は材料が残る
-check_plan holder mic-channel 8 \
-  "void_rect 49.25 61.95 3 11.7;
-   solid 49 8; solid 62.2 8; solid 30 8; solid 80 8; solid 55.6 1.5"
-# z=1.5 (床の中): 左は USB-C 長穴 14×8.5、右はチャンネルが床を貫通し、
+   loop -45.7 -17.95 61.4 29.9;
+   loop 55.6 -26.4 81.2 46.8;
+   arc -72.4 -7 4 8; arc -19 -7 4 8; arc -72.4 -28.9 4 8; arc -19 -28.9 4 8;
+   arc 19 -15.7 4 8; arc 92.2 -15.7 4 8; arc 19 -45.8 4 8; arc 92.2 -45.8 4 8;
+   nosharp -76.4 -3; nosharp -15 -3; nosharp -76.4 -32.9; nosharp -15 -32.9;
+   nosharp 15 -11.7; nosharp 96.2 -11.7; nosharp 15 -49.8; nosharp 96.2 -49.8"
+# z=38 (両ポケットの天端の直下): 上端を Z40 の一平面へ揃えたので、ここでも
+# 外形は全幅 178.6 × 奥行き 57 のまま残り、両ポケットの内寸 loop も在る。
+# 旧構成 (右35 → 左37 → 座40 の段) なら、ここは幅24の座だけになって red
+check_plan holder top-flush 38 \
+  "loops 3; rect -79.4 99.2 -52.8 4.2;
+   loop -45.7 -17.95 61.4 29.9; loop 55.6 -26.4 81.2 46.8"
+# 右ポケットの凸チャンネル: 背面中央に 12.7 × 8.7。cavity 背面 (y=-11.7) から
+# 外壁の内面 (y=-3) までが全幅にわたって空で、その左右は材料が残る。
+# solid 55.6 2 は、チャンネルの真下の背面壁がデスク側の段まで続くこと
+check_plan holder mic-channel 30 \
+  "void_rect 49.25 61.95 -11.7 -3;
+   solid 49 -8; solid 62.2 -8; solid 30 -8; solid 80 -8;
+   solid 55.6 -1.5; solid 55.6 2"
+# z=1.5 (両方の床の中): 左は USB-C 長穴 14×8.5、右はチャンネルが床を貫通し、
 # それ以外の床は受けとして残る (loop は外形 + 長穴 + チャンネルの3本)
 check_plan holder floor 1.5 \
   "loops 3;
-   loop -45.7 21.15 14 8.5;
-   void_rect 49.25 61.95 3 11.7;
-   solid -45.7 10; solid -45.7 29; solid 55.6 30; solid 55.6 1.5"
-# y=30 (両ポケットの内部を通る X-Z 断面): 左は外形 67.4×37 (床3+深さ34)、
-# 右は外形 87.2×35 (床3+深さ32)。座は y 0..6 しかないのでここには現れず、
-# 2つのポケットが別々の U 字断面になる。
-# y=30 を選ぶのは、左の長穴 (y 16.9..25.4) も右のチャンネル (y 3..11.7) も
-# 通らない帯だから — そこを切ると床が割れて U 字断面が2 loop になる
-check_section holder pockets-depth 30 \
-  "loop -45.7 18.5 67.4 37; loop 55.6 17.5 87.2 35;
-   solid -45.7 1.5; void -45.7 4; void -45.7 36.5;
-   solid 55.6 1.5; void 55.6 4; void 55.6 34.5"
-# y=8 (右の凸チャンネルの帯): チャンネルは背面壁の全高 (床の下端から天端まで)
-# を貫通する。点で拾うと「底や天端に 1mm 未満の膜が残った」退行を見逃すため、
-# チャンネルの X 範囲 × 部品の全高 z 0..35 を void_rect の幾何交差で測る
-# (材料の境界がこの矩形へ1辺も入って来ないこと = 膜が無いこと)。
-# 矩形の縁 (x=49.25/61.95 のチャンネル側壁、z=0 の底面、z=35 の天端) に
+   loop -45.7 -21.15 14 8.5;
+   void_rect 49.25 61.95 -11.7 -3;
+   solid -45.7 -10; solid -45.7 -29; solid 55.6 -30; solid 55.6 -1.5"
+# y=-30 (両ポケットの内部を通る X-Z 断面): 左は外形 67.4×40 (床6+深さ34)、
+# 右は外形 87.2×40 (床8+深さ32)。上端が一平面 Z40 に揃ったことと、床の
+# 厚みが左6・右8 であることを、材料の有無の跨ぎで実測する。
+# y=-30 を選ぶのは、左の長穴 (y -25.4..-16.9) も右のチャンネル (y -11.7..-3)
+# も通らない帯だから — そこを切ると床が割れて U 字断面が2 loop になる
+check_section holder pockets-depth -30 \
+  "loop -45.7 20 67.4 40; loop 55.6 20 87.2 40;
+   solid -45.7 5.5; void -45.7 6.5; void -45.7 39;
+   solid 55.6 7.5; void 55.6 8.5; void 55.6 39"
+# y=-8 (右の凸チャンネルの帯): チャンネルは背面壁の全高 (床の下端から天端
+# まで) を貫通する。点で拾うと「底や天端に 1mm 未満の膜が残った」退行を
+# 見逃すため、チャンネルの X 範囲 × 部品の全高 z 0..40 を void_rect の幾何
+# 交差で測る (材料の境界がこの矩形へ1辺も入って来ないこと = 膜が無いこと)。
+# 矩形の縁 (x=49.25/61.95 のチャンネル側壁、z=0 の底面、z=40 の天端) に
 # 載るだけの辺は eps の内側縮めで交差扱いにならない。左右は材料
-check_section holder mic-channel-height 8 \
-  "void_rect 49.25 61.95 0 35;
-   void 55.6 1; void 55.6 17; void 55.6 34;
-   solid 48 17; solid 63 17; solid 48 1"
+check_section holder mic-channel-height -8 \
+  "void_rect 49.25 61.95 0 40;
+   void 55.6 1; void 55.6 20; void 55.6 39;
+   solid 48 20; solid 63 20; solid 48 1"
 
 # ---------------------------------------------------------------------------
-# 3. 形状健全性: 外形 bbox、外側垂直エッジの R2、単一連結成分。
+# 4. 形状健全性: 外形 bbox、外側垂直エッジの R2、単一連結成分。
 #    デスク接触面 (底面) の水平エッジは未加工 (R2 は垂直エッジだけ)
 # ---------------------------------------------------------------------------
-check_bbox holder -79.4 99.2 0 52.8 0 40
-check_plan holder outer-round 8 \
-  "nosharp -79.4 0; nosharp -79.4 35.9; nosharp 99.2 0; nosharp 99.2 52.8;
-   arc -77.4 2 2 8; arc -77.4 33.9 2 8; arc 97.2 2 2 8; arc 97.2 50.8 2 8"
-check_plan holder seat-round 38 \
-  "nosharp -12 0; nosharp 12 0; nosharp -12 6; nosharp 12 6;
-   arc -10 2 2 8; arc 10 2 2 8; arc -10 4 2 8; arc 10 4 2 8"
+check_bbox holder -79.4 99.2 -52.8 4.2 0 40
+check_plan holder outer-round 30 \
+  "nosharp -79.4 -35.9; nosharp 99.2 -52.8; nosharp -79.4 4.2; nosharp 99.2 4.2;
+   arc -77.4 -33.9 2 8; arc 97.2 -50.8 2 8;
+   arc -77.4 2.2 2 8; arc 97.2 2.2 2 8"
 check_single_solid holder
 
 # 設計契約 (台帳 designs/game-desk-clamp-holder.md の確定値)
@@ -501,7 +531,11 @@ expect_echo holder 'CONTRACT earphone_mic_holder: mic_channel = [12.7, 8.7]'
 expect_echo holder 'CONTRACT earphone_mic_holder: usb_slot = [14, 8.5]'
 expect_echo holder 'CONTRACT earphone_mic_holder: usb_slot_from_front = [7.5, 16]'
 expect_echo holder 'CONTRACT earphone_mic_holder: wall = 3'
-expect_echo holder 'CONTRACT earphone_mic_holder: floor_t = 3'
+# 上端を Z40 の一平面へ揃えるため、床厚は左 (イヤホン) 6・右 (マイク) 8
+expect_echo holder 'CONTRACT earphone_mic_holder: floor_t = [6, 8]'
+# デスク側の段: 逃げの幅 24.4 (板24 + クリアランス0.4) × 板厚 4.2
+expect_echo holder 'CONTRACT earphone_mic_holder: desk_step = [24.4, 4.2]'
+expect_echo holder 'CONTRACT earphone_mic_holder: outer = [178.6, 57, 40]'
 expect_echo holder 'CONTRACT earphone_mic_holder: pocket_r = 4'
 expect_echo holder 'CONTRACT earphone_mic_holder: corner_r = 2'
 
