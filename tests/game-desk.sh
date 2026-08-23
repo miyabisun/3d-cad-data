@@ -414,17 +414,20 @@ render holder assets/game-desk/earphone_mic_holder.scad
 #    外面の二面幅16.0 から深さ4.5 で通し 8.4 へ直線的に絞る錐台にする
 #    (断面がなだらかな三角形になり、皿がきれいに収まる)。
 #    深さ d の二面幅は 16.0 - d * (16.0 - 8.4) / 4.5、対角はその 1/cos30。
-#    y=-1.4 (錐台の底 y=-1.5 より内側) では通し六角だけが残る
+#    y=-1.4 (錐台の底 y=-1.5 より内側) では通し六角だけが残る。
+#    部品の上端はクランプ板の上端より 4.5 低い (天板と面一にするため) ので、
+#    M8 の中心は部品座標で Z = 40 + 4.5 - 20 = 24.5 に上がる。旧値 20 は
+#    superseded — 部品が板の上へ 4.5 はみ出す配置だった
 # ---------------------------------------------------------------------------
 check_section holder mount-pass1.4 -1.4 \
-  "loop 0 20 9.70 8.40; void 0 20; solid 0 5"
+  "loop 0 24.5 9.70 8.40; void 0 24.5; solid 0 5"
 # 錐台の3断面。直壁ボアなら d に依らず 16.0 のままなので red になる
 check_section holder mount-bore0.5 -5.5 \
-  "loop 0 20 17.500 15.156; void 0 20; solid 0 5"
+  "loop 0 24.5 17.500 15.156; void 0 24.5; solid 0 5"
 check_section holder mount-bore2.25 -3.75 \
-  "loop 0 20 14.087 12.200; void 0 20; solid 0 5"
+  "loop 0 24.5 14.087 12.200; void 0 24.5; solid 0 5"
 check_section holder mount-bore4.0 -2.0 \
-  "loop 0 20 10.675 9.244; void 0 20; solid 0 5"
+  "loop 0 24.5 10.675 9.244; void 0 24.5; solid 0 5"
 # 取付座の板厚 6 (皿ボア4.5 + 残り肉1.5): 座は当たり面から y=-6 までで、
 # その先 (y=-6.5) は両ポケットのブロックに挟まれた凹みになり材料が無い。
 # 皿ネジの頭とドライバーはこの凹みから入る
@@ -524,8 +527,39 @@ check_section holder mic-channel-height -41 \
    solid 48 20; solid 63 20; solid 48 1"
 
 # ---------------------------------------------------------------------------
-# 4. 形状健全性: 外形 bbox、外側垂直エッジの R2、単一連結成分。
-#    デスク接触面 (底面) の水平エッジは未加工 (R2 は垂直エッジだけ)
+# 4. 補強ガセット: 取付座の外面 (y=-6) と両ポケットの側壁 (x=±12) が作る
+#    凹角へ、脚 2mm の 45度 直角三角形を左右対称に足す。中央の座だけで
+#    左右のポケットを繋いでいると、この凹角に応力が集まって折れる。
+#    右のガセットは (12,-6)-(10,-6)-(12,-8)。斜辺は x + y = 4 の 45度 線で、
+#    材料は x + y > 4 の側にある (左は x を反転した鏡像)。
+#    ガセットは opening の後に union するので、角は R2 に丸まらない
+# ---------------------------------------------------------------------------
+# z=20 (M8 の通し六角 z 20.3..28.7 の下・皿錐台が座を断ち切らない高さ) の
+# 平面。凹角 (±12,-6) が肉で埋まって頂点が消え、代わりに (±10,-6) と
+# (±12,-8) が新しい鋭角の頂点になる。斜辺の内側は材料・外側は空
+check_plan holder gusset 20 \
+  "sharp 10 -6; sharp 12 -8; sharp -10 -6; sharp -12 -8;
+   nosharp 12 -6; nosharp -12 -6;
+   solid 11.3 -6.3; solid -11.3 -6.3;
+   void 10.5 -7.5; void -10.5 -7.5"
+# y=-7 / y=-7.5 の X-Z 断面: 座 (y -6..0) より外なので、本来は左右のポケットの
+# ブロックだけが残る帯である。ガセットが 45度 で張り出すぶん、右ブロックの
+# 内側の縁が x=12 から 11 (y=-7)・11.5 (y=-7.5) へ寄る。0.5 下がると 0.5
+# 寄るのが 45度 の実測で、ガセットが無ければどちらも 12 のままで red。
+# ガセットは全高の押し出しなので、ブロックは z 0..40 に伸びる。
+# 左ブロックの bbox は測らない — この帯は USB-C 長穴 (y -14.8..-6.3) の
+# 中なので、左は床が抜けて 2 loop に割れる。左は材料の跨ぎで測る
+check_section holder gusset -7 \
+  "loop 55.1 20 88.2 40;
+   solid 11.5 20; solid -11.5 20; void 10.5 20; void -10.5 20"
+check_section holder gusset-deep -7.5 \
+  "loop 55.35 20 87.7 40;
+   solid 11.8 20; solid -11.8 20; void 11.2 20; void -11.2 20"
+
+# ---------------------------------------------------------------------------
+# 5. 形状健全性: 外形 bbox、外側垂直エッジの R2、単一連結成分。
+#    デスク接触面 (底面) の水平エッジは未加工 (R2 は垂直エッジだけ)。
+#    ガセットは凹角の中に収まるので bbox は変わらない
 # ---------------------------------------------------------------------------
 check_bbox holder -79.4 99.2 -48.6 4.2 0 40
 check_plan holder outer-round 30 \
@@ -543,7 +577,10 @@ expect_echo holder 'CONTRACT earphone_mic_holder: m8_head_flat = 16'
 expect_echo holder 'CONTRACT earphone_mic_holder: m8_head_depth = 4.5'
 # 皿の逃げは直壁ではなく、外面16.0 → 深さ4.5 で通し8.4 へ絞る六角錐台
 expect_echo holder 'CONTRACT earphone_mic_holder: m8_head_taper = [16, 8.4, 4.5]'
-expect_echo holder 'CONTRACT earphone_mic_holder: m8_center = [0, 20]'
+# 部品の上端はクランプ板の上端より 4.5 低い。部品の datum (底面 Z=0) は
+# 動かさないので、この 4.5 は M8 中心の Z が 20 → 24.5 へ上がる形で現れる
+expect_echo holder 'CONTRACT earphone_mic_holder: top_drop = 4.5'
+expect_echo holder 'CONTRACT earphone_mic_holder: m8_center = [0, 24.5]'
 # 皿込み全長8.6 - 座の厚み6 = 2.6mm がクランプ板 (4.2) の M8 メスへ掛かる
 expect_echo holder 'CONTRACT earphone_mic_holder: screw_engagement = 2.6'
 expect_echo holder 'CONTRACT earphone_mic_holder: clearance = 0.4'
@@ -565,6 +602,8 @@ expect_echo holder 'CONTRACT earphone_mic_holder: desk_step = [24.4, 4.2]'
 expect_echo holder 'CONTRACT earphone_mic_holder: outer = [178.6, 52.8, 40]'
 expect_echo holder 'CONTRACT earphone_mic_holder: pocket_r = 4'
 expect_echo holder 'CONTRACT earphone_mic_holder: corner_r = 2'
+# 取付座とポケット側壁の凹角を埋める 45度 三角の脚長
+expect_echo holder 'CONTRACT earphone_mic_holder: gusset = 2'
 
 if [ "$fail" -ne 0 ]; then
   exit 1

@@ -14,9 +14,13 @@ use <../../modules/slide_rail_outer_bracket.scad>
 //   Y = 0 がクランプ板への当たり面。-Y へ本体 (取付座とポケット) が伸びる。
 //     +Y 側はクランプ板 4.2 を逃がす帯と、その左右でデスク面 (y=4.2) へ
 //     当たる段になる
-//   Z = 0 が部品底面。+Z が上で、上端は 40 の一平面 (クランプ板と同じ高さ)
-// M8 の中心は取付座の中央 = (X, Z) = (0, 20) で、クランプ板 40×24 の
-// 中央のメスネジと一致する。
+//   Z = 0 が部品底面。+Z が上で、上端は 40 の一平面。この上端はクランプ板の
+//     上端より top_drop (4.5) だけ低い — クランプ上腕の厚みぶん部品が
+//     デスク天板からはみ出して邪魔になるため、部品ごと下げてある
+// クランプ板は部品座標で Z 4.5..44.5 に掛かるので、その中央にある M8 メスの
+// 中心は (X, Z) = (0, 24.5) になる。部品の datum (底面 Z=0 = プリント面) は
+// 動かさないので、「天端を 4.5 下げる」は M8 中心が 20 → 24.5 へ上がる形で
+// 現れる (M8 中心 20 の旧配置は superseded)。
 //
 // 前後の定義: 前 = デスク接触面 (y=4.2) の側、後 = その反対側。ケースを
 // 差し込む向き依存の feature (USB-C 長穴・凸チャンネル) は、この前壁の内面
@@ -35,6 +39,9 @@ m8_pass_flat = 8.4;  // M8皿ネジ軸部の通し六角 二面幅 (呼び7.8Φ)
 m8_head_flat = 16.0; // 皿逃げの六角錐台 外面側の二面幅 (実測15.6Φ)
 m8_head_depth = 4.5; // 皿部分の高さ
 m8_screw_len = 8.6;  // 皿込みの全長
+// 部品の上端をクランプ板の上端より下げる量。クランプの上腕がデスク天板の上に
+// 乗る厚みぶん、部品が天板からはみ出して邪魔になるため下げる (user 指摘)
+top_drop = 4.5;
 // クリアランス: ケースは「少しスカスカなくらい」が良いとの user 判断で 0.4
 clearance = 0.4;
 // アイテム1: Bluetooth イヤホンのケース (横幅・奥行き・ケースを沈める深さ)
@@ -50,13 +57,18 @@ usb_slot_back = 16.0; // 前壁内面から長穴の奥側まで (前面9・奥�
 usb_slot_r = 2; // 長穴の角丸 (ケーブルの角が丸いので角丸で足りる)
 
 wall = 3; // ポケットの側壁厚
-// ポケットの床厚。上端をクランプ板の上端 (Z40) と同じ一平面へ揃えるのが
-// 必須要件なので、収納深さ (34 / 32) を変えずに床の厚みで高さの差を吸収する。
-// 増えるのはインフィルだけなので重量・材料の問題にはならない (user 判断)
+// ポケットの床厚。上端を Z40 の一平面へ揃えるのが必須要件なので、収納深さ
+// (34 / 32) を変えずに床の厚みで高さの差を吸収する。この一平面はデスク天板と
+// 面一にする面で、クランプ板の上端より top_drop (4.5) 低い (クランプ板の上端と
+// 同一平面へ揃えていた旧仕様は superseded)。増えるのはインフィルだけなので
+// 重量・材料の問題にはならない (user 判断)
 ear_floor_t = 6;
 mic_floor_t = 8;
 pocket_r = 4; // ポケット内側コーナーのR (ケースの角が丸いため)
 corner_r = 2; // 外側垂直エッジのR (角が刺さると痛いという user 指示)
+// 取付座の外面と両ポケットの側壁が作る凹角を埋める 45度 三角形の脚長。
+// 中央の座だけで左右のポケットを繋ぐと、この凹角が細い板頼りで弱い (user 指摘)
+gusset = 2;
 arc_fn = 64; // 円弧の分割数 (このリポジトリの既存慣行)
 // 取付座の板厚。皿の逃げ 4.5 + 残り肉1.5 で決めた。皿ネジは
 // 皿込み8.6 (軸部4.1) しか無いので、座を厚くするほど軸がクランプ板へ届か
@@ -76,7 +88,10 @@ m8_head_slope = (m8_head_flat - m8_pass_flat) / m8_head_depth;
 m8_head_over = 0.1; // 錐台を外面より外へ出す切削の抜き代
 seat_w = clamp_plate_w;
 seat_h = clamp_plate_h;
-m8_z = seat_h / 2;
+// M8 の中心 Z。クランプ板は部品座標で top_drop..top_drop+40 に掛かるので、
+// その中央は seat_h + top_drop - clamp_plate_h / 2 = 24.5 になる。
+// 部品の datum (底面 Z=0) は動かさない — seat_h / 2 の旧配置は superseded
+m8_z = seat_h + top_drop - clamp_plate_h / 2;
 // クランプ板を逃がす帯の幅。板 24 に対してクリアランスは総量 0.4 (片側0.2)
 // で取る。左右それぞれへ 0.4 振ると帯が 24.8 になり、板が帯の中で泳ぐ
 clamp_slot_w = clamp_plate_w + clearance;
@@ -141,6 +156,18 @@ hex_y_taper_flat_up(flat_a, flat_b, l)
         circle(d = flat_a / cos(30), $fn = 6);
 }
 
+// 右 (+X) の補強ガセットの2D輪郭。取付座の外面 (y=-mount_t) とポケットの
+// 側壁 (x=seat_w/2) が作る凹角へ、脚 gusset の45度直角三角形を置く。
+// 斜辺は x + y = seat_w/2 - mount_t - gusset (= 4) の45度線で、材料は
+// x + y がそれより大きい側に残る
+module
+gusset_2d()
+{
+    polygon([[seat_w / 2, -mount_t],
+             [seat_w / 2 - gusset, -mount_t],
+             [seat_w / 2, -mount_t - gusset]]);
+}
+
 // 外形の2D輪郭。取付座・両ポケット・デスク側の段を2Dで足してから
 // opening (縮めてから膨らませる) を掛け、凸の角だけを R2 に丸める。
 // 凹の角 (座とポケットの取り合い) は opening では丸まらないので、接合部の
@@ -150,24 +177,33 @@ hex_y_taper_flat_up(flat_a, flat_b, l)
 // これで、クランプ板の無い左右がデスク面へ当たる段が外形そのものになり、
 // 壁厚も他と同じ 3mm に揃う (全幅へ 4.2 の帯を足す旧構成は superseded)。
 // クランプ板の逃げは opening の後に切る。板の角は直角なので、逃げの角も
-// 直角のまま残す
+// 直角のまま残す。
+// 補強ガセットも opening の後に union する。opening の erosion は凸の角しか
+// 動かさないとはいえ、45度の細い三角を先に足すと縮めた段階で消えてしまう
 module
 footprint_2d()
 {
     difference()
     {
-        offset(r = corner_r, $fn = arc_fn) offset(r = -corner_r, $fn = arc_fn)
+        union()
         {
-            translate([ -seat_w / 2, -mount_t ]) square([ seat_w, mount_t ]);
-            translate([ ear_x0, desk_y - ear_out_d ])
-                square([ ear_out_w, ear_out_d ]);
-            translate([ mic_x0, desk_y - mic_out_d ])
-                square([ mic_out_w, mic_out_d ]);
-            // デスク側の段の帯。ポケットのブロックだけでは中央 (取付座の幅)
-            // にデスク接触面が無く、そこが凸の角になって opening で R2 に
-            // 丸まる — クランプ板の逃げの内側の角は板の直角と合わせたいので、
-            // 帯で全幅を繋いでから逃げを切る
-            translate([ ear_x0, 0 ]) square([ outer_w, desk_y ]);
+            offset(r = corner_r, $fn = arc_fn)
+                offset(r = -corner_r, $fn = arc_fn)
+            {
+                translate([ -seat_w / 2, -mount_t ])
+                    square([ seat_w, mount_t ]);
+                translate([ ear_x0, desk_y - ear_out_d ])
+                    square([ ear_out_w, ear_out_d ]);
+                translate([ mic_x0, desk_y - mic_out_d ])
+                    square([ mic_out_w, mic_out_d ]);
+                // デスク側の段の帯。ポケットのブロックだけでは中央 (取付座の
+                // 幅) にデスク接触面が無く、そこが凸の角になって opening で
+                // R2 に丸まる — クランプ板の逃げの内側の角は板の直角と
+                // 合わせたいので、帯で全幅を繋いでから逃げを切る
+                translate([ ear_x0, 0 ]) square([ outer_w, desk_y ]);
+            }
+            gusset_2d();
+            mirror([ 1, 0 ]) gusset_2d();
         }
         // クランプ板の逃げ: 当たり面から +Y のデスク帯のうち、中央 24.4 だけ
         // を板の厚み分だけ抜き、そこへ板を挟み込む。+1 は切削の抜き代
@@ -238,6 +274,9 @@ earphone_mic_holder()
     // 皿の逃げは直壁ではなく [外面の二面幅, 底の二面幅, 深さ] の六角錐台
     echo(str("CONTRACT earphone_mic_holder: m8_head_taper = ",
              [ m8_head_flat, m8_pass_flat, m8_head_depth ]));
+    // 部品の上端をクランプ板の上端より下げる量。部品 datum は動かさないので
+    // 観測できる形は M8 中心の Z (20 → 24.5) として現れる
+    echo(str("CONTRACT earphone_mic_holder: top_drop = ", top_drop));
     echo(str("CONTRACT earphone_mic_holder: m8_center = ", [ 0, m8_z ]));
     echo(str("CONTRACT earphone_mic_holder: screw_engagement = ",
              screw_engagement));
@@ -257,6 +296,7 @@ earphone_mic_holder()
              [ ear_floor_t, mic_floor_t ]));
     echo(str("CONTRACT earphone_mic_holder: pocket_r = ", pocket_r));
     echo(str("CONTRACT earphone_mic_holder: corner_r = ", corner_r));
+    echo(str("CONTRACT earphone_mic_holder: gusset = ", gusset));
     echo(str("CONTRACT earphone_mic_holder: desk_step = ",
              [ clamp_slot_w, clamp_plate_t ]));
     echo(str("CONTRACT earphone_mic_holder: outer = ",
@@ -272,8 +312,14 @@ earphone_mic_holder()
     // 皿逃げの六角錐台は取付座 (= クランプ板と同じ 40×24) に収まること
     assert(m8_head_diag <= seat_w + 1e-9,
            "countersink runs past the seat width");
-    assert(m8_head_diag <= seat_h + 1e-9,
-           "countersink runs past the seat height");
+    // 高さ方向は中心が top_drop だけ上がっているので、上下端で個別に見る
+    assert(m8_z + m8_head_diag / 2 <= seat_h + 1e-9,
+           "countersink runs past the seat top");
+    assert(m8_z - m8_head_diag / 2 >= -1e-9,
+           "countersink runs past the seat bottom");
+    // 皿の逃げがガセットに食われないこと (ドライバーの入る幅も同じ条件)
+    assert(m8_head_diag / 2 <= seat_w / 2 - gusset + 1e-9,
+           "countersink reaches into the gusset");
     // opening が取付座の帯を切らない条件 (座はポケット同士を繋ぐ梁でもある)
     assert(mount_t >= 2 * corner_r, "mount_t is too thin for corner_r");
     // ポケットの内側R4が内寸を食い尽くさないこと
@@ -288,10 +334,11 @@ earphone_mic_holder()
            "USB slot runs past the pocket floor");
     assert(usb_slot_w + 2 * pocket_r <= ear_inner[0],
            "USB slot is too wide for the pocket floor");
-    // 上端はクランプ板の上端と同じ一平面であること (必須要件)。深さは
-    // 変えずに床で吸収するので、床を動かしたらここで止まる
+    // 上端が一平面であること (必須要件)。深さは変えずに床で吸収するので、
+    // 床を動かしたらここで止まる。この一平面はクランプ板の上端より
+    // top_drop 低い (デスク天板と面一にするため)
     assert(ear_out_h == seat_h && mic_out_h == seat_h,
-           "pocket tops must be flush with the clamp plate top");
+           "pocket tops must be flush with the seat top");
     // クランプ板の逃げがポケットの内寸まで届かないこと (床と壁を抜かない)
     assert(clamp_slot_w / 2 <= mic_x0 + wall,
            "clamp relief reaches into the pockets");
