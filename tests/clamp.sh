@@ -327,20 +327,34 @@ PYEOF
 render knob assets/clamp/hand_knob.scad
 
 # ---------------------------------------------------------------------------
-# 1. 下段 (Z 0..5) = レバー本体。楕円ローブ2枚 ∪ 中央ハブ円の平面輪郭に、
-#    M8 軸の通し穴 Φ8.4 が同軸で開く。全長 (X) はちょうど 36。
-#    ハブ円 (Φ21.473 = 六角対角15.473 + 壁3×2) はローブの短径 16 より太いので、
+# 1. 下段 (Z 0..5) = レバー本体。楕円ローブ2枚 ∪ 中央ハブ円へ closing (R2) を
+#    掛けた平面輪郭に、M8 軸の通し穴 Φ8.4 が同軸で開く。全長 (X) はちょうど 36。
+#    ハブ円 (Φ21.473 = 六角対角15.473 + 壁3×2) はローブの短径 8 より太いので、
 #    外形の Y 幅はハブが決める
 # ---------------------------------------------------------------------------
 # z=2.5: 外形1本 + 通し穴1本 = 2 loop。全長36 は rect の X 幅で実測する
+# (closing の円弧は多角形近似なので実測は 35.994。許容 0.05 の内側である)
 check_plan knob lever 2.5 \
   "loops 2;
    rect -18 18 -10.736 10.736;
    loop 0 0 8.4 8.4;
    void 0 0; solid 0 5; solid 12 0; solid 17.5 0; void 18.5 0"
-# ローブが楕円であること (矩形の腕なら x=17.5 で y=3 まで材料が続く)。
-# 楕円 26×16 を中心 x=±5 に置くと、x=17.5 での半高は 2.198 しかない
-check_plan knob lobe-taper 2.5 "solid 17.5 0; void 17.5 3; solid 17.5 2"
+# ローブの短径が 8 であること。ハブの外 (|x| > 10.736) はローブだけが外形を
+# 決めるので、そこで Y の肉の切れる高さを測れば短径が固定できる。楕円 26×8 を
+# 中心 x=±5 に置くと x=12 での半高は 3.371 で、旧形状 26×16 なら 6.741 ある。
+# 4本の腕すべてを上下左右対称に測る
+check_plan knob lobe-width 2.5 \
+  "solid 12 3; void 12 3.8; solid -12 3; void -12 3.8;
+   solid 12 -3; void 12 -3.8; solid -12 -3; void -12 -3.8"
+# ローブが楕円であること (矩形の腕なら x=17.5 で y=1.5 まで材料が続く)。
+# 楕円 26×8 を中心 x=±5 に置くと、x=17.5 での半高は 1.099 しかない
+check_plan knob lobe-taper 2.5 "solid 17.5 0; void 17.5 1.5; solid 17.5 0.7"
+# ハブとローブの凹接合に R2 のフィレットが入っていること。ハブ円 (r=10.736) と
+# 楕円の交点は (10.086, 3.681) 付近にあり、そこから外側へ開くくさびが凹接合で
+# ある。closing (offset +2 → -2) 無しの素の union ではこのくさびは空のままで、
+# R2 を入れると (±10.2, ±3.8) が材料になる。4箇所の接合すべてを対称に測る
+check_plan knob junction-fillet 2.5 \
+  "solid 10.2 3.8; solid 10.2 -3.8; solid -10.2 3.8; solid -10.2 -3.8"
 
 # ---------------------------------------------------------------------------
 # 2. 上段 (Z 5..10) = 中央ハブだけのボス。ボルト先端の六角 (二面幅13.4) を
@@ -403,8 +417,10 @@ expect_echo knob 'CONTRACT hand_knob: tip_hex_measured = 12.8'
 expect_echo knob 'CONTRACT hand_knob: clearance = 0.6'
 # 手回しレバーの全長 (user 指定の 36mm)
 expect_echo knob 'CONTRACT hand_knob: knob_len = 36'
-expect_echo knob 'CONTRACT hand_knob: lobe = [26, 16]'
+expect_echo knob 'CONTRACT hand_knob: lobe = [26, 8]'
 expect_echo knob 'CONTRACT hand_knob: lobe_offset = 5'
+# ハブとローブの凹接合へ入れるフィレット半径 (user 指定の 2mm)
+expect_echo knob 'CONTRACT hand_knob: junction_r = 2'
 # M8 軸の通し穴 (7.8 + 0.6)
 expect_echo knob 'CONTRACT hand_knob: m8_pass_d = 8.4'
 # 六角ポケットの二面幅 (12.8 + 0.6) と、そこから決まる対角

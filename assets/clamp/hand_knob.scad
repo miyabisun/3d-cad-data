@@ -19,8 +19,10 @@ use <../../modules/bolts.scad>
 // 穴が下で細く上で太いので、ボルト先端の六角の肩 (軸から六角へ太る段) が
 // この段差へ座り、ノブが六角の上で止まる。
 //
-// 印刷向き: 底面 (z=0) をビルドプレートへ置く。外周は楕円と円、穴は円と
-// 六角で、すべて垂直面 + 水平な上下面しかない。穴は上へ向かって太るだけ
+// 印刷向き: 底面 (z=0) をビルドプレートへ置く。外周は楕円と円とその接合の
+// フィレット弧、穴は円と六角で、すべて垂直面 + 水平な上下面しかない
+// (フィレットは平面輪郭に入るので、掛かるのは Z に沿った縦の面である)。
+// 穴は上へ向かって太るだけ
 // なので水平ブリッジ (天井) が1枚も無く、サポートも要らない。
 
 // --- クランプ本体の実測値 (user のノギス実測) ---
@@ -35,12 +37,15 @@ tip_hex_measured = 12.8; // ボルト先端の六角 二面幅の実測
 // user 指定で、通し穴も同じ 0.6 を足して 8.4 になる (このリポジトリの
 // M8 通し穴 8.4 とも一致する)
 clearance = 0.6;
-knob_len = 36;     // ハンドルの全長 (X)。user 指定
-lobe = [ 26, 16 ]; // 楕円ローブ1枚の [長径, 短径]。「2本の瞳みたいな楕円形」
-hub_wall = 3;      // 六角ポケットの周りに残す肉厚
-pass_h = 5;        // 下段 (M8 通し穴) の高さ。user 指定
-hex_h = 5;         // 上段 (六角ポケット) の高さ。user 指定
-arc_fn = 64;       // 円弧の分割数 (このリポジトリの既存慣行)
+knob_len = 36;    // ハンドルの全長 (X)。user 指定
+lobe = [ 26, 8 ]; // 楕円ローブ1枚の [長径, 短径]。「2本の瞳みたいな楕円形」。
+                  // 短径は「楕円が丸すぎて力が入りづらい」という user の指摘で
+                  // 16 から半分にした (長径と全長は不変)
+junction_r = 2; // ハブとローブの凹接合へ入れるフィレット半径。user 指定
+hub_wall = 3;   // 六角ポケットの周りに残す肉厚
+pass_h = 5;     // 下段 (M8 通し穴) の高さ。user 指定
+hex_h = 5;      // 上段 (六角ポケット) の高さ。user 指定
+arc_fn = 64;    // 円弧の分割数 (このリポジトリの既存慣行)
 cut_over = 0.5; // 切削の抜き代 (面同士の接触で退化した稜を残さないため)
 
 // --- 派生値 ---
@@ -61,10 +66,11 @@ ellipse_2d(w, d)
     scale([ w / 2, d / 2 ]) circle(r = 1, $fn = arc_fn);
 }
 
-// レバーの平面輪郭: 楕円ローブ2枚 ∪ 中央ハブ円。ローブの中心はハブの中に
-// あるので、3つの図形は必ず1つに融合する (ボスが浮いた島にならない)
+// レバーの素の輪郭: 楕円ローブ2枚 ∪ 中央ハブ円。ローブの中心はハブの中に
+// あるので、3つの図形は必ず1つに融合する (ボスが浮いた島にならない)。
+// ハブとローブは凹角で交わり、その角を丸めるのは knob_footprint_2d である
 module
-knob_footprint_2d()
+knob_outline_2d()
 {
     union()
     {
@@ -72,6 +78,18 @@ knob_footprint_2d()
             translate([ s * lobe_offset, 0 ]) ellipse_2d(lobe[0], lobe[1]);
         circle(d = hub_d, $fn = arc_fn);
     }
+}
+
+// レバーの平面輪郭。素の輪郭へ closing (offset +junction_r → -junction_r) を
+// 掛け、ハブとローブが交わる凹角4箇所へ R2 のフィレットを入れる。closing は
+// 「外側から半径 junction_r の円が入り込めない窪み」だけを埋める操作なので、
+// 凸の境界 (ローブ先端・ハブの外周) は1点も動かない。つまり全長 knob_len も
+// ハブ径 hub_d も不変で、増えるのは凹接合のくさびの肉だけである
+module
+knob_footprint_2d()
+{
+    offset(r = -junction_r, $fn = arc_fn) offset(r = junction_r, $fn = arc_fn)
+        knob_outline_2d();
 }
 
 module
@@ -114,6 +132,7 @@ hand_knob()
     echo(str("CONTRACT hand_knob: knob_len = ", knob_len));
     echo(str("CONTRACT hand_knob: lobe = ", lobe));
     echo(str("CONTRACT hand_knob: lobe_offset = ", lobe_offset));
+    echo(str("CONTRACT hand_knob: junction_r = ", junction_r));
     echo(str("CONTRACT hand_knob: m8_pass_d = ", m8_pass_d));
     echo(str("CONTRACT hand_knob: tip_hex_flat = ", tip_hex_flat));
     echo(str("CONTRACT hand_knob: tip_hex_diag = ", tip_hex_diag));
@@ -141,6 +160,9 @@ hand_knob()
         "the lobes do not reach the hub center; the boss would be an island");
     // ハブがローブを飲み込まないこと (飲み込むと指を掛ける腕が消える)
     assert(hub_d < knob_len, "the hub swallows the lobes");
+    // 部品の Y 幅はハブが決めること。ローブの短径がハブ径を越えると外形の
+    // Y がローブ側へ移り、台帳と断面検査の前提 (Y 幅 = hub_d) が崩れる
+    assert(lobe[1] < hub_d, "the lobes are wider than the hub");
 
     hand_knob_body();
 }
