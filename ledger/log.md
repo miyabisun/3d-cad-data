@@ -1,5 +1,12 @@
 # 3D CAD ledger Update Log
 
+## 2026-08-26
+
+- **Update**: [レターケースのGridfinityベースプレート](designs/letter-case-gridfinity.md)
+  の縁の肉抜きを、ハニカムからbinの境目に沿った四角窓＋2mmのX筋交いへ置換した
+  （userの案）。`modules/honeycomb.scad`を削除し`modules/xbrace.scad`を新設。
+  結果は≈57g+52g。
+
 ## 2026-08-25
 
 - **Creation**: [レターケースのGridfinityベースプレート](designs/letter-case-gridfinity.md)

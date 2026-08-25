@@ -3,8 +3,8 @@
 # - openscad が exit 0 で非空の STL を生成し、console に ERROR / WARNING が無いこと
 # - 設計契約 (CONTRACT echo) が台帳の確定値と一致すること
 # - production STL の断面実測で、板の外形 (引き出し内寸 − クリアランス)・
-#   ソケットの配置 (42mm ピッチ)・ソケット輪郭 (41.5 / 37.2 / 35.8 の3段) を
-#   実形状として固定すること (echo は自己申告なので形状で裏を取る)
+#   ソケットの配置 (42mm ピッチ)・ソケット輪郭 (41.5 / 37.2 / 35.8 の3段)・
+#   縁の X 筋交い窓を実形状として固定すること (echo は自己申告なので形状で裏を取る)
 # - 2枚を前後に突き合わせたとき、継ぎ目を跨いでも 42mm ピッチが保たれること
 # - 各 STL が1連結成分であること
 set -euo pipefail
@@ -55,6 +55,8 @@ expect_echo() {
 #   rect <x1> <x2> <y1> <y2>         — 最大 loop (外形) の bbox
 #   loop <cx> <cy> <sx> <sy>         — 指定位置に指定 bbox の loop がある (穴の実測)
 #   solid <cx> <cy> / void <cx> <cy> — 指定点に材料が有る/無い
+#   winbox <cx> <cy> <sx> <sy>       — 指定の矩形の中に収まる (外形以外の) loop が
+#       ちょうど 4 本あり、その union の bbox が矩形と一致する (X 窓の実寸)
 #   grid <x0> <dx> <nx> <y0> <dy> <ny> <span> — 外形以外の span 角の全 loop の
 #       中心の集合が格子 {x0+i*dx} × {y0+j*dy} と過不足なく一致する
 # solid/void は全 loop を偶奇規則で数える内外判定なので、穴・ポケットの中は
@@ -126,6 +128,20 @@ for cond in spec.split(";"):
             l = hit[0]
             print(f"plan {name}: loop x=[{l[0]:.3f},{l[1]:.3f}] y=[{l[2]:.3f},{l[3]:.3f}]"
                   f" span ({l[1] - l[0]:.3f},{l[3] - l[2]:.3f})")
+    elif kind == "winbox":  # <cx> <cy> <sx> <sy>
+        cx, cy, sx, sy = map(float, args)
+        box = (cx - sx / 2 - 0.1, cx + sx / 2 + 0.1, cy - sy / 2 - 0.1, cy + sy / 2 + 0.1)
+        inner = [bbox(l) for l in loops if l is not body]
+        inner = [b for b in inner
+                 if b[0] >= box[0] and b[1] <= box[1] and b[2] >= box[2] and b[3] <= box[3]]
+        u = (min(b[0] for b in inner), max(b[1] for b in inner),
+             min(b[2] for b in inner), max(b[3] for b in inner)) if inner else None
+        print(f"plan {name}: winbox ({cx},{cy}) {len(inner)} loops, union "
+              f"{tuple(round(v, 3) for v in u) if u else None}")
+        want = (cx - sx / 2, cx + sx / 2, cy - sy / 2, cy + sy / 2)
+        if len(inner) != 4 or any(abs(a - c) > 0.05 for a, c in zip(u, want)):
+            print(f"plan {name}: winbox want 4 loops with union {want}")
+            ok = False
     elif kind == "grid":  # <x0> <dx> <nx> <y0> <dy> <ny> <span>
         x0, dx, nx, y0, dy, ny, span = map(float, args)
         want = {(round(x0 + i * dx, 3), round(y0 + j * dy, 3))
@@ -354,7 +370,7 @@ render rear assets/letter-case/baseplate_rear.scad
 #    を置くので、前 4 / 奥 18 (= くぼみ 14 + 余り 5 − クリアランス 1) が縁になる。
 #    前 4 行 + 奥 3 行に分割し、前片は奥行き 4+168=172、奥片は 126+18=144
 # ---------------------------------------------------------------------------
-CONTRACT="CONTRACT plate=238x316 grid=5x7 pitch=42 socket=41.5/37.2/35.8 depth=4.65 floor=0 rim=L14/R14/F4/B18 hex=3.6/1.6/2.4"
+CONTRACT="CONTRACT plate=238x316 grid=5x7 pitch=42 socket=41.5/37.2/35.8 depth=4.65 floor=0 rim=L14/R14/F4/B18 xwin=2"
 expect_echo front "$CONTRACT split=front rows=4 len=172"
 expect_echo rear "$CONTRACT split=rear rows=3 len=144"
 
@@ -366,8 +382,8 @@ check_single_solid rear
 
 # ---------------------------------------------------------------------------
 # 1. ソケットの配置 (42mm ピッチ)。上の面取り (Z 2.5..4.65) の中の z=4.0 で
-#    切ると、各ソケットは 41.5 − 2×0.65 = 40.2 角の loop になる。縁のハニカムも
-#    同じ断面に六角の loop として出る (数は 4. で数える) ので、grid 節は 40.2 角の
+#    切ると、各ソケットは 41.5 − 2×0.65 = 40.2 角の loop になる。縁の窓も
+#    同じ断面に loop として出る (数は 4. で数える) ので、grid 節は 40.2 角の
 #    loop だけを拾い、20 / 15 個すべての中心を集合として固定する。
 #    列の中心は x = -84,-42,0,42,84。前片の行の中心は y = 25,67,109,151、
 #    奥片は y = 21,63,105 で、前片の全長 172 を足すと 193,235,277 になり
@@ -389,12 +405,12 @@ check_plan rear cells 4.0 \
 #    垂直部 (Z 0.7..2.5) の z=1.6 で切ると 37.2 角、下の面取り (Z 0..0.7) の
 #    z=0.35 で切ると 35.8 + 2×0.35 = 36.5 角になる
 # ---------------------------------------------------------------------------
-#    ハニカムの穴は貫通なので、どの高さの断面でも loop 総数は z=4.0 と同じ
-#    (前片 147、奥片 240。内訳は 4. を参照)。総数を固定して全ソケットの存在を測る
-check_plan front wall 1.6 "loops 147; loop -84 25 37.2 37.2; loop 0 109 37.2 37.2"
-check_plan front chamfer-bottom 0.35 "loops 147; loop -84 25 36.5 36.5; loop 84 151 36.5 36.5"
-check_plan rear wall 1.6 "loops 240; loop 84 105 37.2 37.2"
-check_plan rear chamfer-bottom 0.35 "loops 240; loop 0 21 36.5 36.5"
+#    縁の窓は貫通なので、どの高さの断面でも loop 総数は z=4.0 と同じ
+#    (前片 53、奥片 60。内訳は 4. を参照)。総数を固定して全ソケットの存在を測る
+check_plan front wall 1.6 "loops 53; loop -84 25 37.2 37.2; loop 0 109 37.2 37.2"
+check_plan front chamfer-bottom 0.35 "loops 53; loop -84 25 36.5 36.5; loop 84 151 36.5 36.5"
+check_plan rear wall 1.6 "loops 60; loop 84 105 37.2 37.2"
+check_plan rear chamfer-bottom 0.35 "loops 60; loop 0 21 36.5 36.5"
 
 # ---------------------------------------------------------------------------
 # 3. 縦断面 (X-Z) で、ソケットが底 (z=0) から天面まで抜けていること (床が無い)、
@@ -420,39 +436,49 @@ check_section front row1 25 \
 check_section rear row3 105 "void 84 0.2; solid 118 2; solid -118 2; void 84 3"
 # 縁の内側 (前片の y=2, 奥片の y=135) は全幅で詰まった板である
 check_section front front-rim 2 "solid 0 3; solid -118.5 3; solid 118.5 3; void 0 4.7"
-# 奥片の、左右のハニカムと奥のハニカムの間の無垢の帯 (y 123.6..128.4)
+# 奥片の、左右の窓と奥の窓の間の無垢の帯 (y 124..128)
 check_section rear rear-band 126 "solid 0 3; solid -112 3; solid 112 3; solid -118.5 3; void 0 4.7"
 
 # ---------------------------------------------------------------------------
-# 4. 縁のハニカム。z=4.0 の断面で数える。六角穴は二面幅 3.6 (平面が ±X を向く
-#    向きに 90° 回して置くので、左右の縁では X の幅が頂点間 4.157、Y の幅が
-#    3.6)、壁 1.6、枠 2.4。中心間隔は行方向 5.2、行の間隔 4.503。
-#    左右の縁 (幅 14 → 肉抜き幅 9.2) には 2 行 (中心 x = ±112 ± 2.252)。
-#    前片の左右は長さ 172 − 4.8 = 167.2 の範囲に、x = −109.748 と +114.252 の行が
-#    中心 y=86 から 5.2 刻みで |y − 86| ≤ 81.8 の 31 個、もう一方の行が
-#    半ピッチずれの 32 個 → 片側 63、両側 126。
-#    奥片の左右は 126 − 4.8 = 121.2 の範囲 (|y − 63| ≤ 58.8) に 23 + 22 = 45、
-#    両側 90。奥の縁 (幅 18 → 13.2) は 3 行 (y = 135 が半ピッチずれ、
-#    135 ± 4.503 が x = 5.2 刻み) で、|x| ≤ 114.8 に 45 + 44 + 45 = 134。
-#    奥の縁の六角は回していないので X 幅 3.6・Y 幅 4.157
-#    loop 総数は 外形 1 + ソケット + 六角: 前片 1+20+126 = 147、奥片 1+15+90+134 = 240
+# 4. 縁の X 筋交い窓。z=4.0 の断面で数える。左右の縁 (14) には bin の境目
+#    (42mm ピッチ) に沿って、幅 10 (枠 2 を外周とソケット際に残す)・長さ 40
+#    (境目に 2mm のリブ) の窓を行ごとに開け、窓の対角に幅 2 の X を渡す。
+#    各片の端 (継ぎ目・前縁側) は 2mm 残すので端の窓は 39 になる。
+#    前片の左右: y = [5,45] [47,87] [89,129] [131,170]、奥片: [2,41] [43,83] [85,125]。
+#    奥の縁 (18) には列ごとに 40×14 の窓 (x = 中心 ±20、y = [128,142])。
+#    X は窓を 4 つの三角に割るので、窓 1 つが loop 4 本になる:
+#    前片 1 + 20 + 8窓×4 = 53、奥片 1 + 15 + 6窓×4 + 5窓×4 = 60。
+#    三角の重心 (端の三角は中心から長辺の 2/3、脇の三角は短辺の 2/3) が void、
+#    X の交点・リブ・枠が solid。
+#    窓の実寸は winbox で測る (4 つの三角の union bbox = 窓の矩形)。
+#    筋交いの幅 2 は、窓の中心から対角に沿って 8 進んだ点を法線方向へ
+#    ±0.8 ずらすと solid、±1.2 ずらすと void になることで測る (もう 1 本の
+#    筋交いの中心線はそこから 2.7mm 以上離れていて、半幅 1 の外にある)。左右の窓 10×40 の対角の向きは
+#    (0.243, 0.970)、法線は (0.970, -0.243)。奥の窓 40×14 は (0.944, 0.330) と
+#    (-0.330, 0.944)
 # ---------------------------------------------------------------------------
-check_plan front honeycomb 4.0 \
-  "loops 147;
-   loop -109.748 86 4.157 3.6; loop -114.252 88.6 4.157 3.6; loop 114.252 86 4.157 3.6;
-   loop -109.748 8 4.157 3.6; loop -114.252 166.6 4.157 3.6;
-   void -109.748 86; solid -112 86; solid -118 86; solid -106 86; solid -112 1.5"
-check_plan rear honeycomb 4.0 \
-  "loops 240;
-   loop -109.748 63 4.157 3.6; loop 109.748 65.6 4.157 3.6;
-   loop 2.6 135 3.6 4.157; loop 0 130.497 3.6 4.157; loop 0 139.503 3.6 4.157;
-   loop -114.4 130.497 3.6 4.157; loop -109.748 5.8 4.157 3.6; loop -114.252 117.6 4.157 3.6;
-   void 2.6 135; solid 0 135; solid 0 142.5; solid 0 127.2; solid -116 126"
+check_plan front xwin 4.0 \
+  "loops 53;
+   void -112 38.3; void -112 11.7; void -115.3 25; void -108.7 25;
+   void 112 38.3; void 112 163.5; void 112 143.7; void -112 157.3;
+   solid -112 25; solid 112 151; solid -112 46; solid -112 4; solid -112 171;
+   solid -106 25; solid -118 25; solid 106 67; solid 118 67;
+   winbox -112 25 10 40; winbox 112 67 10 40; winbox -112 150.5 10 39; winbox 112 150.5 10 39;
+   solid -109.28 32.57; solid -110.84 32.95; void -108.90 32.47; void -111.22 33.05"
+check_plan rear xwin 4.0 \
+  "loops 60;
+   void -112 15.3; void -112 111; void 112 70; void -115.3 21; void 108.7 21;
+   solid -112 21; solid -112 42; solid -112 1; solid -112 125;
+   void 13.3 135; void -13.3 135; void 0 139.7; void 0 130.3; void 84 139.7; void -84 130.3;
+   solid 0 135; solid 21 135; solid -21 135; solid 0 143; solid 0 127; solid -112 135; solid 112 135;
+   winbox -112 21.5 10 39; winbox 112 63 10 40; winbox -112 105 10 40;
+   winbox 0 135 40 14; winbox 84 135 40 14; winbox -84 135 40 14;
+   solid 7.29 138.40; solid 7.81 136.88; void 7.15 138.77; void 7.95 136.51"
 
 # ---------------------------------------------------------------------------
-# 5. 材料。STL の体積 (facet の符号付き体積の和) が、床 0 化とハニカムの目標
-#    (床 1 で 96.6 / 92.6 cm³ → 床 0 で 55.6 / 58.3 → さらに縁の肉抜き) を
-#    下回ること。床の混入やハニカムの消失は体積で red になる
+# 5. 材料。STL の体積 (facet の符号付き体積の和) が、床 0 化と縁の肉抜きの目標
+#    (床 1 で 96.6 / 92.6 cm³ → 床 0 で 55.6 / 58.3 → ハニカムで 49.1 / 46.6
+#    → X 窓) を下回ること。床の混入や窓の消失は体積で red になる
 # ---------------------------------------------------------------------------
 check_volume() {
   name=$1 max=$2
@@ -468,8 +494,8 @@ print(f"volume {name}: {abs(V):.1f} cm3 (max {vmax})")
 sys.exit(0 if abs(V) <= vmax else 1)
 PYEOF
 }
-check_volume front 50
-check_volume rear 48
+check_volume front 47
+check_volume rear 43
 
 if [ "$fail" -ne 0 ]; then
   echo "letter-case: FAILED" >&2
