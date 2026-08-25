@@ -59,3 +59,14 @@ Gridfinity ベースプレートの共通モジュール。ピッチ 42mm、ソ�
 | `gf_baseplate(cols, rows, rim, floor_t)` | cols×rows のソケットを床 `floor_t` の上に彫った板。`rim=[left,right,front,back]` でソケット列の外側に縁を残す |
 
 座標系は X が列方向（中央 0）、Y が行方向（板の前端 0）、Z=0 が底面。
+
+## honeycomb.scad
+
+2D ハニカム (六角穴の千鳥格子)。板の肉抜きへ `difference` で使う。
+
+| モジュール | 用途 |
+|-----------|------|
+| `honeycomb(size, hole, wall)` | 矩形 `size=[w,d]` (中心が原点) に二面幅 `hole` の六角穴を壁 `wall` で並べる。行は X に沿い、矩形からはみ出す穴は置かない |
+
+`honeycomb_r` / `honeycomb_dx` / `honeycomb_dy` / `honeycomb_rows` で
+外接半径・中心間隔・行間隔・収まる行数を導ける。

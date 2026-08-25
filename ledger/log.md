@@ -8,6 +8,10 @@
   （4行+3行）で実装した（`modules/gridfinity.scad` +
   `assets/letter-case/`、検証は`tests/letter-case.sh`）。L字の埋め材案は
   不採用とし、その理由を記録した。
+- **Update**: 同conceptへ「材料の削減」を追記した。床1mm（≈120g+115g）は
+  食いすぎというuserの指摘で床0にし、くぼみを跨ぐ左右・奥の縁を六角穴3.6mm・
+  壁1.6mm・枠2.4mmの貫通ハニカムで肉抜きした（`modules/honeycomb.scad`新設）。
+  結果は≈61g+58g。
 
 ## 2026-08-12
 
