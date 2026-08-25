@@ -1,5 +1,14 @@
 # 3D CAD ledger Update Log
 
+## 2026-08-25
+
+- **Creation**: [レターケースのGridfinityベースプレート](designs/letter-case-gridfinity.md)
+  を新設した。既製レターケースの引き出し（240×318、左右奥14mm幅のくぼみ）へ
+  敷く5×7ベースプレートを、くぼみを縁で跨ぐ238×316の縁付き板として前後2分割
+  （4行+3行）で実装した（`modules/gridfinity.scad` +
+  `assets/letter-case/`、検証は`tests/letter-case.sh`）。L字の埋め材案は
+  不採用とし、その理由を記録した。
+
 ## 2026-08-12
 
 - **Creation**: OKF v0.2 bundleとして台帳を新設した。`print/`のSMB書き込み共有
