@@ -11,7 +11,7 @@ include <../../modules/xbrace.scad>
 // 床は持たない (ソケットは底まで抜け、bin は引き出しの床に直接乗る)。
 // くぼみを跨ぐ左右と奥の縁は、bin の境目 (42mm ピッチ) に沿った四角い窓を
 // 貫通で開け、窓の対角に X の筋交いを渡して肉抜きする。枠・リブ・筋交いは
-// すべて同じ線幅。前縁 (4mm) はそのまま。
+// すべて同じ線幅。前縁 (2.5mm) はそのまま。
 //
 // 座標系 (各片の datum):
 //   X = 横方向。板の中央が 0
@@ -29,6 +29,10 @@ recess_drop = 3.5; // くぼみの深さ (中央床との段差)。板は跨ぐ�
 
 // --- 設計値 ---
 fit_clearance = 1; // 引き出し内壁との片側クリアランス (メジャー実測の誤差込み)
+// --- 実プリントの合わせ込み (2026-08-26 の試作から。実測値は書き換えない) ---
+side_extend = 1.5; // 横がスカスカ (4mm 弱) だったので左右を 1.5 ずつ伸ばす
+front_trim = 1.5; // 前後が 1.5 ほどオーバーしたので手前の縁を削る
+back_corner_r = 6; // 引き出しの奥の内角が丸いので、奥片の奥側 2 隅を R6 にする
 floor_t = 0; // ソケット底の床厚。0 = 床なし (bin が引き出しの床に乗る)
 cols = 5;       // 横のマス数 (240/42 = 5.71)
 rows = 7;       // 奥行きのマス数 (318/42 = 7.57)
@@ -38,19 +42,19 @@ rear_rows = rows - front_rows;
 win_line = 2;
 
 // --- 派生値 ---
-plate_w = drawer_w - 2 * fit_clearance; // 238
-plate_d = drawer_d - 2 * fit_clearance; // 316
-grid_w = cols * gf_pitch;               // 210
-grid_d = rows * gf_pitch;               // 294
-side_rim = (plate_w - grid_w) / 2;      // 14 (= くぼみの幅)
+plate_w = drawer_w - 2 * fit_clearance + 2 * side_extend; // 241
+plate_d = drawer_d - 2 * fit_clearance - front_trim;      // 314.5
+grid_w = cols * gf_pitch;                                 // 210
+grid_d = rows * gf_pitch;                                 // 294
+side_rim = (plate_w - grid_w) / 2; // 15.5 (くぼみの幅 14 + 1.5)
 // 奥行きは高い床 (drawer_d − recess_w = 304) の中央へ grid を置く
-raised_d = drawer_d - recess_w;                     // 304
-raised_slack = (raised_d - grid_d) / 2;             // 5
-front_rim = raised_slack - fit_clearance;           // 4
-back_rim = recess_w + raised_slack - fit_clearance; // 18
-front_len = front_rim + front_rows * gf_pitch;      // 172
-rear_len = rear_rows * gf_pitch + back_rim;         // 144
-side_win_w = side_rim - 2 * win_line; // 10: 左右の窓の幅 (X 方向)
+raised_d = drawer_d - recess_w;                        // 304
+raised_slack = (raised_d - grid_d) / 2;                // 5
+front_rim = raised_slack - fit_clearance - front_trim; // 2.5
+back_rim = recess_w + raised_slack - fit_clearance;    // 18
+front_len = front_rim + front_rows * gf_pitch;         // 170.5
+rear_len = rear_rows * gf_pitch + back_rim;            // 144
+side_win_w = side_rim - 2 * win_line; // 11.5: 左右の窓の幅 (X 方向)
 back_win_d = back_rim - 2 * win_line; // 14: 奥の窓の奥行き (Y 方向)
 
 contract = str("CONTRACT plate=",
@@ -82,7 +86,9 @@ contract = str("CONTRACT plate=",
                "/B",
                back_rim,
                " xwin=",
-               win_line);
+               win_line,
+               " corner=",
+               back_corner_r);
 
 // 板 1 枚。rows 行のソケットに縁 rim = [left, right, front, back] を付け、
 // 左右の縁に行ごとの窓、back > 0 なら奥の縁に列ごとの窓を開ける。
@@ -97,6 +103,20 @@ letter_case_plate(rows, rim)
     difference()
     {
         gf_baseplate(cols, rows, rim, floor_t);
+        // 奥縁を持つ片 (奥片) は、奥側 2 隅を R に丸める:
+        // 隅の正方形から円を引いた残りを削る
+        if (rim[3] > 0)
+            for (sx = [ -1, 1 ])
+                translate([
+                    sx * (plate_w / 2 - back_corner_r),
+                    len - back_corner_r,
+                    -gf_over
+                ]) linear_extrude(cut_h) difference()
+                {
+                    translate([ sx > 0 ? 0 : -back_corner_r, 0 ])
+                        square(back_corner_r + gf_over);
+                    circle(r = back_corner_r, $fn = gf_fn * 2);
+                }
         for (r = [0:rows - 1]) {
             y0 = max(rim[2] + r * gf_pitch + win_line / 2, win_line);
             y1 =
