@@ -4,11 +4,9 @@
 プレート。外箱は既製品を使い、bin だけをプリントする構成の受け皿。
 設計思想は `ledger/designs/letter-case-gridfinity.md` が正本。
 
-## letter_case.scad
-
-前片・奥片が include する共通値。引き出し内寸（240×318、左右奥に 14mm 幅・
-3.5mm のくぼみ）、クリアランス、マス数、分割行数と、そこから導く板寸法・
-縁幅・CONTRACT 文字列。単体では何も描かない。
+共通値（引き出し内寸、クリアランス、合わせ込み値、マス数、分割行数と、
+そこから導く板寸法・縁幅・CONTRACT 文字列）は `modules/letter_case.scad` が
+持つ。単体では何も描かないので `assets/` ではなく `modules/` に置く。
 
 ## baseplate_front.scad / baseplate_rear.scad
 

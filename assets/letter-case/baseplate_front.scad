@@ -1,4 +1,4 @@
-include <letter_case.scad>
+include <../../modules/letter_case.scad>
 
 // 前片: 引き出しの前側。前縁 3.5 + 4 行。奥側の端は継ぎ目 (縁なし)
 echo(str(contract, " split=front rows=", front_rows, " len=", front_len));

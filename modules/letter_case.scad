@@ -1,9 +1,11 @@
-include <../../modules/gridfinity.scad>
-include <../../modules/xbrace.scad>
+include <gridfinity.scad>
+include <xbrace.scad>
 
 // スタック式レターケースの引き出しへ敷く Gridfinity ベースプレートの共通値。
 // 設計の経緯と確定値は ledger/designs/letter-case-gridfinity.md が正本。
-// このファイルは前片・奥片の両 asset から include され、単体では何も描かない。
+// このファイルは前片・奥片の両 asset から include され、単体では何も描かない
+// (描かないので assets/ ではなく modules/ に置く。scad-live は assets/ の .scad
+// を 全部 render 対象にする)。
 //
 // 引き出しの床は、左右と奥の 14mm 幅が 3.5mm 低い (中央が高い)。板は高い
 // 中央床 (212x304) の上に乗り、縁はくぼみの上を浮いて跨ぐ (くぼみの斜面には

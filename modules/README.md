@@ -67,3 +67,9 @@ Gridfinity ベースプレートの共通モジュール。ピッチ 42mm、ソ�
 | モジュール | 用途 |
 |-----------|------|
 | `xbrace_window(size, line)` | 矩形 `size=[w,d]` (中心が原点) の窓から、対角 2 本の筋交い (幅 `line`) を残した 4 つの三角形の開口 |
+
+## letter_case.scad
+
+`assets/letter-case/` の前片・奥片が include する project 固有の共通値と
+`letter_case_plate(rows, rim)`。共有モジュールではないが、単体では何も描かない
+ので render 対象の `assets/` には置かない。
