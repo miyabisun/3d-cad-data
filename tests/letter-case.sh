@@ -3,7 +3,7 @@
 # - openscad が exit 0 で非空の STL を生成し、console に ERROR / WARNING が無いこと
 # - 設計契約 (CONTRACT echo) が台帳の確定値と一致すること
 # - production STL の断面実測で、板の外形 (引き出し内寸 − クリアランス)・
-#   ソケットの配置 (42mm ピッチ)・ソケット輪郭 (41.5 / 37.2 / 35.8 の3段)・
+#   ソケットの配置 (42mm ピッチ)・ソケット輪郭 (公称 41.5 / 37.2 / 35.8 の3段 + 逃げ 0.1)・
 #   縁の X 筋交い窓を実形状として固定すること (echo は自己申告なので形状で裏を取る)
 # - 2枚を前後に突き合わせたとき、継ぎ目を跨いでも 42mm ピッチが保たれること
 # - 各 STL が1連結成分であること
@@ -383,7 +383,7 @@ render rear assets/letter-case/baseplate_rear.scad
 #    縁になる。前 4 行 + 奥 3 行に分割し、前片は奥行き 3.5+168=171.5、奥片は
 #    126+18=144。奥片の奥側 2 隅は R6
 # ---------------------------------------------------------------------------
-CONTRACT="CONTRACT plate=240.6x315.5 grid=5x7 pitch=42 socket=41.5/37.2/35.8 depth=4.65 floor=0 rim=L15.3/R15.3/F3.5/B18 xwin=2 corner=6"
+CONTRACT="CONTRACT plate=240.6x315.5 grid=5x7 pitch=42 socket=41.5/37.2/35.8 fit=0.1 depth=4.65 floor=0 rim=L15.3/R15.3/F3.5/B18 xwin=2 corner=6"
 expect_echo front "$CONTRACT split=front rows=4 len=171.5"
 expect_echo rear "$CONTRACT split=rear rows=3 len=144"
 
@@ -395,35 +395,36 @@ check_single_solid rear
 
 # ---------------------------------------------------------------------------
 # 1. ソケットの配置 (42mm ピッチ)。上の面取り (Z 2.5..4.65) の中の z=4.0 で
-#    切ると、各ソケットは 41.5 − 2×0.65 = 40.2 角の loop になる。縁の窓も
-#    同じ断面に loop として出る (数は 4. で数える) ので、grid 節は 40.2 角の
-#    loop だけを拾い、20 / 15 個すべての中心を集合として固定する。
+#    切ると、各ソケットは 41.7 − 2×0.65 = 40.4 角の loop になる (輪郭は公称
+#    41.5/37.2/35.8 に嵌合クリアランス 0.1 を全周へ足した 41.7/37.4/36.0)。縁の窓も
+#    同じ断面に loop として出る (数は 4. で数える) ので、grid 節は 40.4 角の
+#    loop (40.4 角) だけを拾い、20 / 15 個すべての中心を集合として固定する。
 #    列の中心は x = -84,-42,0,42,84。前片の行の中心は y = 24.5,66.5,108.5,150.5、
 #    奥片は y = 21,63,105 で、前片の全長 171.5 を足すと 192.5,234.5,276.5 になり
 #    150.5 + 42 = 192.5 で継ぎ目を跨いでも 42mm ピッチである
 # ---------------------------------------------------------------------------
 check_plan front cells 4.0 \
-  "rect -120.3 120.3 0 171.5; grid -84 42 5 24.5 42 4 40.2;
-   loop -84 24.5 40.2 40.2; loop 84 24.5 40.2 40.2; loop 0 108.5 40.2 40.2;
-   loop -84 150.5 40.2 40.2; loop 84 150.5 40.2 40.2;
+  "rect -120.3 120.3 0 171.5; grid -84 42 5 24.5 42 4 40.4;
+   loop -84 24.5 40.4 40.4; loop 84 24.5 40.4 40.4; loop 0 108.5 40.4 40.4;
+   loop -84 150.5 40.4 40.4; loop 84 150.5 40.4 40.4;
    void 0 24.5; solid -105 24.5; solid 105 24.5; solid 0 1; solid -63 66.5; solid 0 171.1"
 check_plan rear cells 4.0 \
-  "rect -120.3 120.3 0 144; grid -84 42 5 21 42 3 40.2;
-   loop -84 21 40.2 40.2; loop 84 21 40.2 40.2; loop 0 63 40.2 40.2;
-   loop -84 105 40.2 40.2; loop 84 105 40.2 40.2;
+  "rect -120.3 120.3 0 144; grid -84 42 5 21 42 3 40.4;
+   loop -84 21 40.4 40.4; loop 84 21 40.4 40.4; loop 0 63 40.4 40.4;
+   loop -84 105 40.4 40.4; loop 84 105 40.4 40.4;
    void 0 21; solid -105 63; solid 105 63; solid 0 135; solid 0 143; solid -63 63"
 
 # ---------------------------------------------------------------------------
 # 2. ソケット輪郭の3段 (底から 0.7 面取り / 1.8 垂直 / 2.15 面取り)。
-#    垂直部 (Z 0.7..2.5) の z=1.6 で切ると 37.2 角、下の面取り (Z 0..0.7) の
-#    z=0.35 で切ると 35.8 + 2×0.35 = 36.5 角になる
+#    垂直部 (Z 0.7..2.5) の z=1.6 で切ると 37.4 角、下の面取り (Z 0..0.7) の
+#    z=0.35 で切ると 36.0 + 2×0.35 = 36.7 角になる
 # ---------------------------------------------------------------------------
 #    縁の窓は貫通なので、どの高さの断面でも loop 総数は z=4.0 と同じ
 #    (前片 53、奥片 60。内訳は 4. を参照)。総数を固定して全ソケットの存在を測る
-check_plan front wall 1.6 "loops 53; loop -84 24.5 37.2 37.2; loop 0 108.5 37.2 37.2"
-check_plan front chamfer-bottom 0.35 "loops 53; loop -84 24.5 36.5 36.5; loop 84 150.5 36.5 36.5"
-check_plan rear wall 1.6 "loops 60; loop 84 105 37.2 37.2"
-check_plan rear chamfer-bottom 0.35 "loops 60; loop 0 21 36.5 36.5"
+check_plan front wall 1.6 "loops 53; loop -84 24.5 37.4 37.4; loop 0 108.5 37.4 37.4"
+check_plan front chamfer-bottom 0.35 "loops 53; loop -84 24.5 36.7 36.7; loop 84 150.5 36.7 36.7"
+check_plan rear wall 1.6 "loops 60; loop 84 105 37.4 37.4"
+check_plan rear chamfer-bottom 0.35 "loops 60; loop 0 21 36.7 36.7"
 
 # ---------------------------------------------------------------------------
 # 3. 縦断面 (X-Z) で、ソケットが底 (z=0) から天面まで抜けていること (床が無い)、
@@ -526,6 +527,22 @@ check_plan rear corners 2.0 \
    arc 114.3 138 6 114.8 121 138.2 145; arc -114.3 138 6 -121 -114.8 138.2 145;
    solid 119.8 0.5; solid -119.8 0.5"
 check_plan front corners 2.0 "solid 119.8 0.5; solid -119.8 0.5; solid 119.8 171; solid -119.8 171"
+
+# ---------------------------------------------------------------------------
+# 7. 共有 module の既定値。letter-case はクリアランス 0.1 を渡すが、
+#    gf_baseplate の既定 (clearance=0) は Gridfinity の公称輪郭 41.5/37.2/35.8
+#    のままであること (他 project が使うときの契約)。1 マスの板を WORK で描く。
+#    既定の床 floor_t=1 があるので、切断高さは letter-case より 1 高い
+# ---------------------------------------------------------------------------
+printf 'use <%s/modules/gridfinity.scad>\ngf_baseplate(1, 1);\n' "$ROOT" > "$WORK/nominal.scad"
+if openscad -o "$WORK/nominal.stl" "$WORK/nominal.scad" > "$WORK/nominal.log" 2>&1; then
+  check_plan nominal cells 5.0 "loops 2; loop 0 21 40.2 40.2"
+  check_plan nominal wall 2.6 "loops 2; loop 0 21 37.2 37.2"
+  check_plan nominal chamfer-bottom 1.35 "loops 2; loop 0 21 36.5 36.5"
+else
+  err "nominal: openscad failed"
+  cat "$WORK/nominal.log" >&2
+fi
 
 if [ "$fail" -ne 0 ]; then
   echo "letter-case: FAILED" >&2

@@ -55,8 +55,8 @@ Gridfinity ベースプレートの共通モジュール。ピッチ 42mm、ソ�
 
 | モジュール | 用途 |
 |-----------|------|
-| `gf_socket_cut()` | ソケット 1 個の切削体（z=0 がソケット底、+Z へ抜ける） |
-| `gf_baseplate(cols, rows, rim, floor_t)` | cols×rows のソケットを床 `floor_t` の上に彫った板。`rim=[left,right,front,back]` でソケット列の外側に縁を残す |
+| `gf_socket_cut(clearance)` | ソケット 1 個の切削体（z=0 がソケット底、+Z へ抜ける）。`clearance` で輪郭を全周へ逃がす（幅 +2c、角 R +c。既定 0 = 公称） |
+| `gf_baseplate(cols, rows, rim, floor_t, clearance)` | cols×rows のソケットを床 `floor_t` の上に彫った板。`rim=[left,right,front,back]` でソケット列の外側に縁を残す |
 
 座標系は X が列方向（中央 0）、Y が行方向（板の前端 0）、Z=0 が底面。
 

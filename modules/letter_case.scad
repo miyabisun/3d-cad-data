@@ -36,6 +36,8 @@ side_extend =
     1.3; // 試作1: 横が 4mm 弱スカスカで +1.5。試作2: 前後の端で当たるので −0.2
 front_trim = 0.5; // 試作1: 前後 1.5 オーバーで −1.5 → 試作3: 奥角の R
                   // が原因だったので 1 戻す
+socket_clearance =
+    0.1; // 試作3: bin がきつく板がしなるので、ソケット輪郭を全周 0.1 外へ
 back_corner_r = 6; // 引き出しの奥の内角が丸いので、奥片の奥側 2 隅を R6 にする
 floor_t = 0; // ソケット底の床厚。0 = 床なし (bin が引き出しの床に乗る)
 cols = 5;       // 横のマス数 (240/42 = 5.71)
@@ -77,6 +79,8 @@ contract = str("CONTRACT plate=",
                gf_socket_mid,
                "/",
                gf_socket_bot,
+               " fit=",
+               socket_clearance,
                " depth=",
                gf_socket_depth,
                " floor=",
@@ -106,7 +110,7 @@ letter_case_plate(rows, rim)
     cut_h = gf_socket_depth + 2 * gf_over;
     difference()
     {
-        gf_baseplate(cols, rows, rim, floor_t);
+        gf_baseplate(cols, rows, rim, floor_t, socket_clearance);
         // 奥縁を持つ片 (奥片) は、奥側 2 隅を R に丸める:
         // 隅の正方形から円を引いた残りを削る
         if (rim[3] > 0)
