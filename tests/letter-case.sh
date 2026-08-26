@@ -376,19 +376,19 @@ render rear assets/letter-case/baseplate_rear.scad
 
 # ---------------------------------------------------------------------------
 # 0. 設計契約。引き出し内寸 240x318 からクリアランス 1 を片側ずつ引いた
-#    238x316 の板に、実プリントの合わせ込み (左右 +1.3 ずつ、手前 −1.5) を
-#    足した 240.6x314.5 の板に 5x7 のソケットを置く。横は 5x42=210 を中央へ置いて
+#    238x316 の板に、実プリントの合わせ込み (左右 +1.3 ずつ、手前 −0.5) を
+#    足した 240.6x315.5 の板に 5x7 のソケットを置く。横は 5x42=210 を中央へ置いて
 #    左右 15.3 が縁になる。奥行きは高い床 (318-14=304) の中央へ 7x42=294 を
-#    置くので、前 4−1.5=2.5 / 奥 18 (= くぼみ 14 + 余り 5 − クリアランス 1) が
-#    縁になる。前 4 行 + 奥 3 行に分割し、前片は奥行き 2.5+168=170.5、奥片は
+#    置くので、前 4−0.5=3.5 / 奥 18 (= くぼみ 14 + 余り 5 − クリアランス 1) が
+#    縁になる。前 4 行 + 奥 3 行に分割し、前片は奥行き 3.5+168=171.5、奥片は
 #    126+18=144。奥片の奥側 2 隅は R6
 # ---------------------------------------------------------------------------
-CONTRACT="CONTRACT plate=240.6x314.5 grid=5x7 pitch=42 socket=41.5/37.2/35.8 depth=4.65 floor=0 rim=L15.3/R15.3/F2.5/B18 xwin=2 corner=6"
-expect_echo front "$CONTRACT split=front rows=4 len=170.5"
+CONTRACT="CONTRACT plate=240.6x315.5 grid=5x7 pitch=42 socket=41.5/37.2/35.8 depth=4.65 floor=0 rim=L15.3/R15.3/F3.5/B18 xwin=2 corner=6"
+expect_echo front "$CONTRACT split=front rows=4 len=171.5"
 expect_echo rear "$CONTRACT split=rear rows=3 len=144"
 
 # 外形。X は中央が 0、Y は各片の前端が 0、Z=0 が底面。床は無いので高さはソケットの 4.65
-check_bbox front -120.3 120.3 0 170.5 0 4.65
+check_bbox front -120.3 120.3 0 171.5 0 4.65
 check_bbox rear -120.3 120.3 0 144 0 4.65
 check_single_solid front
 check_single_solid rear
@@ -398,15 +398,15 @@ check_single_solid rear
 #    切ると、各ソケットは 41.5 − 2×0.65 = 40.2 角の loop になる。縁の窓も
 #    同じ断面に loop として出る (数は 4. で数える) ので、grid 節は 40.2 角の
 #    loop だけを拾い、20 / 15 個すべての中心を集合として固定する。
-#    列の中心は x = -84,-42,0,42,84。前片の行の中心は y = 23.5,65.5,107.5,149.5、
-#    奥片は y = 21,63,105 で、前片の全長 170.5 を足すと 191.5,233.5,275.5 になり
-#    149.5 + 42 = 191.5 で継ぎ目を跨いでも 42mm ピッチである
+#    列の中心は x = -84,-42,0,42,84。前片の行の中心は y = 24.5,66.5,108.5,150.5、
+#    奥片は y = 21,63,105 で、前片の全長 171.5 を足すと 192.5,234.5,276.5 になり
+#    150.5 + 42 = 192.5 で継ぎ目を跨いでも 42mm ピッチである
 # ---------------------------------------------------------------------------
 check_plan front cells 4.0 \
-  "rect -120.3 120.3 0 170.5; grid -84 42 5 23.5 42 4 40.2;
-   loop -84 23.5 40.2 40.2; loop 84 23.5 40.2 40.2; loop 0 107.5 40.2 40.2;
-   loop -84 149.5 40.2 40.2; loop 84 149.5 40.2 40.2;
-   void 0 23.5; solid -105 23.5; solid 105 23.5; solid 0 1; solid -63 65.5; solid 0 170.1"
+  "rect -120.3 120.3 0 171.5; grid -84 42 5 24.5 42 4 40.2;
+   loop -84 24.5 40.2 40.2; loop 84 24.5 40.2 40.2; loop 0 108.5 40.2 40.2;
+   loop -84 150.5 40.2 40.2; loop 84 150.5 40.2 40.2;
+   void 0 24.5; solid -105 24.5; solid 105 24.5; solid 0 1; solid -63 66.5; solid 0 171.1"
 check_plan rear cells 4.0 \
   "rect -120.3 120.3 0 144; grid -84 42 5 21 42 3 40.2;
    loop -84 21 40.2 40.2; loop 84 21 40.2 40.2; loop 0 63 40.2 40.2;
@@ -420,8 +420,8 @@ check_plan rear cells 4.0 \
 # ---------------------------------------------------------------------------
 #    縁の窓は貫通なので、どの高さの断面でも loop 総数は z=4.0 と同じ
 #    (前片 53、奥片 60。内訳は 4. を参照)。総数を固定して全ソケットの存在を測る
-check_plan front wall 1.6 "loops 53; loop -84 23.5 37.2 37.2; loop 0 107.5 37.2 37.2"
-check_plan front chamfer-bottom 0.35 "loops 53; loop -84 23.5 36.5 36.5; loop 84 149.5 36.5 36.5"
+check_plan front wall 1.6 "loops 53; loop -84 24.5 37.2 37.2; loop 0 108.5 37.2 37.2"
+check_plan front chamfer-bottom 0.35 "loops 53; loop -84 24.5 36.5 36.5; loop 84 150.5 36.5 36.5"
 check_plan rear wall 1.6 "loops 60; loop 84 105 37.2 37.2"
 check_plan rear chamfer-bottom 0.35 "loops 60; loop 0 21 36.5 36.5"
 
@@ -437,17 +437,17 @@ check_plan rear chamfer-bottom 0.35 "loops 60; loop 0 21 36.5 36.5"
 # ここで全数を測る
 ALL_CELLS="void_rect -101.5 -66.5 0.05 4.6; void_rect -59.5 -24.5 0.05 4.6;
    void_rect -17.5 17.5 0.05 4.6; void_rect 24.5 59.5 0.05 4.6; void_rect 66.5 101.5 0.05 4.6"
-for y in 23.5 65.5 107.5 149.5; do
+for y in 24.5 66.5 108.5 150.5; do
   check_section front "row-y$y" "$y" "$ALL_CELLS; solid -63 2.5; solid 63 2.5; solid -106 2; solid 106 2"
 done
 for y in 21 63 105; do
   check_section rear "row-y$y" "$y" "$ALL_CELLS; solid -63 2.5; solid 63 2.5; solid -106 2; solid 106 2"
 done
 # 縁の枠 (ソケット際 105..107、外周 118.3..120.3) が全高で詰まっていること
-check_section front row1 23.5 \
+check_section front row1 24.5 \
   "void -84 0.2; void 0 0.2; solid -119.3 2; solid 119.3 2; solid -119.8 4.5; void -84 3"
 check_section rear row3 105 "void 84 0.2; solid 119.3 2; solid -119.3 2; void 84 3"
-# 前縁 (2.5) は全幅で詰まった板
+# 前縁 (3.5) は全幅で詰まった板
 check_section front front-rim 1 "solid 0 3; solid -119.8 3; solid 119.8 3; void 0 4.7"
 # 奥片の、左右の窓と奥の窓の間の無垢の帯 (y 125..128)
 check_section rear rear-band 126.5 "solid 0 3; solid -112 3; solid 112 3; solid -119.8 3; void 0 4.7"
@@ -458,7 +458,7 @@ check_section rear rear-band 126.5 "solid 0 3; solid -112 3; solid 112 3; solid 
 #    (境目に 2mm のリブ) の窓を行ごとに開け、窓の対角に幅 2 の X を渡す。
 #    窓の中心は x = ±112.65。各片の端 (継ぎ目・前縁側) は 2mm 残すので
 #    継ぎ目側の端の窓は 39 になる。
-#    前片の左右: y = [3.5,43.5] [45.5,85.5] [87.5,127.5] [129.5,168.5]、
+#    前片の左右: y = [4.5,44.5] [46.5,86.5] [88.5,128.5] [130.5,169.5]、
 #    奥片: [2,41] [43,83] [85,125]。
 #    奥の縁 (18) には列ごとに 40×14 の窓 (x = 中心 ±20、y = [128,142])。
 #    X は窓を 4 つの三角に割るので、窓 1 つが loop 4 本になる:
@@ -475,12 +475,12 @@ check_section rear rear-band 126.5 "solid 0 3; solid -112 3; solid 112 3; solid 
 # ---------------------------------------------------------------------------
 check_plan front xwin 4.0 \
   "loops 53;
-   void -112.65 36.8; void -112.65 10.2; void -116.42 23.5; void -108.88 23.5;
-   void 112.65 36.8; void 112.65 162; void 112.65 136; void -112.65 162;
-   solid -112.65 23.5; solid 112.65 149; solid -112.65 44.5; solid -112.65 3; solid -112.65 169.5;
-   solid -106 23.5; solid -119.3 23.5; solid 106 65.5; solid 119.3 65.5;
-   winbox -112.65 23.5 11.3 40; winbox 112.65 65.5 11.3 40; winbox -112.65 149 11.3 39; winbox 112.65 149 11.3 39;
-   solid -109.71 30.98; solid -111.25 31.42; void -109.32 30.87; void -111.63 31.52"
+   void -112.65 37.8; void -112.65 11.2; void -116.42 24.5; void -108.88 24.5;
+   void 112.65 37.8; void 112.65 163; void 112.65 137; void -112.65 163;
+   solid -112.65 24.5; solid 112.65 150; solid -112.65 45.5; solid -112.65 3; solid -112.65 170.5;
+   solid -106 24.5; solid -119.3 24.5; solid 106 66.5; solid 119.3 66.5;
+   winbox -112.65 24.5 11.3 40; winbox 112.65 66.5 11.3 40; winbox -112.65 150 11.3 39; winbox 112.65 150 11.3 39;
+   solid -109.71 31.98; solid -111.25 32.42; void -109.32 31.87; void -111.63 32.52"
 check_plan rear xwin 4.0 \
   "loops 60;
    void -112.65 15.3; void -112.65 111; void 112.65 70; void -116.42 21; void 108.88 21;
@@ -510,7 +510,7 @@ print(f"volume {name}: {abs(V):.1f} cm3 (max {vmax})")
 sys.exit(0 if abs(V) <= vmax else 1)
 PYEOF
 }
-check_volume front 46
+check_volume front 47
 check_volume rear 43
 
 # ---------------------------------------------------------------------------
@@ -525,7 +525,7 @@ check_plan rear corners 2.0 \
   "void 119.3 143; void -119.3 143; solid 119.3 140.5; solid -119.3 140.5; solid 114.3 143.5;
    arc 114.3 138 6 114.8 121 138.2 145; arc -114.3 138 6 -121 -114.8 138.2 145;
    solid 119.8 0.5; solid -119.8 0.5"
-check_plan front corners 2.0 "solid 119.8 0.5; solid -119.8 0.5; solid 119.8 170; solid -119.8 170"
+check_plan front corners 2.0 "solid 119.8 0.5; solid -119.8 0.5; solid 119.8 171; solid -119.8 171"
 
 if [ "$fail" -ne 0 ]; then
   echo "letter-case: FAILED" >&2

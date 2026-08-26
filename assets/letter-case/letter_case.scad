@@ -11,7 +11,7 @@ include <../../modules/xbrace.scad>
 // 床は持たない (ソケットは底まで抜け、bin は引き出しの床に直接乗る)。
 // くぼみを跨ぐ左右と奥の縁は、bin の境目 (42mm ピッチ) に沿った四角い窓を
 // 貫通で開け、窓の対角に X の筋交いを渡して肉抜きする。枠・リブ・筋交いは
-// すべて同じ線幅。前縁 (2.5mm) はそのまま。
+// すべて同じ線幅。前縁 (3.5mm) はそのまま。
 //
 // 座標系 (各片の datum):
 //   X = 横方向。板の中央が 0
@@ -32,7 +32,8 @@ fit_clearance = 1; // 引き出し内壁との片側クリアランス (メジ�
 // --- 実プリントの合わせ込み (2026-08-26 の試作から。実測値は書き換えない) ---
 side_extend =
     1.3; // 試作1: 横が 4mm 弱スカスカで +1.5。試作2: 前後の端で当たるので −0.2
-front_trim = 1.5; // 前後が 1.5 ほどオーバーしたので手前の縁を削る
+front_trim = 0.5; // 試作1: 前後 1.5 オーバーで −1.5 → 試作3: 奥角の R
+                  // が原因だったので 1 戻す
 back_corner_r = 6; // 引き出しの奥の内角が丸いので、奥片の奥側 2 隅を R6 にする
 floor_t = 0; // ソケット底の床厚。0 = 床なし (bin が引き出しの床に乗る)
 cols = 5;       // 横のマス数 (240/42 = 5.71)
@@ -44,16 +45,16 @@ win_line = 2;
 
 // --- 派生値 ---
 plate_w = drawer_w - 2 * fit_clearance + 2 * side_extend; // 240.6
-plate_d = drawer_d - 2 * fit_clearance - front_trim;      // 314.5
+plate_d = drawer_d - 2 * fit_clearance - front_trim;      // 315.5
 grid_w = cols * gf_pitch;                                 // 210
 grid_d = rows * gf_pitch;                                 // 294
 side_rim = (plate_w - grid_w) / 2; // 15.3 (くぼみの幅 14 + 1.3)
 // 奥行きは高い床 (drawer_d − recess_w = 304) の中央へ grid を置く
 raised_d = drawer_d - recess_w;                        // 304
 raised_slack = (raised_d - grid_d) / 2;                // 5
-front_rim = raised_slack - fit_clearance - front_trim; // 2.5
+front_rim = raised_slack - fit_clearance - front_trim; // 3.5
 back_rim = recess_w + raised_slack - fit_clearance;    // 18
-front_len = front_rim + front_rows * gf_pitch;         // 170.5
+front_len = front_rim + front_rows * gf_pitch;         // 171.5
 rear_len = rear_rows * gf_pitch + back_rim;            // 144
 side_win_w = side_rim - 2 * win_line; // 11.3: 左右の窓の幅 (X 方向)
 back_win_d = back_rim - 2 * win_line; // 14: 奥の窓の奥行き (Y 方向)

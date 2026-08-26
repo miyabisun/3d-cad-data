@@ -17,6 +17,9 @@
 - **Creation**: 最初のPrint concept
   [レターケース ベースプレート（前片・奥片）](prints/letter-case-baseplate.md)
   を登録した。`print/letter-case/baseplate.3mf`（試作2回目＝板幅241のSTL）。
+- **Update**: 同Design conceptへ試作3回目を記録した。奥行きは最初の316で
+  ぴったりで、1.5オーバーは奥角の丸みへの突っ張りの誤認だった。userの指示で
+  手前を1mmだけ戻し（`front_trim` 0.5）、板は240.6×315.5へ。
 
 ## 2026-08-25
 
