@@ -68,7 +68,7 @@ Designの本文はuserの当該発言を`## user 原文 (verbatim)`見出しの�
 
 ## Print
 
-（まだ無い）
+- [レターケース ベースプレート（前片・奥片）](prints/letter-case-baseplate.md) - レターケースの引き出しへ敷くGridfinityベースプレート2枚のBambuStudioプロジェクト。試作の合わせ込み中
 
 ## Design
 

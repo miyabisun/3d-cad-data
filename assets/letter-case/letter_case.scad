@@ -30,7 +30,8 @@ recess_drop = 3.5; // くぼみの深さ (中央床との段差)。板は跨ぐ�
 // --- 設計値 ---
 fit_clearance = 1; // 引き出し内壁との片側クリアランス (メジャー実測の誤差込み)
 // --- 実プリントの合わせ込み (2026-08-26 の試作から。実測値は書き換えない) ---
-side_extend = 1.5; // 横がスカスカ (4mm 弱) だったので左右を 1.5 ずつ伸ばす
+side_extend =
+    1.3; // 試作1: 横が 4mm 弱スカスカで +1.5。試作2: 前後の端で当たるので −0.2
 front_trim = 1.5; // 前後が 1.5 ほどオーバーしたので手前の縁を削る
 back_corner_r = 6; // 引き出しの奥の内角が丸いので、奥片の奥側 2 隅を R6 にする
 floor_t = 0; // ソケット底の床厚。0 = 床なし (bin が引き出しの床に乗る)
@@ -42,11 +43,11 @@ rear_rows = rows - front_rows;
 win_line = 2;
 
 // --- 派生値 ---
-plate_w = drawer_w - 2 * fit_clearance + 2 * side_extend; // 241
+plate_w = drawer_w - 2 * fit_clearance + 2 * side_extend; // 240.6
 plate_d = drawer_d - 2 * fit_clearance - front_trim;      // 314.5
 grid_w = cols * gf_pitch;                                 // 210
 grid_d = rows * gf_pitch;                                 // 294
-side_rim = (plate_w - grid_w) / 2; // 15.5 (くぼみの幅 14 + 1.5)
+side_rim = (plate_w - grid_w) / 2; // 15.3 (くぼみの幅 14 + 1.3)
 // 奥行きは高い床 (drawer_d − recess_w = 304) の中央へ grid を置く
 raised_d = drawer_d - recess_w;                        // 304
 raised_slack = (raised_d - grid_d) / 2;                // 5
@@ -54,7 +55,7 @@ front_rim = raised_slack - fit_clearance - front_trim; // 2.5
 back_rim = recess_w + raised_slack - fit_clearance;    // 18
 front_len = front_rim + front_rows * gf_pitch;         // 170.5
 rear_len = rear_rows * gf_pitch + back_rim;            // 144
-side_win_w = side_rim - 2 * win_line; // 11.5: 左右の窓の幅 (X 方向)
+side_win_w = side_rim - 2 * win_line; // 11.3: 左右の窓の幅 (X 方向)
 back_win_d = back_rim - 2 * win_line; // 14: 奥の窓の奥行き (Y 方向)
 
 contract = str("CONTRACT plate=",
