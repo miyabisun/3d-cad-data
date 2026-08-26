@@ -1,5 +1,10 @@
 # 3D CAD ledger Update Log
 
+## 2026-08-27
+
+- **Update**: [レターケース ベースプレート（前片・奥片）](prints/letter-case-baseplate.md)
+  の`content_sha256`を、userが保存し直した`.3mf`へ更新した。
+
 ## 2026-08-26
 
 - **Update**: [レターケースのGridfinityベースプレート](designs/letter-case-gridfinity.md)
