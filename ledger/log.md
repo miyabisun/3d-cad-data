@@ -2,6 +2,10 @@
 
 ## 2026-08-27
 
+- **Creation**: [Gridfinity 4U bin（薄いリップ・ラベル棚）](designs/gridfinity-bin-4u.md)
+  を新設した。Web生成器の底の穴を嫌ったuserの依頼で、無垢の底・薄いリップ・
+  手前に13mmのラベル棚を持つ1×1と1×2の4U bin（`modules/gridfinity_bin.scad` +
+  `assets/gridfinity-bin/`、検証は`tests/gridfinity-bin.sh`）。
 - **Update**: [レターケース ベースプレート（前片・奥片）](prints/letter-case-baseplate.md)
   の`content_sha256`を、userが保存し直した`.3mf`へ更新した。
 

@@ -1,0 +1,473 @@
+#!/bin/bash
+# Gridfinity bin (1x1x4U / 1x2x4U、薄いリップ、手前に 13mm のラベル棚) のレンダリング検証。
+# - openscad が exit 0 で非空の STL を生成し、console に ERROR / WARNING が無いこと
+# - 設計契約 (CONTRACT echo) が台帳の確定値と一致すること
+# - production STL の断面実測で、底の 3 段輪郭 (35.6/37.2/41.5)・42 ピッチ・
+#   外形 41.5 角と全高・壁 1.2・床・薄いリップ・ラベル棚 13mm とその裏のリブを
+#   実形状として固定すること (echo は自己申告なので形状で裏を取る)
+# - 底面に穴が無いこと (磁石穴・ネジ穴を持たない)
+# - 各 STL が1連結成分であること
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+
+fail=0
+err() {
+  echo "gridfinity-bin: $*" >&2
+  fail=1
+}
+
+# render <name> <scad> — STL 生成と console 検査。console は $WORK/<name>.log に残す
+render() {
+  name=$1 scad=$2
+  if ! openscad -o "$WORK/$name.stl" "$ROOT/$scad" > "$WORK/$name.log" 2>&1; then
+    err "$name: openscad failed"
+    cat "$WORK/$name.log" >&2
+    return
+  fi
+  [ -s "$WORK/$name.stl" ] || err "$name: STL is empty"
+  # STL が意味のある大きさか (ヘッダだけの空形状を弾く)
+  size=$(stat -c %s "$WORK/$name.stl")
+  [ "$size" -gt 10000 ] || err "$name: STL is suspiciously small ($size bytes)"
+  if grep -Eq 'ERROR|WARNING' "$WORK/$name.log"; then
+    err "$name: console has ERROR/WARNING"
+    grep -E 'ERROR|WARNING' "$WORK/$name.log" >&2
+  fi
+}
+
+# expect_echo <name> <payload> — CONTRACT echo の完全一致検査。
+# openscad の console は echo(str(...)) を `ECHO: "<payload>"` という1行で書くので、
+# 行全体と突き合わせる (grep -Fx)。部分一致で照合すると、期待値 36 が 360 でも、
+# 8.4 が 8.41 でも通ってしまい、値を固定できない
+expect_echo() {
+  name=$1 payload=$2
+  grep -Fxq "ECHO: \"$payload\"" "$WORK/$name.log" \
+    || err "$name: missing contract echo: $payload"
+}
+
+# 水平断面 (X-Y) の実測: 指定 z で切る。2D X = 部品X、生 y = -部品Y。
+# spec の節:
+#   loops <n>                        — loop の数
+#   rect <x1> <x2> <y1> <y2>         — 最大 loop (外形) の bbox
+#   loop <cx> <cy> <sx> <sy>         — 指定位置に指定 bbox の loop がある (穴の実測)
+#   solid <cx> <cy> / void <cx> <cy> — 指定点に材料が有る/無い
+#   winbox <cx> <cy> <sx> <sy>       — 指定の矩形の中に収まる (外形以外の) loop が
+#       ちょうど 4 本あり、その union の bbox が矩形と一致する (X 窓の実寸)
+#   arc <cx> <cy> <r> <x1> <x2> <y1> <y2> — 矩形 [x1,x2]×[y1,y2] に入る外形の頂点が
+#       5 個以上あり、すべて (cx,cy) から距離 r (±0.05) にある (角の丸みの実測)
+#   grid <x0> <dx> <nx> <y0> <dy> <ny> <span> — 外形以外の span 角の全 loop の
+#       中心の集合が格子 {x0+i*dx} × {y0+j*dy} と過不足なく一致する
+# solid/void は全 loop を偶奇規則で数える内外判定なので、穴・ポケットの中は
+# 外側 (材料無し) になる。bbox では見えない「肉の抜け」を直接測る。
+# この部品は全周が曲面 (楕円・円・六角) なので、外形は bbox と点の内外で測る
+check_plan() {
+  stl=$1 name=$2 cut_z=$3 spec=$4
+  cat > "$WORK/plan_$name.scad" <<EOF
+projection(cut = true) translate([ 0, 0, -$cut_z ]) import("$WORK/$stl.stl");
+EOF
+  if ! openscad -o "$WORK/plan_$name.svg" "$WORK/plan_$name.scad" > /dev/null 2>&1; then
+    err "plan $name: failed to render"
+    return
+  fi
+  python3 - "$WORK/plan_$name.svg" "$name" "$spec" <<'PYEOF' || fail=1
+import re, sys
+src = open(sys.argv[1]).read()
+name, spec = sys.argv[2], sys.argv[3]
+loops = []
+for sub in re.search(r'd="([^"]+)"', src).group(1).split("M")[1:]:
+    pts = [(float(a), -float(b)) for a, b in re.findall(r'(-?\d+\.?\d*),(-?\d+\.?\d*)', sub)]
+    loops.append(pts)
+
+
+def bbox(pts):
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    return (min(xs), max(xs), min(ys), max(ys))
+
+
+def inside(x, y):  # 偶奇規則 (+X 方向へ ray を飛ばして交差数を数える)
+    hits = 0
+    for pts in loops:
+        for i in range(len(pts)):
+            x1, y1 = pts[i]
+            x2, y2 = pts[(i + 1) % len(pts)]
+            if (y1 > y) != (y2 > y) and x < x1 + (y - y1) * (x2 - x1) / (y2 - y1):
+                hits += 1
+    return hits % 2 == 1
+
+
+body = max(loops, key=lambda p: (bbox(p)[1] - bbox(p)[0]) * (bbox(p)[3] - bbox(p)[2]))
+ok = True
+for cond in spec.split(";"):
+    kind, *args = cond.split()
+    if kind == "loops":
+        want = int(args[0])
+        print(f"plan {name}: {len(loops)} loops (want {want})")
+        if len(loops) != want:
+            ok = False
+    elif kind == "rect":  # rect <x1> <x2> <y1> <y2>
+        x1, x2, y1, y2 = map(float, args)
+        b = bbox(body)
+        print(f"plan {name}: rect x=[{b[0]:.3f},{b[1]:.3f}]"
+              f" y=[{b[2]:.3f},{b[3]:.3f}] span x={b[1] - b[0]:.3f}")
+        if any(abs(a - c) > 0.05 for a, c in zip(b, (x1, x2, y1, y2))):
+            print(f"plan {name}: rect want x=[{x1},{x2}] y=[{y1},{y2}]")
+            ok = False
+    elif kind == "loop":  # loop <cx> <cy> <sx> <sy>
+        cx, cy, sx, sy = map(float, args)
+        hit = [l for l in map(bbox, loops)
+               if abs((l[0] + l[1]) / 2 - cx) < 0.1 and abs((l[2] + l[3]) / 2 - cy) < 0.1
+               and abs((l[1] - l[0]) - sx) < 0.05 and abs((l[3] - l[2]) - sy) < 0.05]
+        if not hit:
+            print(f"plan {name}: missing loop ({cx},{cy}) span ({sx},{sy})")
+            print(f"plan {name}: loops = "
+                  f"{[tuple(round(v, 3) for v in bbox(l)) for l in loops]}")
+            ok = False
+        else:
+            l = hit[0]
+            print(f"plan {name}: loop x=[{l[0]:.3f},{l[1]:.3f}] y=[{l[2]:.3f},{l[3]:.3f}]"
+                  f" span ({l[1] - l[0]:.3f},{l[3] - l[2]:.3f})")
+    elif kind == "winbox":  # <cx> <cy> <sx> <sy>
+        cx, cy, sx, sy = map(float, args)
+        box = (cx - sx / 2 - 0.1, cx + sx / 2 + 0.1, cy - sy / 2 - 0.1, cy + sy / 2 + 0.1)
+        inner = [bbox(l) for l in loops if l is not body]
+        inner = [b for b in inner
+                 if b[0] >= box[0] and b[1] <= box[1] and b[2] >= box[2] and b[3] <= box[3]]
+        u = (min(b[0] for b in inner), max(b[1] for b in inner),
+             min(b[2] for b in inner), max(b[3] for b in inner)) if inner else None
+        print(f"plan {name}: winbox ({cx},{cy}) {len(inner)} loops, union "
+              f"{tuple(round(v, 3) for v in u) if u else None}")
+        want = (cx - sx / 2, cx + sx / 2, cy - sy / 2, cy + sy / 2)
+        if len(inner) != 4 or any(abs(a - c) > 0.05 for a, c in zip(u, want)):
+            print(f"plan {name}: winbox want 4 loops with union {want}")
+            ok = False
+    elif kind == "arc":  # <cx> <cy> <r> <x1> <x2> <y1> <y2>
+        cx, cy, r, x1, x2, y1, y2 = map(float, args)
+        pts = [p for p in body if x1 <= p[0] <= x2 and y1 <= p[1] <= y2]
+        dist = [((p[0] - cx) ** 2 + (p[1] - cy) ** 2) ** 0.5 for p in pts]
+        print(f"plan {name}: arc ({cx},{cy}) r={r}: {len(pts)} vertices, "
+              f"r=[{min(dist):.3f},{max(dist):.3f}]" if pts else f"plan {name}: arc: no vertices")
+        if len(pts) < 5 or any(abs(d - r) > 0.05 for d in dist):
+            print(f"plan {name}: arc want >=5 vertices at r={r} from ({cx},{cy})")
+            ok = False
+    elif kind == "grid":  # <x0> <dx> <nx> <y0> <dy> <ny> <span>
+        x0, dx, nx, y0, dy, ny, span = map(float, args)
+        want = {(round(x0 + i * dx, 3), round(y0 + j * dy, 3))
+                for i in range(int(nx)) for j in range(int(ny))}
+        # 外形以外の loop のうち span 角のものだけが対象 (他の大きさの穴は別の節で数える)
+        holes = [b for b in (bbox(l) for l in loops if l is not body)
+                 if abs((b[1] - b[0]) - span) <= 0.05 and abs((b[3] - b[2]) - span) <= 0.05]
+        got = {(round((b[0] + b[1]) / 2, 3), round((b[2] + b[3]) / 2, 3)) for b in holes}
+        # 中心は格子と 0.05 以内で一致しなければならない (集合として過不足なし)
+        matched = {w for w in want if any(abs(w[0] - g[0]) < 0.05 and abs(w[1] - g[1]) < 0.05 for g in got)}
+        extra = [g for g in got if not any(abs(w[0] - g[0]) < 0.05 and abs(w[1] - g[1]) < 0.05 for w in want)]
+        print(f"plan {name}: grid {len(matched)}/{len(want)} centers matched,"
+              f" {len(extra)} extra (span {span})")
+        if len(matched) != len(want) or extra:
+            print(f"plan {name}: missing {sorted(want - matched)} extra {extra}")
+            ok = False
+    elif kind in ("solid", "void"):  # <cx> <cy>
+        cx, cy = map(float, args)
+        got = inside(cx, cy)
+        print(f"plan {name}: ({cx},{cy}) is {'solid' if got else 'void'}")
+        if got != (kind == "solid"):
+            print(f"plan {name}: want {kind} at ({cx},{cy})")
+            ok = False
+print(f"plan {name}: {'ok' if ok else 'FAIL'}")
+sys.exit(0 if ok else 1)
+PYEOF
+}
+
+# 縦断面 (X-Z) の実測: production STL を指定 y で切り、輪郭の bbox と材料の
+# 有無を測る。rotate([90,0,0]) で部品Y軸が切断面法線になり、2D X = 部品X、
+# SVG の生 y = 部品Z (openscad の SVG は y 軸を反転して書く)。
+# 水平断面は「その高さで何が在るか」しか見えないので、段の切り替わる Z と
+# 穴が上まで開いているかは、この縦断面で測る。
+# spec の節:
+#   loop <cx> <cz> <span_x> <span_z> — 指定位置に指定 bbox の loop がある
+#   solid <x> <z> / void <x> <z>     — 指定点に材料が有る/無い
+#   void_rect <x1> <x2> <z1> <z2>    — 矩形領域の内部が完全に空 (材料ゼロ)
+# void_rect は幾何交差で領域の空を測る: 全 loop の全辺と矩形の線分交差が0本
+# (= 材料の境界が領域へ入って来ない) かつ、5点の偶奇判定がすべて外側
+# (= 領域が材料に包含されていない) のときだけ空とみなす。点のサンプリングでは
+# 「サンプルの隙間に薄膜が残る」退行 (穴を横切る 1mm 未満の天井) を見逃すため、
+# 穴の連続性はこの交差判定で測る
+check_section() {
+  stl=$1 name=$2 cut_y=$3 spec=$4
+  cat > "$WORK/sec_$name.scad" <<EOF
+projection(cut = true) rotate([ 90, 0, 0 ]) translate([ 0, -($cut_y), 0 ])
+  import("$WORK/$stl.stl");
+EOF
+  if ! openscad -o "$WORK/sec_$name.svg" "$WORK/sec_$name.scad" > /dev/null 2>&1; then
+    err "section $name: failed to render"
+    return
+  fi
+  section_eval "$name" "$spec"
+}
+
+# section_eval <name> <spec> — $WORK/sec_<name>.svg を spec で検査する (断面の向きに依らない)
+section_eval() {
+  name=$1 spec=$2
+  python3 - "$WORK/sec_$name.svg" "$name" "$spec" <<'PYEOF' || fail=1
+import re, sys
+src = open(sys.argv[1]).read()
+name, spec = sys.argv[2], sys.argv[3]
+loops = []
+for sub in re.search(r'd="([^"]+)"', src).group(1).split("M")[1:]:
+    loops.append([(float(a), float(b)) for a, b
+                  in re.findall(r'(-?\d+\.?\d*),(-?\d+\.?\d*)', sub)])
+
+
+def bbox(pts):
+    xs, zs = [p[0] for p in pts], [p[1] for p in pts]
+    return (min(xs), max(xs), min(zs), max(zs))
+
+
+def inside(x, z):  # 偶奇規則 (+X 方向へ ray を飛ばして交差数を数える)
+    hits = 0
+    for pts in loops:
+        for i in range(len(pts)):
+            x1, z1 = pts[i]
+            x2, z2 = pts[(i + 1) % len(pts)]
+            if (z1 > z) != (z2 > z) and x < x1 + (z - z1) * (x2 - x1) / (z2 - z1):
+                hits += 1
+    return hits % 2 == 1
+
+
+# 線分 pq が矩形の内部を正の長さで通るか (Liang-Barsky のクリッピング)。
+# 矩形は境界を eps だけ内側へ縮めてあるので、切断面と重なるだけの辺
+# (= 領域の縁そのもの) は交差扱いにならない
+def seg_crosses(p, q, x1, x2, z1, z2):
+    dx, dz = q[0] - p[0], q[1] - p[1]
+    t0, t1 = 0.0, 1.0
+    for den, num in ((-dx, p[0] - x1), (dx, x2 - p[0]),
+                     (-dz, p[1] - z1), (dz, z2 - p[1])):
+        if den == 0:
+            if num < 0:  # 辺が境界と平行で、矩形の外側にある
+                return False
+        else:
+            t = num / den
+            if den < 0:
+                t0 = max(t0, t)
+            else:
+                t1 = min(t1, t)
+            if t0 > t1:
+                return False
+    return t1 > t0
+
+
+ok = True
+for cond in spec.split(";"):
+    kind, *args = cond.split()
+    if kind == "loop":  # loop <cx> <cz> <span_x> <span_z>
+        cx, cz, sx, sz = map(float, args)
+        hit = [l for l in map(bbox, loops)
+               if abs((l[0] + l[1]) / 2 - cx) < 0.1 and abs((l[2] + l[3]) / 2 - cz) < 0.1
+               and abs((l[1] - l[0]) - sx) < 0.05 and abs((l[3] - l[2]) - sz) < 0.05]
+        if not hit:
+            print(f"section {name}: missing loop ({cx},{cz}) span ({sx},{sz})")
+            print(f"section {name}: loops = "
+                  f"{[tuple(round(v, 3) for v in bbox(l)) for l in loops]}")
+            ok = False
+        else:
+            l = hit[0]
+            print(f"section {name}: loop x=[{l[0]:.3f},{l[1]:.3f}]"
+                  f" z=[{l[2]:.3f},{l[3]:.3f}]")
+    elif kind in ("solid", "void"):  # <x> <z>
+        x, z = map(float, args)
+        got = inside(x, z)
+        print(f"section {name}: ({x},{z}) is {'solid' if got else 'void'}")
+        if got != (kind == "solid"):
+            print(f"section {name}: want {kind} at ({x},{z})")
+            ok = False
+    elif kind == "void_rect":  # <x1> <x2> <z1> <z2>
+        x1, x2, z1, z2 = map(float, args)
+        # 領域の縁に載るだけの辺 (切断面そのもの) を交差扱いしないための許容。
+        # STL/SVG の座標は有効6桁で書かれ実測で ~2e-5mm ずれるので、それを
+        # 十分超え、かつ検出したい薄膜 (0.2mm 級) より桁違いに小さい 1e-3 を取る
+        eps = 1e-3
+        rect = (x1 + eps, x2 - eps, z1 + eps, z2 - eps)
+        # (1) 材料の境界が領域内へ入ってくるか: 全 loop の全辺 × 矩形の交差
+        edges = [(pts[i], pts[(i + 1) % len(pts)])
+                 for pts in loops for i in range(len(pts))]
+        crossing = [e for e in edges if seg_crosses(e[0], e[1], *rect)]
+        # (2) 辺が1本も入らないなら領域は「全部材料」か「全部空」のどちらか。
+        #     偶奇判定 (4隅 + 中心) で材料に包含されている側を弾く
+        probes = [(rect[0], rect[2]), (rect[1], rect[2]), (rect[0], rect[3]),
+                  (rect[1], rect[3]), ((x1 + x2) / 2, (z1 + z2) / 2)]
+        filled = [p for p in probes if inside(*p)]
+        print(f"section {name}: void_rect x=[{x1},{x2}] z=[{z1},{z2}]:"
+              f" {len(crossing)} crossing edges, {len(filled)}/5 probes solid")
+        if crossing or filled:
+            if crossing:
+                print(f"section {name}: material boundary enters the rect at"
+                      f" {[tuple(round(v, 4) for v in e[0]) for e in crossing[:5]]}"
+                      f"{' ...' if len(crossing) > 5 else ''}")
+            if filled:
+                print(f"section {name}: material fills the rect at {filled[:5]}")
+            ok = False
+print(f"section {name}: {'ok' if ok else 'FAIL'}")
+sys.exit(0 if ok else 1)
+PYEOF
+}
+
+# check_bbox <name> <x1> <x2> <y1> <y2> <z1> <z2> — STL 頂点の外形実測
+check_bbox() {
+  name=$1
+  shift
+  python3 - "$WORK/$name.stl" "$name" "$@" <<'PYEOF' || fail=1
+import re, sys
+src = open(sys.argv[1]).read()
+name = sys.argv[2]
+want = list(map(float, sys.argv[3:]))
+vs = [tuple(map(float, v)) for v in
+      re.findall(r'vertex\s+(\S+)\s+(\S+)\s+(\S+)', src)]
+got = []
+for i in range(3):
+    col = [v[i] for v in vs]
+    got += [min(col), max(col)]
+print(f"bbox {name}: x=[{got[0]:.3f},{got[1]:.3f}] y=[{got[2]:.3f},{got[3]:.3f}]"
+      f" z=[{got[4]:.3f},{got[5]:.3f}] span x={got[1] - got[0]:.3f}")
+ok = all(abs(a - b) < 0.05 for a, b in zip(got, want))
+if not ok:
+    print(f"bbox {name}: want {want}")
+print(f"bbox {name}: {'ok' if ok else 'FAIL'}")
+sys.exit(0 if ok else 1)
+PYEOF
+}
+
+# check_single_solid <name> — STL の三角形を頂点の共有で繋いで連結成分を数える。
+# 単一プリント部品なので 1 でなければならない (2以上 = 宙に浮いた島がある)
+check_single_solid() {
+  name=$1
+  python3 - "$WORK/$name.stl" "$name" <<'PYEOF' || fail=1
+import re, sys
+src = open(sys.argv[1]).read()
+name = sys.argv[2]
+vs = [(round(float(a), 4), round(float(b), 4), round(float(c), 4))
+      for a, b, c in re.findall(r'vertex\s+(\S+)\s+(\S+)\s+(\S+)', src)]
+parent = {}
+
+
+def find(a):
+    while parent[a] != a:
+        parent[a] = parent[parent[a]]
+        a = parent[a]
+    return a
+
+
+def union(a, b):
+    ra, rb = find(a), find(b)
+    if ra != rb:
+        parent[ra] = rb
+
+
+for v in vs:
+    parent.setdefault(v, v)
+for i in range(0, len(vs), 3):  # facet ごとに3頂点を繋ぐ
+    union(vs[i], vs[i + 1])
+    union(vs[i + 1], vs[i + 2])
+n = len({find(v) for v in parent})
+print(f"solids {name}: {n} connected component(s) from {len(vs) // 3} facets")
+sys.exit(0 if n == 1 else 1)
+PYEOF
+}
+
+
+
+render b11 assets/gridfinity-bin/bin_1x1x4u.scad
+render b12 assets/gridfinity-bin/bin_1x2x4u.scad
+
+# ---------------------------------------------------------------------------
+# 0. 設計契約。外形は 42 ピッチ − 0.5 (1x1 = 41.5 角、1x2 = 41.5 x 83.5)。
+#    高さは 4U = 28 (壁の上端) + 薄いリップ 4.4 = 32.4。底は公称の 3 段
+#    (35.6 → 45° 0.8 → 37.2 → 垂直 1.8 → 45° 2.15 → 41.5、高さ 4.75) で穴なし。
+#    壁 1.2、床は底の上に 1.2 (床の天面 z=5.95)。ラベル棚は手前 (y=0 側) の壁の
+#    上端 (z=28) と面一で内側へ 13 張り出す厚さ 1.6 の板、裏に 45° のリブ 3 本
+#    (幅 2、内幅 39.1 の 25/50/75% = x = 0, ±9.775。側壁には接しない)
+# ---------------------------------------------------------------------------
+CONTRACT="CONTRACT units=4 pitch=42 outer=41.5 h=28 lip=4.4 base=35.6/37.2/41.5 base_h=4.75 wall=1.2 floor_top=5.95 label=13x1.6 ribs=3x2"
+expect_echo b11 "$CONTRACT bin=1x1 size=41.5x41.5"
+expect_echo b12 "$CONTRACT bin=1x2 size=41.5x83.5"
+
+# 外形。X は中央が 0、Y は手前 (ラベル側) が 0、Z=0 が底面
+check_bbox b11 -20.75 20.75 0 41.5 0 32.4
+check_bbox b12 -20.75 20.75 0 83.5 0 32.4
+check_single_solid b11
+check_single_solid b12
+
+# ---------------------------------------------------------------------------
+# 1. 底の 3 段輪郭と 42 ピッチ。z=0.4 (下の面取りの中) で 35.6 + 0.8 = 36.4 角、
+#    z=2.0 (垂直部) で 37.2 角、z=4.0 (上の面取りの中: 37.2 + 2×(4.0−2.6)) で 40.0 角。
+#    底の中心は bin 座標で y = 20.75 (外形 41.5 の中心。ソケットの中心 21 に置くと
+#    bin は 0.25..41.25 に収まる)。1x2 は底が 2 個 (20.75, 62.75) で、その間
+#    (y=41.75) は z=2 で空
+# ---------------------------------------------------------------------------
+check_plan b11 base-lo 0.4 "loops 1; rect -18.2 18.2 2.55 38.95"
+check_plan b11 base-mid 2.0 "loops 1; rect -18.6 18.6 2.15 39.35; solid 0 21"
+check_plan b11 base-hi 4.0 "loops 1; rect -20 20 0.75 40.75"
+check_plan b12 base-mid 2.0 \
+  "loops 2; loop 0 20.75 37.2 37.2; loop 0 62.75 37.2 37.2; void 0 41.75; solid 0 21; solid 0 63"
+# 底面に穴が無い: z=0.4 で loop は外形 1 本だけ (穴があれば loop が増える)
+check_plan b12 base-lo 0.4 "loops 2; solid 0 21; solid 0 63; solid 8 13; solid -8 29"
+
+# ---------------------------------------------------------------------------
+# 2. 胴体と床。z=15 で外形 41.5 角 + 内側の空 39.1 角 (壁 1.2) の 2 loop。
+#    床の天面は z=5.95: (0,21) は z=5.5 で材料、z=6.5 で空
+# ---------------------------------------------------------------------------
+check_plan b11 body 15 \
+  "loops 2; rect -20.75 20.75 0 41.5; loop 0 20.75 39.1 39.1;
+   void 0 21; solid -20.15 21; solid 20.15 21; solid 0 0.6; solid 0 40.9"
+check_plan b12 body 15 "loops 2; rect -20.75 20.75 0 83.5; loop 0 41.75 39.1 81.1; void 0 42"
+check_section b11 floor 21 "solid 0 5.5; void 0 6.5; solid 0 4; solid -20.15 15; solid 20.15 15; void 0 15"
+
+# ---------------------------------------------------------------------------
+# 3. 薄いリップ。壁 1.2 がそのまま z=32.4 まで立ち、内側の上端 0.8 を 45° に
+#    落とす (上の bin の底の面取りがここに座る)。内側にリップの肉 (棚) は無い。
+#    縦断面 (y=21、X-Z): z=31 で壁の内面は 19.55 のまま (棚があれば内側に肉が出る)、
+#    z=32.0 では面取りで内面が 19.95 へ退く
+# ---------------------------------------------------------------------------
+check_section b11 lip 21 \
+  "solid -20.15 31; solid 20.15 31; void 19.2 31; void -19.2 31; void 0 31;
+   void 19.9 32.0; solid 20.4 32.0; void 0 32.5"
+
+# ---------------------------------------------------------------------------
+# 4. ラベル棚。手前の壁の内面 (y=1.2) から y=14.2 まで、z=26.4..28 の板。
+#    裏に 45° のリブ 3 本 (x = 0, ±9.775、幅 2。側壁から離す)。リブは壁から棚の先端へ
+#    向かって z=26.4 から 13 下がる直角三角形 (斜辺は y=5 で z=17.2、y=13 で 25.2)。
+#    リブの無い x=5 と側壁際 x=18 では棚の下は空 (棚がブリッジで渡る)
+# ---------------------------------------------------------------------------
+# Y-Z 断面: 指定 x で切る。2D X = 部品Y、生 y = 部品Z (X-Z 断面と同じ流儀)
+check_section_yz() {
+  stl=$1 name=$2 cut_x=$3 spec=$4
+  cat > "$WORK/yz_$name.scad" <<EOS
+projection(cut = true) rotate([ 90, 0, 0 ]) rotate([ 0, 0, -90 ])
+  translate([ -($cut_x), 0, 0 ]) import("$WORK/$stl.stl");
+EOS
+  if ! openscad -o "$WORK/sec_$name.svg" "$WORK/yz_$name.scad" > /dev/null 2>&1; then
+    err "section $name: failed to render"
+    return
+  fi
+  section_eval "$name" "$spec"
+}
+check_section_yz b11 label-rib 0 \
+  "solid 5 27.5; solid 13.8 27.5; void 14.6 27.5; void 5 28.5;
+   solid 5 20; solid 3 24; void 10 14; void 13 24.5; solid 13 25.8; void 25 27.5"
+check_section_yz b11 label-bridge 5 \
+  "solid 5 27.5; solid 13.8 27.5; void 14.6 27.5; void 5 24; void 5 20; void 10 26"
+check_section_yz b12 label-rib 0 "solid 5 27.5; solid 13.8 27.5; void 14.6 27.5; solid 5 20; void 42 27.5; void 80 27.5"
+check_section_yz b11 label-bridge-edge 18 "solid 5 27.5; solid 13.8 27.5; void 5 24; void 10 26"
+# X-Z 断面 (y=8、棚の中): 棚は内幅いっぱい (x = ±19.55)、その下にリブ 3 本 (幅 2)
+check_section b11 label-width 8 \
+  "solid 0 27.5; solid -19 27.5; solid 19 27.5; solid 0 22; solid 9.775 22; solid -9.775 22;
+   solid 0.9 22; void 1.1 22; solid 10.7 22; void 10.9 22; solid 8.85 22; void 8.65 22;
+   void 5 22; void -5 22; void 18.95 22; void -18.95 22; void 0 12"
+
+if [ "$fail" -ne 0 ]; then
+  echo "gridfinity-bin: FAILED" >&2
+  exit 1
+fi
+echo "gridfinity-bin: ok"
