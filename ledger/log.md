@@ -8,6 +8,9 @@
   `assets/gridfinity-bin/`、検証は`tests/gridfinity-bin.sh`）。
 - **Update**: [レターケース ベースプレート（前片・奥片）](prints/letter-case-baseplate.md)
   の`content_sha256`を、userが保存し直した`.3mf`へ更新した。
+- **Update**: [Gridfinity 4U bin](designs/gridfinity-bin-4u.md)のラベル棚を、
+  リブ+ブリッジ（PETGでヒゲだらけになった）から天板1mm+45°無垢くさび+境目R1へ
+  置換した（userの指示）。
 
 ## 2026-08-26
 

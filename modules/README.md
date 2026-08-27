@@ -81,9 +81,9 @@ Gridfinity bin (箱) の共有 module。`gridfinity.scad` のピッチ・角丸�
 | モジュール | 用途 |
 |-----------|------|
 | `gfb_base_cell()` | 1 マスぶんの無垢の底 (35.6 → 37.2 → 41.5、高さ 4.75) |
-| `gfb_bin(cols, rows, units, wall, floor_t, label_d, label_t, rib_t, label_ribs)` | 薄いリップの bin。`label_d > 0` で手前の壁上端に内側へ張り出すラベル棚と 45° リブ |
+| `gfb_bin(cols, rows, units, wall, floor_t, label_d, label_t, label_r)` | 薄いリップの bin。`label_d > 0` で手前の壁上端に内側へ張り出すラベル天板と、その下の 45° 無垢くさび (先端の境目 R `label_r`) |
 
 ## gridfinity_bin_4u.scad
 
-`assets/gridfinity-bin/` の 4U bin 群の共通値 (壁 1.2・床 1.2・ラベル棚 13×1.6・
-リブ 3 本・幅 2) と `bin_4u(cols, rows)`。単体では何も描かない。
+`assets/gridfinity-bin/` の 4U bin 群の共通値 (壁 1.2・床 1.2・ラベル天板 13×1・
+境目 R1) と `bin_4u(cols, rows)`。単体では何も描かない。

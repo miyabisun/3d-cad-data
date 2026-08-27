@@ -6,9 +6,8 @@ units = 4; // 高さ 4U = 28 (壁の上端)。リップ 4.4 を足して全高 3
 wall = 1.2;    // 0.4 ノズル 3 本
 floor_t = 1.2; // 底 (4.75) の上に載せる床。床の天面 z = 5.95
 label_d = 13;  // 12mm 幅のラベルシールを貼る棚の張り出し
-label_t = 1.6; // 棚の厚さ (ブリッジで渡るので 4 層)
-rib_t = 2;     // 棚を支える 45° リブの厚さ (user 指定)
-label_ribs = 3; // リブの本数。内幅の 25% / 50% / 75% に置く (user 指定)
+label_t = 1; // 天板の厚さ (user 指定)。下は 45° の無垢のくさび
+label_r = 1; // 天板の先端と 45° 面の境目の R (user 指定)
 
 function bin_contract(cols, rows) = str("CONTRACT units=",
                                         units,
@@ -36,10 +35,8 @@ function bin_contract(cols, rows) = str("CONTRACT units=",
                                         label_d,
                                         "x",
                                         label_t,
-                                        " ribs=",
-                                        label_ribs,
-                                        "x",
-                                        rib_t,
+                                        " wedge=45 fillet=",
+                                        label_r,
                                         " bin=",
                                         cols,
                                         "x",
@@ -53,6 +50,5 @@ module
 bin_4u(cols, rows)
 {
     echo(bin_contract(cols, rows));
-    gfb_bin(
-        cols, rows, units, wall, floor_t, label_d, label_t, rib_t, label_ribs);
+    gfb_bin(cols, rows, units, wall, floor_t, label_d, label_t, label_r);
 }

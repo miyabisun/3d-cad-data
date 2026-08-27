@@ -3,7 +3,7 @@
 # - openscad が exit 0 で非空の STL を生成し、console に ERROR / WARNING が無いこと
 # - 設計契約 (CONTRACT echo) が台帳の確定値と一致すること
 # - production STL の断面実測で、底の 3 段輪郭 (35.6/37.2/41.5)・42 ピッチ・
-#   外形 41.5 角と全高・壁 1.2・床・薄いリップ・ラベル棚 13mm とその裏のリブを
+#   外形 41.5 角と全高・壁 1.2・床・薄いリップ・ラベル天板 13mm とその下の 45° くさびを
 #   実形状として固定すること (echo は自己申告なので形状で裏を取る)
 # - 底面に穴が無いこと (磁石穴・ネジ穴を持たない)
 # - 各 STL が1連結成分であること
@@ -188,6 +188,7 @@ PYEOF
 # 穴が上まで開いているかは、この縦断面で測る。
 # spec の節:
 #   loop <cx> <cz> <span_x> <span_z> — 指定位置に指定 bbox の loop がある
+#   arc <cx> <cz> <r> <x1> <x2> <z1> <z2> — 矩形に入る頂点が 5 個以上あり全部 (cx,cz) から r
 #   solid <x> <z> / void <x> <z>     — 指定点に材料が有る/無い
 #   void_rect <x1> <x2> <z1> <z2>    — 矩形領域の内部が完全に空 (材料ゼロ)
 # void_rect は幾何交差で領域の空を測る: 全 loop の全辺と矩形の線分交差が0本
@@ -282,6 +283,15 @@ for cond in spec.split(";"):
         print(f"section {name}: ({x},{z}) is {'solid' if got else 'void'}")
         if got != (kind == "solid"):
             print(f"section {name}: want {kind} at ({x},{z})")
+            ok = False
+    elif kind == "arc":  # <cx> <cz> <r> <x1> <x2> <z1> <z2>
+        cx, cz, r, x1, x2, z1, z2 = map(float, args)
+        pts = [p for l in loops for p in l if x1 <= p[0] <= x2 and z1 <= p[1] <= z2]
+        dist = [((p[0] - cx) ** 2 + (p[1] - cz) ** 2) ** 0.5 for p in pts]
+        print(f"section {name}: arc ({cx},{cz}) r={r}: {len(pts)} vertices, "
+              + (f"r=[{min(dist):.3f},{max(dist):.3f}]" if pts else "none"))
+        if len(pts) < 5 or any(abs(d - r) > 0.05 for d in dist):
+            print(f"section {name}: arc want >=5 vertices at r={r} from ({cx},{cz})")
             ok = False
     elif kind == "void_rect":  # <x1> <x2> <z1> <z2>
         x1, x2, z1, z2 = map(float, args)
@@ -385,11 +395,11 @@ render b12 assets/gridfinity-bin/bin_1x2x4u.scad
 # 0. 設計契約。外形は 42 ピッチ − 0.5 (1x1 = 41.5 角、1x2 = 41.5 x 83.5)。
 #    高さは 4U = 28 (壁の上端) + 薄いリップ 4.4 = 32.4。底は公称の 3 段
 #    (35.6 → 45° 0.8 → 37.2 → 垂直 1.8 → 45° 2.15 → 41.5、高さ 4.75) で穴なし。
-#    壁 1.2、床は底の上に 1.2 (床の天面 z=5.95)。ラベル棚は手前 (y=0 側) の壁の
-#    上端 (z=28) と面一で内側へ 13 張り出す厚さ 1.6 の板、裏に 45° のリブ 3 本
-#    (幅 2、内幅 39.1 の 25/50/75% = x = 0, ±9.775。側壁には接しない)
+#    壁 1.2、床は底の上に 1.2 (床の天面 z=5.95)。ラベル天板は手前 (y=0 側) の壁の
+#    上端 (z=28) と面一で内側へ 13 張り出す厚さ 1 の板で、その下は 45° の無垢の
+#    くさびが壁まで下りる。天板の先端 (垂直面) と 45° 面の境目は R1
 # ---------------------------------------------------------------------------
-CONTRACT="CONTRACT units=4 pitch=42 outer=41.5 h=28 lip=4.4 base=35.6/37.2/41.5 base_h=4.75 wall=1.2 floor_top=5.95 label=13x1.6 ribs=3x2"
+CONTRACT="CONTRACT units=4 pitch=42 outer=41.5 h=28 lip=4.4 base=35.6/37.2/41.5 base_h=4.75 wall=1.2 floor_top=5.95 label=13x1 wedge=45 fillet=1"
 expect_echo b11 "$CONTRACT bin=1x1 size=41.5x41.5"
 expect_echo b12 "$CONTRACT bin=1x2 size=41.5x83.5"
 
@@ -415,13 +425,14 @@ check_plan b12 base-mid 2.0 \
 check_plan b12 base-lo 0.4 "loops 2; solid 0 21; solid 0 63; solid 8 13; solid -8 29"
 
 # ---------------------------------------------------------------------------
-# 2. 胴体と床。z=15 で外形 41.5 角 + 内側の空 39.1 角 (壁 1.2) の 2 loop。
+# 2. 胴体と床。z=12 (床の上、ラベルのくさびの下端 z=14 より下) で外形 41.5 角 +
+#    内側の空 39.1 角 (壁 1.2) の 2 loop。
 #    床の天面は z=5.95: (0,21) は z=5.5 で材料、z=6.5 で空
 # ---------------------------------------------------------------------------
-check_plan b11 body 15 \
+check_plan b11 body 12 \
   "loops 2; rect -20.75 20.75 0 41.5; loop 0 20.75 39.1 39.1;
    void 0 21; solid -20.15 21; solid 20.15 21; solid 0 0.6; solid 0 40.9"
-check_plan b12 body 15 "loops 2; rect -20.75 20.75 0 83.5; loop 0 41.75 39.1 81.1; void 0 42"
+check_plan b12 body 12 "loops 2; rect -20.75 20.75 0 83.5; loop 0 41.75 39.1 81.1; void 0 42"
 check_section b11 floor 21 "solid 0 5.5; void 0 6.5; solid 0 4; solid -20.15 15; solid 20.15 15; void 0 15"
 
 # ---------------------------------------------------------------------------
@@ -435,10 +446,17 @@ check_section b11 lip 21 \
    void 19.9 32.0; solid 20.4 32.0; void 0 32.5"
 
 # ---------------------------------------------------------------------------
-# 4. ラベル棚。手前の壁の内面 (y=1.2) から y=14.2 まで、z=26.4..28 の板。
-#    裏に 45° のリブ 3 本 (x = 0, ±9.775、幅 2。側壁から離す)。リブは壁から棚の先端へ
-#    向かって z=26.4 から 13 下がる直角三角形 (斜辺は y=5 で z=17.2、y=13 で 25.2)。
-#    リブの無い x=5 と側壁際 x=18 では棚の下は空 (棚がブリッジで渡る)
+# 4. ラベル天板と 45° くさび。手前の壁の内面 (y=1.2) から y=14.2 まで、z=27..28 の
+#    天板 (厚さ 1)。その下は 45° の斜面が先端 (14.2, 27) から壁へ下りる無垢の
+#    くさび。斜面 z = 27 − (14.2 − y) は契約値として y=1.3 で 14.1、y=5 で 17.8、
+#    y=10 で 22.8、y=13 で 25.8 にあり、各点を ±0.08 で挟んで 45° を固定する
+#    (斜面の上がくさびの材料、下が空) (壁側の終点を 1 下げて 47° にすると y=5 で 17.15 になり red)。
+#    内幅いっぱい (x=±19.55) に同じ断面なので、x=0 / 5 / 15 のどこで切っても同じ
+#    (x>17 は内側の角 R2.55 に掛かり y=1.3 が壁の中になるので、そこでは切らない)。
+#    先端の垂直面 (z=27..28) と 45° 面の境目 (14.2, 27) は R1: 円弧の中心は
+#    (13.2, 27.414) で、接点は垂直面の (14.2, 27.414) と斜面の (13.907, 26.707)。
+#    断面の頂点のうち y∈[13.5,14.3] z∈[26.6,27.6] にあるものが全部この円弧上に
+#    あることで R を固定する
 # ---------------------------------------------------------------------------
 # Y-Z 断面: 指定 x で切る。2D X = 部品Y、生 y = 部品Z (X-Z 断面と同じ流儀)
 check_section_yz() {
@@ -453,18 +471,21 @@ EOS
   fi
   section_eval "$name" "$spec"
 }
-check_section_yz b11 label-rib 0 \
-  "solid 5 27.5; solid 13.8 27.5; void 14.6 27.5; void 5 28.5;
-   solid 5 20; solid 3 24; void 10 14; void 13 24.5; solid 13 25.8; void 25 27.5"
-check_section_yz b11 label-bridge 5 \
-  "solid 5 27.5; solid 13.8 27.5; void 14.6 27.5; void 5 24; void 5 20; void 10 26"
-check_section_yz b12 label-rib 0 "solid 5 27.5; solid 13.8 27.5; void 14.6 27.5; solid 5 20; void 42 27.5; void 80 27.5"
-check_section_yz b11 label-bridge-edge 18 "solid 5 27.5; solid 13.8 27.5; void 5 24; void 10 26"
-# X-Z 断面 (y=8、棚の中): 棚は内幅いっぱい (x = ±19.55)、その下にリブ 3 本 (幅 2)
-check_section b11 label-width 8 \
-  "solid 0 27.5; solid -19 27.5; solid 19 27.5; solid 0 22; solid 9.775 22; solid -9.775 22;
-   solid 0.9 22; void 1.1 22; solid 10.7 22; void 10.9 22; solid 8.85 22; void 8.65 22;
-   void 5 22; void -5 22; void 18.95 22; void -18.95 22; void 0 12"
+WEDGE="solid 5 27.5; solid 13.8 27.5; void 14.6 27.5; void 5 28.5;
+   void 1.3 14.02; solid 1.3 14.18; void 5 17.72; solid 5 17.88;
+   void 10 22.72; solid 10 22.88; void 13 25.72; solid 13 25.88;
+   solid 5 20; void 5 16; void 10 21; void 13 24.5;
+   arc 13.2 27.414 1 13.5 14.3 26.6 27.6; void 25 27.5"
+check_section_yz b11 wedge-x0 0 "$WEDGE"
+check_section_yz b11 wedge-x5 5 "$WEDGE"
+check_section_yz b11 wedge-x15 15 "$WEDGE"
+check_section_yz b12 wedge-x0 0 "solid 5 27.5; solid 13.8 27.5; void 14.6 27.5; solid 5 20; void 5 16; void 42 27.5; void 80 27.5"
+# X-Z 断面 (y=8、くさびの中): z=22 は内幅いっぱい材料 (斜面は y=8 で z=20.8)、
+#    z=19.5 は空。内面 (±19.55) の直前 ±19.5 まで材料が続く (側壁に溶けている)
+check_section b11 wedge-width 8 \
+  "solid 0 27.5; solid -19.5 27.5; solid 19.5 27.5; solid 0 22; solid 15 22; solid -15 22;
+   solid 19.5 22; solid -19.5 22; void 19.5 20.72; solid 19.5 20.88;
+   void 0 19.5; void 15 19.5; void 0 12"
 
 if [ "$fail" -ne 0 ]; then
   echo "gridfinity-bin: FAILED" >&2

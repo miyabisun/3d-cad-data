@@ -67,11 +67,22 @@ gf_rounded_square_wd(w, d, r)
     offset(r = r, $fn = gf_fn) square([ w - 2 * r, d - 2 * r ], center = true);
 }
 
+// ラベル天板の Y-Z 断面 (y = 壁の内面からの距離、z = 高さ)。天板 (厚さ t) の
+// 先端から 45° の斜面が壁まで下りる無垢のくさび。先端の垂直面と斜面の境目
+// (135°) を半径 r で丸める: 円弧の中心は先端の角から (-r, r·tan22.5°)、接点は
+// 垂直面上の角 + (0, r·tan22.5°) と斜面上の角 + 0.4142r·(-1,-1)。壁の内側へ
+// 1 だけ食い込ませて胴体と溶かす
+function gfb_label_profile(d, t, h, r) =
+    let(y0 = d, z0 = h - t, cy = y0 - r, cz = z0 + r * tan(22.5))
+        concat([ [ -1, h ], [ d, h ] ],
+               [for (a = [0:-5:-45])[cy + r * cos(a), cz + r* sin(a)]],
+               [[ -1, h - t - d - 1 ]]);
+
 // bin 本体。units は高さ (U)。wall / floor_t は壁と床の厚さ。
 // label_d > 0 なら手前 (y=0) の壁の上端 (z = units*7) と面一で内側へ label_d
-// 張り出す厚さ label_t の棚を付け、裏に 45° のリブ (厚さ rib_t) を label_ribs
-// 本 立てる
-// (側壁から離し、内幅を等分した位置)。棚はリブの間と両端をブリッジで渡る。
+// 張り出す厚さ label_t のラベル天板を付ける。天板の下は 45° の無垢のくさびが
+// 壁まで下りる (ブリッジもリブも無い。中身はスライサのインフィル任せ)。
+// 天板の先端と 45° 面の境目は半径 label_r で丸める
 module
 gfb_bin(cols,
         rows,
@@ -79,9 +90,8 @@ gfb_bin(cols,
         wall = 1.2,
         floor_t = 1.2,
         label_d = 0,
-        label_t = 1.6,
-        rib_t = 1.2,
-        label_ribs = 3)
+        label_t = 1,
+        label_r = 1)
 {
     h = units * gfb_unit; // 壁の上端
     top = h + gfb_lip_h;  // リップの上端
@@ -115,21 +125,10 @@ gfb_bin(cols,
                     gfb_footprint(cols, rows, wall - gfb_lip_chamfer);
             }
         }
-        // ラベル棚とリブ
-        if (label_d > 0) {
-            translate([ -inner_w / 2, wall - gf_eps, h - label_t ])
-                cube([ inner_w, label_d + gf_eps, label_t ]);
-            for (i = [0:label_ribs - 1]) {
-                // リブは側壁から離して内幅を等分した位置に置く
-                // (3 本なら内幅の 25% / 50% / 75%)
-                x = -inner_w / 2 + inner_w * (i + 1) / (label_ribs + 1);
-                translate([ x - rib_t / 2, wall - gf_eps, 0 ])
-                    rotate([ 90, 0, 90 ]) linear_extrude(rib_t) polygon([
-                        [ 0, h - label_t + gf_eps ],
-                        [ label_d + gf_eps, h - label_t + gf_eps ],
-                        [ 0, h - label_t - label_d ]
-                    ]);
-            }
-        }
+        // ラベル天板と 45° くさび (内幅いっぱい、同じ断面)
+        if (label_d > 0)
+            translate([ -inner_w / 2, wall, 0 ]) rotate([ 90, 0, 90 ])
+                linear_extrude(inner_w)
+                    polygon(gfb_label_profile(label_d, label_t, h, label_r));
     }
 }
