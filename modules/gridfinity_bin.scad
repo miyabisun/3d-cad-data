@@ -125,10 +125,15 @@ gfb_bin(cols,
                     gfb_footprint(cols, rows, wall - gfb_lip_chamfer);
             }
         }
-        // ラベル天板と 45° くさび (内幅いっぱい、同じ断面)
+        // ラベル天板と 45° くさび (内幅いっぱい、同じ断面)。壁へ 1 食い込ませた
+        // 矩形の柱なので、角の丸み (R3.75) の外へ出ないよう外形で切り取る
         if (label_d > 0)
-            translate([ -inner_w / 2, wall, 0 ]) rotate([ 90, 0, 90 ])
-                linear_extrude(inner_w)
-                    polygon(gfb_label_profile(label_d, label_t, h, label_r));
+            intersection()
+            {
+                translate([ -inner_w / 2, wall, 0 ]) rotate([ 90, 0, 90 ])
+                    linear_extrude(inner_w) polygon(
+                        gfb_label_profile(label_d, label_t, h, label_r));
+                linear_extrude(top) gfb_footprint(cols, rows);
+            }
     }
 }

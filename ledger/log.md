@@ -11,6 +11,8 @@
 - **Update**: [Gridfinity 4U bin](designs/gridfinity-bin-4u.md)のラベル棚を、
   リブ+ブリッジ（PETGでヒゲだらけになった）から天板1mm+45°無垢くさび+境目R1へ
   置換した（userの指示）。
+- **Update**: 同conceptのくさびが角の丸みの外へ飛び出していた点を、外形で
+  クリップして修正した（userの指摘）。
 
 ## 2026-08-26
 

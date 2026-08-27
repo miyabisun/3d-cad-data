@@ -487,6 +487,24 @@ check_section b11 wedge-width 8 \
    solid 19.5 22; solid -19.5 22; void 19.5 20.72; solid 19.5 20.88;
    void 0 19.5; void 15 19.5; void 0 12"
 
+# ---------------------------------------------------------------------------
+# 5. くさびと天板は bin の角丸外形 (R3.75) の内側に収まる。矩形の柱をそのまま
+#    置くと、壁へ食い込ませた 1mm ぶんが角の丸みの外へ出る。外壁の角の円は
+#    中心 (±17, 3.75) 半径 3.75 で、x=19.5 では外面が y=0.955、x=18.5 では
+#    y=0.31 まで後退する。角の丸みの領域 (|x| > 17) の Y-Z 断面で、外面より
+#    手前 (y=0.3) がくさびの高さ (z=20) と天板 (z=27.5) で void、外面より内側が
+#    solid であることを測る (水平断面はこの STL で CGAL の projection が落ちるので
+#    縦断面で測る)
+# ---------------------------------------------------------------------------
+CORNER="void 0.3 20; void 0.3 27.5; void 0.3 24; solid 1.5 20; solid 1.5 24; solid 1.5 27.5; solid 5 27.5"
+INSIDE="solid 0.9 20; solid 0.9 24; solid 0.9 27.5; void 0.1 20"
+check_section_yz b11 corner-clip-r 19.5 "$CORNER"
+check_section_yz b11 corner-clip-l -19.5 "$CORNER"
+check_section_yz b11 corner-inside 18.5 "$INSIDE"
+check_section_yz b12 corner-clip-r 19.5 "$CORNER"
+check_section_yz b12 corner-clip-l -19.5 "$CORNER"
+check_section_yz b12 corner-inside 18.5 "$INSIDE"
+
 if [ "$fail" -ne 0 ]; then
   echo "gridfinity-bin: FAILED" >&2
   exit 1
