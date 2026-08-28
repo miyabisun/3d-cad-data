@@ -1,5 +1,11 @@
 # 3D CAD ledger Update Log
 
+## 2026-08-28
+
+- **Update**: [レターケースのGridfinityベースプレート](designs/letter-case-gridfinity.md)
+  へ引き出しの内高（38、中央34.7）と、充電器は入るが単一電池は入らないので
+  棚大付きの別製品で別管理するというuser判断を記録した。
+
 ## 2026-08-27
 
 - **Creation**: [Gridfinity 4U bin（薄いリップ・ラベル棚）](designs/gridfinity-bin-4u.md)
