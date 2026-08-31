@@ -1,5 +1,5 @@
 #!/bin/bash
-# Gridfinity bin (1x1x4U / 1x2x4U、薄いリップ、手前に 13mm のラベル棚) のレンダリング検証。
+# Gridfinity bin (cols 1..2 × rows 1..5 の 4U 全 10 種、薄いリップ、手前に 13mm のラベル天板) のレンダリング検証。
 # - openscad が exit 0 で非空の STL を生成し、console に ERROR / WARNING が無いこと
 # - 設計契約 (CONTRACT echo) が台帳の確定値と一致すること
 # - production STL の断面実測で、底の 3 段輪郭 (35.6/37.2/41.5)・42 ピッチ・
@@ -388,8 +388,13 @@ PYEOF
 
 
 
-render b11 assets/gridfinity-bin/bin_1x1x4u.scad
-render b12 assets/gridfinity-bin/bin_1x2x4u.scad
+# 全 10 種 (cols 1..2 × rows 1..5、すべて 4U) を render し、契約・外形・連結を測る。
+# 断面の深掘りは代表の 1x1 と、両軸が最大の 2x5 に集中する
+for c in 1 2; do
+  for r in 1 2 3 4 5; do
+    render "b${c}x${r}" "assets/gridfinity-bin/bin_${c}x${r}x4u.scad"
+  done
+done
 
 # ---------------------------------------------------------------------------
 # 0. 設計契約。外形は 42 ピッチ − 0.5 (1x1 = 41.5 角、1x2 = 41.5 x 83.5)。
@@ -400,14 +405,21 @@ render b12 assets/gridfinity-bin/bin_1x2x4u.scad
 #    くさびが壁まで下りる。天板の先端 (垂直面) と 45° 面の境目は R1
 # ---------------------------------------------------------------------------
 CONTRACT="CONTRACT units=4 pitch=42 outer=41.5 h=28 lip=4.4 base=35.6/37.2/41.5 base_h=4.75 wall=1.2 floor_top=5.95 label=13x1 wedge=45 fillet=1"
-expect_echo b11 "$CONTRACT bin=1x1 size=41.5x41.5"
-expect_echo b12 "$CONTRACT bin=1x2 size=41.5x83.5"
+# echo の size は c*42−0.5 × r*42−0.5 (例 1x1 → 41.5x41.5、2x5 → 83.5x209.5)
+for c in 1 2; do
+  for r in 1 2 3 4 5; do
+    expect_echo "b${c}x${r}" "$CONTRACT bin=${c}x${r} size=$((c * 42 - 1)).5x$((r * 42 - 1)).5"
+  done
+done
 
 # 外形。X は中央が 0、Y は手前 (ラベル側) が 0、Z=0 が底面
-check_bbox b11 -20.75 20.75 0 41.5 0 32.4
-check_bbox b12 -20.75 20.75 0 83.5 0 32.4
-check_single_solid b11
-check_single_solid b12
+for c in 1 2; do
+  half=$([ "$c" = 1 ] && echo 20.75 || echo 41.75)
+  for r in 1 2 3 4 5; do
+    check_bbox "b${c}x${r}" -$half $half 0 $((r * 42 - 1)).5 0 32.4
+    check_single_solid "b${c}x${r}"
+  done
+done
 
 # ---------------------------------------------------------------------------
 # 1. 底の 3 段輪郭と 42 ピッチ。z=0.4 (下の面取りの中) で 35.6 + 0.8 = 36.4 角、
@@ -416,24 +428,24 @@ check_single_solid b12
 #    bin は 0.25..41.25 に収まる)。1x2 は底が 2 個 (20.75, 62.75) で、その間
 #    (y=41.75) は z=2 で空
 # ---------------------------------------------------------------------------
-check_plan b11 base-lo 0.4 "loops 1; rect -18.2 18.2 2.55 38.95"
-check_plan b11 base-mid 2.0 "loops 1; rect -18.6 18.6 2.15 39.35; solid 0 21"
-check_plan b11 base-hi 4.0 "loops 1; rect -20 20 0.75 40.75"
-check_plan b12 base-mid 2.0 \
+check_plan b1x1 base-lo 0.4 "loops 1; rect -18.2 18.2 2.55 38.95"
+check_plan b1x1 base-mid 2.0 "loops 1; rect -18.6 18.6 2.15 39.35; solid 0 21"
+check_plan b1x1 base-hi 4.0 "loops 1; rect -20 20 0.75 40.75"
+check_plan b1x2 base-mid 2.0 \
   "loops 2; loop 0 20.75 37.2 37.2; loop 0 62.75 37.2 37.2; void 0 41.75; solid 0 21; solid 0 63"
 # 底面に穴が無い: z=0.4 で loop は外形 1 本だけ (穴があれば loop が増える)
-check_plan b12 base-lo 0.4 "loops 2; solid 0 21; solid 0 63; solid 8 13; solid -8 29"
+check_plan b1x2 base-lo 0.4 "loops 2; solid 0 21; solid 0 63; solid 8 13; solid -8 29"
 
 # ---------------------------------------------------------------------------
 # 2. 胴体と床。z=12 (床の上、ラベルのくさびの下端 z=14 より下) で外形 41.5 角 +
 #    内側の空 39.1 角 (壁 1.2) の 2 loop。
 #    床の天面は z=5.95: (0,21) は z=5.5 で材料、z=6.5 で空
 # ---------------------------------------------------------------------------
-check_plan b11 body 12 \
+check_plan b1x1 body 12 \
   "loops 2; rect -20.75 20.75 0 41.5; loop 0 20.75 39.1 39.1;
    void 0 21; solid -20.15 21; solid 20.15 21; solid 0 0.6; solid 0 40.9"
-check_plan b12 body 12 "loops 2; rect -20.75 20.75 0 83.5; loop 0 41.75 39.1 81.1; void 0 42"
-check_section b11 floor 21 "solid 0 5.5; void 0 6.5; solid 0 4; solid -20.15 15; solid 20.15 15; void 0 15"
+check_plan b1x2 body 12 "loops 2; rect -20.75 20.75 0 83.5; loop 0 41.75 39.1 81.1; void 0 42"
+check_section b1x1 floor 21 "solid 0 5.5; void 0 6.5; solid 0 4; solid -20.15 15; solid 20.15 15; void 0 15"
 
 # ---------------------------------------------------------------------------
 # 3. 薄いリップ。壁 1.2 がそのまま z=32.4 まで立ち、内側の上端 0.8 を 45° に
@@ -441,7 +453,7 @@ check_section b11 floor 21 "solid 0 5.5; void 0 6.5; solid 0 4; solid -20.15 15;
 #    縦断面 (y=21、X-Z): z=31 で壁の内面は 19.55 のまま (棚があれば内側に肉が出る)、
 #    z=32.0 では面取りで内面が 19.95 へ退く
 # ---------------------------------------------------------------------------
-check_section b11 lip 21 \
+check_section b1x1 lip 21 \
   "solid -20.15 31; solid 20.15 31; void 19.2 31; void -19.2 31; void 0 31;
    void 19.9 32.0; solid 20.4 32.0; void 0 32.5"
 
@@ -476,13 +488,13 @@ WEDGE="solid 5 27.5; solid 13.8 27.5; void 14.6 27.5; void 5 28.5;
    void 10 22.72; solid 10 22.88; void 13 25.72; solid 13 25.88;
    solid 5 20; void 5 16; void 10 21; void 13 24.5;
    arc 13.2 27.414 1 13.5 14.3 26.6 27.6; void 25 27.5"
-check_section_yz b11 wedge-x0 0 "$WEDGE"
-check_section_yz b11 wedge-x5 5 "$WEDGE"
-check_section_yz b11 wedge-x15 15 "$WEDGE"
-check_section_yz b12 wedge-x0 0 "solid 5 27.5; solid 13.8 27.5; void 14.6 27.5; solid 5 20; void 5 16; void 42 27.5; void 80 27.5"
+check_section_yz b1x1 wedge-x0 0 "$WEDGE"
+check_section_yz b1x1 wedge-x5 5 "$WEDGE"
+check_section_yz b1x1 wedge-x15 15 "$WEDGE"
+check_section_yz b1x2 wedge-x0 0 "solid 5 27.5; solid 13.8 27.5; void 14.6 27.5; solid 5 20; void 5 16; void 42 27.5; void 80 27.5"
 # X-Z 断面 (y=8、くさびの中): z=22 は内幅いっぱい材料 (斜面は y=8 で z=20.8)、
 #    z=19.5 は空。内面 (±19.55) の直前 ±19.5 まで材料が続く (側壁に溶けている)
-check_section b11 wedge-width 8 \
+check_section b1x1 wedge-width 8 \
   "solid 0 27.5; solid -19.5 27.5; solid 19.5 27.5; solid 0 22; solid 15 22; solid -15 22;
    solid 19.5 22; solid -19.5 22; void 19.5 20.72; solid 19.5 20.88;
    void 0 19.5; void 15 19.5; void 0 12"
@@ -498,12 +510,29 @@ check_section b11 wedge-width 8 \
 # ---------------------------------------------------------------------------
 CORNER="void 0.3 20; void 0.3 27.5; void 0.3 24; solid 1.5 20; solid 1.5 24; solid 1.5 27.5; solid 5 27.5"
 INSIDE="solid 0.9 20; solid 0.9 24; solid 0.9 27.5; void 0.1 20"
-check_section_yz b11 corner-clip-r 19.5 "$CORNER"
-check_section_yz b11 corner-clip-l -19.5 "$CORNER"
-check_section_yz b11 corner-inside 18.5 "$INSIDE"
-check_section_yz b12 corner-clip-r 19.5 "$CORNER"
-check_section_yz b12 corner-clip-l -19.5 "$CORNER"
-check_section_yz b12 corner-inside 18.5 "$INSIDE"
+check_section_yz b1x1 corner-clip-r 19.5 "$CORNER"
+check_section_yz b1x1 corner-clip-l -19.5 "$CORNER"
+check_section_yz b1x1 corner-inside 18.5 "$INSIDE"
+check_section_yz b1x2 corner-clip-r 19.5 "$CORNER"
+check_section_yz b1x2 corner-clip-l -19.5 "$CORNER"
+check_section_yz b1x2 corner-inside 18.5 "$INSIDE"
+
+# ---------------------------------------------------------------------------
+# 6. 2x5 (両軸が最大)。底の格子 2×5 (中心 x=±21、y=20.75+42k)、角のクリップ、
+#    ラベル天板が内幅 (81.1) いっぱいであること
+# ---------------------------------------------------------------------------
+# grid 節は最大の loop を外形として除外するので、外形の無いこの断面では使わない
+check_plan b2x5 base-mid 2.0 \
+  "loops 10;
+   loop -21 20.75 37.2 37.2; loop 21 20.75 37.2 37.2; loop -21 62.75 37.2 37.2;
+   loop 21 62.75 37.2 37.2; loop -21 104.75 37.2 37.2; loop 21 104.75 37.2 37.2;
+   loop -21 146.75 37.2 37.2; loop 21 146.75 37.2 37.2; loop -21 188.75 37.2 37.2;
+   loop 21 188.75 37.2 37.2"
+check_section_yz b2x5 corner-clip-r 40.5 "$CORNER"
+check_section_yz b2x5 corner-clip-l -40.5 "$CORNER"
+check_section_yz b2x5 corner-inside 39.5 "$INSIDE"
+check_section b2x5 label-width 8 \
+  "solid 0 27.5; solid -40.5 27.5; solid 40.5 27.5; solid 0 22; solid 40.5 22; solid -40.5 22; void 0 19.5"
 
 if [ "$fail" -ne 0 ]; then
   echo "gridfinity-bin: FAILED" >&2

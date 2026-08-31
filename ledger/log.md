@@ -1,5 +1,11 @@
 # 3D CAD ledger Update Log
 
+## 2026-08-31
+
+- **Update**: [Gridfinity 4U bin](designs/gridfinity-bin-4u.md)をcols 1..2 ×
+  rows 1..5の10種へ増産した。`gridfinity_bin(cols, rows, units)`の3引数
+  払い出し口を`modules/gridfinity_bin_4u.scad`に置き、assetは各1呼び出し。
+
 ## 2026-08-28
 
 - **Update**: [レターケースのGridfinityベースプレート](designs/letter-case-gridfinity.md)

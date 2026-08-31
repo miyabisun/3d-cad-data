@@ -4,10 +4,11 @@ Gridfinity の bin (箱)。レターケースのベースプレート (`assets/l
 並べて使う。設計思想は `ledger/designs/gridfinity-bin-4u.md` が正本。
 共通値は `modules/gridfinity_bin_4u.scad`、形状は `modules/gridfinity_bin.scad`。
 
-## bin_1x1x4u.scad / bin_1x2x4u.scad
+## bin_{c}x{r}x4u.scad (10 種)
 
-1×1 マスと 1×2 マス (奥行き 2 マス) の高さ 4U。どちらも底面をビルドプレートへ
-置き、サポート不要 (面取り・くさびは 45°)。
+cols 1..2 × rows 1..5 の高さ 4U。cols が横 (X)、rows がラベルの壁から奥 (Y)。
+各 asset は `gridfinity_bin(cols, rows, units)` の 1 呼び出し。どれも底面を
+ビルドプレートへ置き、サポート不要 (面取り・くさびは 45°)。
 
 - 外形 41.5 角 (1×2 は 41.5×83.5)、角 R3.75。壁の上端 z=28、リップ 4.4 で全高 32.4
 - 底は Gridfinity 公称の 3 段 (35.6 → 37.2 → 41.5、高さ 4.75) で穴なし (無垢)
