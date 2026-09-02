@@ -1,5 +1,13 @@
 # 3D CAD ledger Update Log
 
+## 2026-09-03
+
+- **Update**: [Gridfinity 4U bin](designs/gridfinity-bin-4u.md)をcols 1..5 ×
+  rows 1..5の25種へ増産した。3×5が必要になり横に置くので5×3として作り、
+  「5x5x4Uまでの全組み合わせ」というuserの依頼で残りも揃えた。払い出し口と
+  形状は不変で、asset 15個の追加と`tests/gridfinity-bin.sh`の一般化
+  （bboxの半幅c×21−0.25、深掘りを2x5から5x5へ）のみ。
+
 ## 2026-08-31
 
 - **Update**: [Gridfinity 4U bin](designs/gridfinity-bin-4u.md)をcols 1..2 ×

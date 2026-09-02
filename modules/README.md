@@ -87,4 +87,4 @@ Gridfinity bin (箱) の共有 module。`gridfinity.scad` のピッチ・角丸�
 
 `assets/gridfinity-bin/` の bin 群の共通値 (壁 1.2・床 1.2・ラベル天板 13×1・
 境目 R1) と、サイズ 3 引数の払い出し口 `gridfinity_bin(cols, rows, units)`。
-単体では何も描かない。保証する範囲は cols 1..2 × rows 1..5 × units 4。
+単体では何も描かない。保証する範囲は cols 1..5 × rows 1..5 × units 4。

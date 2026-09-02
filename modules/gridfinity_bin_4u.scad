@@ -2,8 +2,8 @@ include <gridfinity_bin.scad>
 
 // assets/gridfinity-bin/ の bin 群の共通値と、サイズ 3 引数の払い出し口。
 // 単体では何も描かない。設計の経緯と確定値は
-// ledger/designs/gridfinity-bin-4u.md が正本。 保証する範囲は cols 1..2 ×
-// rows 1..5 × units 4 (assets に並ぶ 10 種)。 cols が X (横)、rows が Y
+// ledger/designs/gridfinity-bin-4u.md が正本。 保証する範囲は cols 1..5 ×
+// rows 1..5 × units 4 (assets に並ぶ 25 種)。 cols が X (横)、rows が Y
 // (ラベルの壁から奥へ)、units が高さ (7mm 単位)。
 wall = 1.2;    // 0.4 ノズル 3 本
 floor_t = 1.2; // 底 (4.75) の上に載せる床。床の天面 z = 5.95

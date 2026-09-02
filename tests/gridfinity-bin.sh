@@ -1,5 +1,5 @@
 #!/bin/bash
-# Gridfinity bin (cols 1..2 × rows 1..5 の 4U 全 10 種、薄いリップ、手前に 13mm のラベル天板) のレンダリング検証。
+# Gridfinity bin (cols 1..5 × rows 1..5 の 4U 全 25 種、薄いリップ、手前に 13mm のラベル天板) のレンダリング検証。
 # - openscad が exit 0 で非空の STL を生成し、console に ERROR / WARNING が無いこと
 # - 設計契約 (CONTRACT echo) が台帳の確定値と一致すること
 # - production STL の断面実測で、底の 3 段輪郭 (35.6/37.2/41.5)・42 ピッチ・
@@ -388,9 +388,9 @@ PYEOF
 
 
 
-# 全 10 種 (cols 1..2 × rows 1..5、すべて 4U) を render し、契約・外形・連結を測る。
-# 断面の深掘りは代表の 1x1 と、両軸が最大の 2x5 に集中する
-for c in 1 2; do
+# 全 25 種 (cols 1..5 × rows 1..5、すべて 4U) を render し、契約・外形・連結を測る。
+# 断面の深掘りは代表の 1x1 と、両軸が最大の 5x5 に集中する
+for c in 1 2 3 4 5; do
   for r in 1 2 3 4 5; do
     render "b${c}x${r}" "assets/gridfinity-bin/bin_${c}x${r}x4u.scad"
   done
@@ -405,16 +405,16 @@ done
 #    くさびが壁まで下りる。天板の先端 (垂直面) と 45° 面の境目は R1
 # ---------------------------------------------------------------------------
 CONTRACT="CONTRACT units=4 pitch=42 outer=41.5 h=28 lip=4.4 base=35.6/37.2/41.5 base_h=4.75 wall=1.2 floor_top=5.95 label=13x1 wedge=45 fillet=1"
-# echo の size は c*42−0.5 × r*42−0.5 (例 1x1 → 41.5x41.5、2x5 → 83.5x209.5)
-for c in 1 2; do
+# echo の size は c*42−0.5 × r*42−0.5 (例 1x1 → 41.5x41.5、5x5 → 209.5x209.5)
+for c in 1 2 3 4 5; do
   for r in 1 2 3 4 5; do
     expect_echo "b${c}x${r}" "$CONTRACT bin=${c}x${r} size=$((c * 42 - 1)).5x$((r * 42 - 1)).5"
   done
 done
 
-# 外形。X は中央が 0、Y は手前 (ラベル側) が 0、Z=0 が底面
-for c in 1 2; do
-  half=$([ "$c" = 1 ] && echo 20.75 || echo 41.75)
+# 外形。X は中央が 0 なので半幅は (c*42−0.5)/2 = c*21−0.25。Y は手前 (ラベル側) が 0、Z=0 が底面
+for c in 1 2 3 4 5; do
+  half=$((c * 21 - 1)).75
   for r in 1 2 3 4 5; do
     check_bbox "b${c}x${r}" -$half $half 0 $((r * 42 - 1)).5 0 32.4
     check_single_solid "b${c}x${r}"
@@ -518,21 +518,23 @@ check_section_yz b1x2 corner-clip-l -19.5 "$CORNER"
 check_section_yz b1x2 corner-inside 18.5 "$INSIDE"
 
 # ---------------------------------------------------------------------------
-# 6. 2x5 (両軸が最大)。底の格子 2×5 (中心 x=±21、y=20.75+42k)、角のクリップ、
-#    ラベル天板が内幅 (81.1) いっぱいであること
+# 6. 5x5 (両軸が最大)。底の格子 5×5 (中心 x=0/±42/±84、y=20.75+42k)、角のクリップ、
+#    ラベル天板が内幅 (207.1) いっぱいであること
 # ---------------------------------------------------------------------------
-# grid 節は最大の loop を外形として除外するので、外形の無いこの断面では使わない
-check_plan b2x5 base-mid 2.0 \
-  "loops 10;
-   loop -21 20.75 37.2 37.2; loop 21 20.75 37.2 37.2; loop -21 62.75 37.2 37.2;
-   loop 21 62.75 37.2 37.2; loop -21 104.75 37.2 37.2; loop 21 104.75 37.2 37.2;
-   loop -21 146.75 37.2 37.2; loop 21 146.75 37.2 37.2; loop -21 188.75 37.2 37.2;
-   loop 21 188.75 37.2 37.2"
-check_section_yz b2x5 corner-clip-r 40.5 "$CORNER"
-check_section_yz b2x5 corner-clip-l -40.5 "$CORNER"
-check_section_yz b2x5 corner-inside 39.5 "$INSIDE"
-check_section b2x5 label-width 8 \
-  "solid 0 27.5; solid -40.5 27.5; solid 40.5 27.5; solid 0 22; solid 40.5 22; solid -40.5 22; void 0 19.5"
+# grid 節は最大の loop を外形として除外するので、外形の無いこの断面では使わない。
+# 25 個の底を loop 節で 1 個ずつ名指しする (中心と 37.2 角の両方を固定する)
+GRID5="loops 25"
+for x in -84 -42 0 42 84; do
+  for j in 0 1 2 3 4; do
+    GRID5="$GRID5; loop $x $((j * 42 + 20)).75 37.2 37.2"
+  done
+done
+check_plan b5x5 base-mid 2.0 "$GRID5"
+check_section_yz b5x5 corner-clip-r 103.5 "$CORNER"
+check_section_yz b5x5 corner-clip-l -103.5 "$CORNER"
+check_section_yz b5x5 corner-inside 102.5 "$INSIDE"
+check_section b5x5 label-width 8 \
+  "solid 0 27.5; solid -103.5 27.5; solid 103.5 27.5; solid 0 22; solid 103.5 22; solid -103.5 22; void 0 19.5"
 
 if [ "$fail" -ne 0 ]; then
   echo "gridfinity-bin: FAILED" >&2
