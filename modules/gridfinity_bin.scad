@@ -138,11 +138,51 @@ gfb_bin(cols,
     }
 }
 
-// カードケース。gfb_bin (ラベル無し) の内側を床の天面から壁の上端 (units*7)
-// まで無垢で埋め、中央にカード (card = [X, Y]、寝かせる) + clearance のポケットを
-// 床の天面から上へ抜き、その中心に finger = [X, Y] の指穴を底まで貫通させる
-// (指が床より下、ベースプレートのソケットの底まで届く)。ポケットと指穴の平面の
-// 隅は半径 r。リップ (壁の上端から上) はそのまま残す
+// 底 1 マスぶんの窪み (くり抜き用の cut)。gfb_base_cell の 3 段の輪郭を、壁厚 wall
+// だけ内側へ・床厚 floor_t だけ上へ寄せた相似形で、天面 (z = 底の高さ + floor_t =
+// 床の天面) の隅は半径 r、下るほど幅と同じ分だけ半径を減らして 45° を保つ。
+// 天面は床の天面と一致するので、その上へ gf_over だけ同じ幅の柱を伸ばして面の
+// 一致を避ける。各段は壁の内面との面の一致を避けるため gf_eps だけ小さい
+module
+gfb_recess(wall, floor_t, r)
+{
+    inset = wall + gf_eps;
+    w1 = gfb_base_bot - 2 * inset;
+    w2 = gfb_base_mid - 2 * inset;
+    w3 = gfb_outer - 2 * inset;
+    z0 = floor_t; // 窪みの床 (底の皮 = floor_t)
+    z1 = z0 + gfb_base_chamfer_bot;
+    z2 = z1 + gfb_base_wall_h;
+    z3 = z0 + gfb_base_h; // = 床の天面
+    r2 = r - (w3 - w2) / 2;
+    r1 = r - (w3 - w1) / 2;
+    hull()
+    {
+        gf_slab(w1, r1, z0);
+        gf_slab(w2, r2, z1 - gf_eps);
+    }
+    hull()
+    {
+        gf_slab(w2, r2, z1 - gf_eps);
+        gf_slab(w2, r2, z2 - gf_eps);
+    }
+    hull()
+    {
+        gf_slab(w2, r2, z2 - gf_eps);
+        gf_slab(w3, r, z3 - gf_eps);
+    }
+    translate([ 0, 0, z3 - gf_eps ]) linear_extrude(gf_over + gf_eps)
+        gf_rounded_square(w3, r);
+}
+
+// カードケース。gfb_bin (ラベル無し) の内側を床の天面から壁の上端 (units*7) まで
+// 無垢で埋め、そこから 2 つを抜く:
+// - カード (card = [X, Y]、寝かせる) + clearance のポケット。左手前の壁に付ける
+//   (壁の内面がそのままポケットの壁)。床は bin の床
+// - 右奥のマスの穴。埋めは壁の内面まで抜き、床と底のマスは gfb_recess の窪みにする
+//   (外形の 3 段に沿って 45° で下がり、底の皮 floor_t を残す。貫通しない)
+// ポケットと穴の平面の隅は半径 r。ポケットと穴は角で繋がり、カードの右奥の角が
+// 窪みの上に張り出すので、指をその下へ入れて 1 枚目を掬える。リップはそのまま
 module
 gfb_card_case(cols,
               rows,
@@ -151,26 +191,43 @@ gfb_card_case(cols,
               floor_t = 1.2,
               card = [ 53.7, 85.5 ],
               clearance = 1,
-              finger = [ 20, 30 ],
               r = 4)
 {
     h = units * gfb_unit;
-    top = h + gfb_lip_h;
     floor_top = gfb_base_h + floor_t;
-    cy = (rows * gf_pitch - 0.5) / 2;
+    inner_w = cols * gf_pitch - 0.5 - 2 * wall;
+    inner_d = rows * gf_pitch - 0.5 - 2 * wall;
+    pw = card[0] + clearance;
+    pd = card[1] + clearance;
+    // 右奥のマスの中心と、そのマスの手前左の角 (埋めの穴の縁)
+    cx = (cols - 1) / 2 * gf_pitch;
+    cy = (rows - 0.5) * gf_pitch - 0.25;
+    hx0 = cx - gfb_outer / 2;
+    hy0 = cy - gfb_outer / 2;
     difference()
     {
         union()
         {
             gfb_bin(cols, rows, units, wall, floor_t);
-            // 埋め: 壁へ gf_eps 食い込ませて胴体と溶かす
+            // 埋め: 壁へ gf_eps 食い込ませて胴体と溶かす。ポケットと穴は 2D で
+            // 引く。壁に接する辺は壁へ gf_eps だけ食い込ませる: 辺を壁の内面に
+            // ぴったり合わせると隅の円弧が壁面に接線で触れ、その STL を CGAL が
+            // 再読込 (projection) できなくなる
             translate([ 0, 0, floor_top - gf_eps ])
-                linear_extrude(h - floor_top + gf_eps)
-                    gfb_footprint(cols, rows, wall - gf_eps);
+                linear_extrude(h - floor_top + gf_eps) difference()
+            {
+                gfb_footprint(cols, rows, wall - gf_eps);
+                translate([ -inner_w / 2 - gf_eps + pw / 2, wall - gf_eps + pd / 2 ])
+                    gf_rounded_square_wd(pw, pd, r);
+                translate([
+                    (hx0 + inner_w / 2 + gf_eps) / 2,
+                    (hy0 + wall + inner_d + gf_eps) / 2
+                ])
+                    gf_rounded_square_wd(inner_w / 2 + gf_eps - hx0,
+                                         wall + inner_d + gf_eps - hy0,
+                                         r);
+            }
         }
-        translate([ 0, cy, floor_top ]) linear_extrude(top - floor_top + gf_over)
-            gf_rounded_square_wd(card[0] + clearance, card[1] + clearance, r);
-        translate([ 0, cy, -gf_over ]) linear_extrude(top + 2 * gf_over)
-            gf_rounded_square_wd(finger[0], finger[1], r);
+        translate([ cx, cy, 0 ]) gfb_recess(wall, floor_t, r);
     }
 }

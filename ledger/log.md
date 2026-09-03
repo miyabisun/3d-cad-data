@@ -2,6 +2,11 @@
 
 ## 2026-09-03
 
+- **Update**: [Gridfinity 4U bin](designs/gridfinity-bin-4u.md)のカードケースを
+  作り直した。貫通指穴は「指はカードを貫通しない」というuserの指摘でsuperseded。
+  ポケットを左手前の隅に寄せ、右奥のマスを壁の内面まで抜いて、その床と底を外形の
+  3段に沿った45°の窪み（皮1.2、床の天面から4.75下がる）にする。張り出したカードの
+  角の下へ指を掛けて1枚目を引き上げる。形状は`gfb_recess` + `gfb_card_case`。
 - **Update**: [Gridfinity 4U bin](designs/gridfinity-bin-4u.md)に2×3×4Uの
   カードケース（`assets/gridfinity-bin/card_case_2x3x4u.scad`、形状は
   `gfb_card_case`）を追加した。binの外殻の内側を壁の上端まで埋め、中央にカード
