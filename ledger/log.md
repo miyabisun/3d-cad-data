@@ -2,6 +2,11 @@
 
 ## 2026-09-03
 
+- **Update**: [Gridfinity 4U bin](designs/gridfinity-bin-4u.md)に2×3×4Uの
+  カードケース（`assets/gridfinity-bin/card_case_2x3x4u.scad`、形状は
+  `gfb_card_case`）を追加した。binの外殻の内側を壁の上端まで埋め、中央にカード
+  53.7×85.5（長辺をYに寝かせる）+1のポケットと、底まで貫通する20×30の指穴を抜く。
+  両方の平面の隅はR4。ラベル天板は無し。
 - **Update**: [Gridfinity 4U bin](designs/gridfinity-bin-4u.md)をcols 1..5 ×
   rows 1..5の25種へ増産した。3×5が必要になり横に置くので5×3として作り、
   「5x5x4Uまでの全組み合わせ」というuserの依頼で残りも揃えた。払い出し口と

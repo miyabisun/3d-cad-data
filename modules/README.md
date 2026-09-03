@@ -82,9 +82,12 @@ Gridfinity bin (箱) の共有 module。`gridfinity.scad` のピッチ・角丸�
 |-----------|------|
 | `gfb_base_cell()` | 1 マスぶんの無垢の底 (35.6 → 37.2 → 41.5、高さ 4.75) |
 | `gfb_bin(cols, rows, units, wall, floor_t, label_d, label_t, label_r)` | 薄いリップの bin。`label_d > 0` で手前の壁上端に内側へ張り出すラベル天板と、その下の 45° 無垢くさび (先端の境目 R `label_r`) |
+| `gfb_card_case(cols, rows, units, wall, floor_t, card, clearance, finger, r)` | `gfb_bin` (ラベル無し) の内側を壁の上端まで埋め、中央に `card + clearance` のポケット (床の天面から上) と `finger` の指穴 (底まで貫通) を抜いたカードケース。両方の平面の隅は R `r` |
 
 ## gridfinity_bin_4u.scad
 
 `assets/gridfinity-bin/` の bin 群の共通値 (壁 1.2・床 1.2・ラベル天板 13×1・
-境目 R1) と、サイズ 3 引数の払い出し口 `gridfinity_bin(cols, rows, units)`。
-単体では何も描かない。保証する範囲は cols 1..5 × rows 1..5 × units 4。
+境目 R1、カードケースのカード 53.7×85.5・余裕 1・指穴 20×30・R4) と、サイズ 3 引数の
+払い出し口 `gridfinity_bin(cols, rows, units)` / `gridfinity_card_case(cols, rows, units)`。
+単体では何も描かない。保証する範囲は bin が cols 1..5 × rows 1..5 × units 4、
+カードケースが 2×3×4。

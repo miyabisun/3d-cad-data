@@ -137,3 +137,40 @@ gfb_bin(cols,
             }
     }
 }
+
+// カードケース。gfb_bin (ラベル無し) の内側を床の天面から壁の上端 (units*7)
+// まで無垢で埋め、中央にカード (card = [X, Y]、寝かせる) + clearance のポケットを
+// 床の天面から上へ抜き、その中心に finger = [X, Y] の指穴を底まで貫通させる
+// (指が床より下、ベースプレートのソケットの底まで届く)。ポケットと指穴の平面の
+// 隅は半径 r。リップ (壁の上端から上) はそのまま残す
+module
+gfb_card_case(cols,
+              rows,
+              units = 4,
+              wall = 1.2,
+              floor_t = 1.2,
+              card = [ 53.7, 85.5 ],
+              clearance = 1,
+              finger = [ 20, 30 ],
+              r = 4)
+{
+    h = units * gfb_unit;
+    top = h + gfb_lip_h;
+    floor_top = gfb_base_h + floor_t;
+    cy = (rows * gf_pitch - 0.5) / 2;
+    difference()
+    {
+        union()
+        {
+            gfb_bin(cols, rows, units, wall, floor_t);
+            // 埋め: 壁へ gf_eps 食い込ませて胴体と溶かす
+            translate([ 0, 0, floor_top - gf_eps ])
+                linear_extrude(h - floor_top + gf_eps)
+                    gfb_footprint(cols, rows, wall - gf_eps);
+        }
+        translate([ 0, cy, floor_top ]) linear_extrude(top - floor_top + gf_over)
+            gf_rounded_square_wd(card[0] + clearance, card[1] + clearance, r);
+        translate([ 0, cy, -gf_over ]) linear_extrude(top + 2 * gf_over)
+            gf_rounded_square_wd(finger[0], finger[1], r);
+    }
+}

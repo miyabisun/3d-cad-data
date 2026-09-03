@@ -1,5 +1,6 @@
 #!/bin/bash
-# Gridfinity bin (cols 1..5 × rows 1..5 の 4U 全 25 種、薄いリップ、手前に 13mm のラベル天板) のレンダリング検証。
+# Gridfinity bin (cols 1..5 × rows 1..5 の 4U 全 25 種、薄いリップ、手前に 13mm のラベル天板) と、
+# 2x3x4U のカードケース (内側を埋めてカードのポケットと指穴を抜いたもの) のレンダリング検証。
 # - openscad が exit 0 で非空の STL を生成し、console に ERROR / WARNING が無いこと
 # - 設計契約 (CONTRACT echo) が台帳の確定値と一致すること
 # - production STL の断面実測で、底の 3 段輪郭 (35.6/37.2/41.5)・42 ピッチ・
@@ -7,6 +8,8 @@
 #   実形状として固定すること (echo は自己申告なので形状で裏を取る)
 # - 底面に穴が無いこと (磁石穴・ネジ穴を持たない)
 # - 各 STL が1連結成分であること
+# - カードケース: ポケット 54.7×86.5 (R4) が床の天面から上へ開き、その中心の指穴 20×30 (R4) が
+#   床と底を貫通していること。ポケット以外の内側は壁の上端まで無垢であること
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -57,7 +60,7 @@ expect_echo() {
 #   solid <cx> <cy> / void <cx> <cy> — 指定点に材料が有る/無い
 #   winbox <cx> <cy> <sx> <sy>       — 指定の矩形の中に収まる (外形以外の) loop が
 #       ちょうど 4 本あり、その union の bbox が矩形と一致する (X 窓の実寸)
-#   arc <cx> <cy> <r> <x1> <x2> <y1> <y2> — 矩形 [x1,x2]×[y1,y2] に入る外形の頂点が
+#   arc <cx> <cy> <r> <x1> <x2> <y1> <y2> — 矩形 [x1,x2]×[y1,y2] に入る (全 loop の) 頂点が
 #       5 個以上あり、すべて (cx,cy) から距離 r (±0.05) にある (角の丸みの実測)
 #   grid <x0> <dx> <nx> <y0> <dy> <ny> <span> — 外形以外の span 角の全 loop の
 #       中心の集合が格子 {x0+i*dx} × {y0+j*dy} と過不足なく一致する
@@ -144,9 +147,9 @@ for cond in spec.split(";"):
         if len(inner) != 4 or any(abs(a - c) > 0.05 for a, c in zip(u, want)):
             print(f"plan {name}: winbox want 4 loops with union {want}")
             ok = False
-    elif kind == "arc":  # <cx> <cy> <r> <x1> <x2> <y1> <y2>
+    elif kind == "arc":  # <cx> <cy> <r> <x1> <x2> <y1> <y2> (全 loop の頂点が対象。矩形で 1 つの角に絞る)
         cx, cy, r, x1, x2, y1, y2 = map(float, args)
-        pts = [p for p in body if x1 <= p[0] <= x2 and y1 <= p[1] <= y2]
+        pts = [p for l in loops for p in l if x1 <= p[0] <= x2 and y1 <= p[1] <= y2]
         dist = [((p[0] - cx) ** 2 + (p[1] - cy) ** 2) ** 0.5 for p in pts]
         print(f"plan {name}: arc ({cx},{cy}) r={r}: {len(pts)} vertices, "
               f"r=[{min(dist):.3f},{max(dist):.3f}]" if pts else f"plan {name}: arc: no vertices")
@@ -535,6 +538,47 @@ check_section_yz b5x5 corner-clip-l -103.5 "$CORNER"
 check_section_yz b5x5 corner-inside 102.5 "$INSIDE"
 check_section b5x5 label-width 8 \
   "solid 0 27.5; solid -103.5 27.5; solid 103.5 27.5; solid 0 22; solid 103.5 22; solid -103.5 22; void 0 19.5"
+
+# ---------------------------------------------------------------------------
+# 7. カードケース 2x3x4U。外形・底・リップは bin と同じでラベル無し。内側は床の天面 (5.95) から
+#    壁の上端 (28) まで無垢で埋め、中央 (0, 62.75) にカード 53.7×85.5 + 1 のポケット 54.7 (X) ×
+#    86.5 (Y)、平面の隅 R4 を床の天面から上へ抜く。ポケットの中心に指穴 20 (X) × 30 (Y)、
+#    隅 R4 を底まで貫通させる (指が床より下のソケットの底まで届く)。
+#    ポケットは y=19.5..106、x=±27.35。指穴は y=47.75..77.75、x=±10
+# ---------------------------------------------------------------------------
+render card "assets/gridfinity-bin/card_case_2x3x4u.scad"
+expect_echo card "CONTRACT card units=4 bin=2x3 size=83.5x125.5 h=28 lip=4.4 floor_top=5.95 card=53.7x85.5 pocket=54.7x86.5 finger=20x30 r=4 center=62.75"
+check_bbox card -41.75 41.75 0 125.5 0 32.4
+check_single_solid card
+# z=15: 外形とポケットの 2 loop。ポケットの外は無垢。隅は R4 (角の円弧の中心は (±23.35, 23.5) と (±23.35, 102))
+check_plan card pocket 15 \
+  "loops 2; rect -41.75 41.75 0 125.5; loop 0 62.75 54.7 86.5; void 0 62.75; void 0 25; void 20 100;
+   solid 35 62.75; solid -35 62.75; solid 0 10; solid 0 115; solid 30 15; solid -30 110;
+   arc 23.35 23.5 4 23.3 27.4 19.45 23.55; arc -23.35 102 4 -27.4 -23.3 101.95 106.05"
+# z=27.5 は埋めの中 (無垢)、z=30 はリップの内側 (埋めは 28 で終わり、リップの内幅 81.1×123.1 が空)
+check_plan card fill-top 27.5 "loops 2; solid 0 10; solid 35 62.75; void 0 62.75"
+check_plan card lip 30 "loops 2; rect -41.75 41.75 0 125.5; loop 0 62.75 81.1 123.1; void 0 10; void 0 62.75; solid 41.2 62.75"
+# z=5.5 (床の中): 外形と指穴の 2 loop。ポケットの下は床 (無垢)。指穴の隅は R4 (円弧の中心 (6, 51.75))
+check_plan card floor 5.5 \
+  "loops 2; loop 0 62.75 20 30; void 0 62.75; void 8 50; solid 0 40; solid 0 85; solid 20 62.75; solid 0 30;
+   arc 6 51.75 4 5.95 10.05 47.7 51.8; arc -6 73.75 4 -10.05 -5.95 73.7 77.8"
+# z=2 (底の垂直部): 6 マス。中央の行の 2 マス (y 44.15..81.35) は指穴 (y 47.75..77.75、x=±10) に
+#    内側を削られて C 字になるが、穴はマスの y の端まで届かないので bbox は 37.2 角のまま。
+#    穴の中 (x=5) は空、穴の脇の腕 (x=5, y=46 / 79.5) と穴の外 (x=15) は無垢
+check_plan card base-mid 2.0 \
+  "loops 6; loop -21 20.75 37.2 37.2; loop 21 20.75 37.2 37.2; loop -21 104.75 37.2 37.2; loop 21 104.75 37.2 37.2;
+   loop 21 62.75 37.2 37.2; loop -21 62.75 37.2 37.2; void 0 62.75; void 5 62.75; void -5 50; void 5 75;
+   solid 5 46; solid 5 79.5; solid -5 46; solid 15 62.75; solid -15 62.75"
+# Y-Z 断面 (x=5、底のマスの中): 指穴が z=0 から上まで空 (void_rect)。ポケットの床 (z 4.75..5.95) と
+#    埋め (z 5.95..28) は無垢、リップの内側 (z>28) は空
+check_section_yz card finger-x5 5 \
+  "void_rect 47.8 77.7 0.05 32; solid 30 3; solid 40 5.5; void 40 6.5; void 40 20; solid 10 5.5; solid 10 20;
+   solid 115 20; solid 10 27.5; void 10 28.5; solid 0.6 30; solid 124.9 30; void 62.75 3; solid 47 5.5; solid 78.5 5.5"
+check_section_yz card finger-x0 0 "void_rect 47.8 77.7 0.05 32; solid 40 5.5; void 40 6.5; solid 10 20; void 62.75 5.5"
+# X-Z 断面 (y=62.75、指穴の中心): 指穴 x=±10 が貫通、ポケット x=±27.35 の外は埋め、壁の上はリップだけ
+check_section card finger-y 62.75 \
+  "void_rect -9.9 9.9 0.05 32; void 0 3; solid 15 3; solid -15 3; void 0 5.5; solid 20 5.5; void 20 6.5;
+   void 0 20; void 25 20; solid 30 20; solid -30 20; solid 40 20; solid 30 27.5; void 30 28.5; solid 41.2 30; void 30 30"
 
 if [ "$fail" -ne 0 ]; then
   echo "gridfinity-bin: FAILED" >&2
