@@ -11,12 +11,14 @@ label_d = 13;  // 12mm 幅のラベルシールを貼る天板の張り出し
 label_t = 1; // 天板の厚さ (user 指定)。下は 45° の無垢のくさび
 label_r = 1; // 天板の先端と 45° 面の境目の R (user 指定)
 // カードケース (card_case_{c}x{r}x4u.scad) の値。カードは実測 53.7 × 85.5 × 0.8 で、
-// 長辺を Y (rows 方向) に寝かせ、左手前の隅に寄せる。ポケットはカードより 1 大きい
-// (片側 0.5)。右奥のマスは壁の内面まで抜き、床と底を外形に沿った 45° の窪みにする
-card_w = 53.7;  // カードの短辺 (X)
-card_d = 85.5;  // カードの長辺 (Y)
-card_clear = 1; // ポケットの余裕 (user 指定「1mmずつ大きい」)
-card_r = 4;     // ポケットと穴の平面の隅 R (user 指定)
+// 長辺を Y (rows 方向) に寝かせ、左手前の隅から 10 内側に置く。ポケットはカードより 1
+// 大きい (片側 0.5)。右奥のマスは壁の内面まで抜き、床と底を外形に平行な 45° の窪みにする
+card_w = 53.7;          // カードの短辺 (X)
+card_d = 85.5;          // カードの長辺 (Y)
+card_clear = 1;         // ポケットの余裕 (user 指定「1mmずつ大きい」)
+card_off = [ 10, 10 ];  // ポケットの左手前の隅の、壁の内側の角からの距離 (user 指定「10mm ずつ」)
+card_r = 4;             // ポケットの平面の隅 R (user 指定)
+recess_skin = floor_t + 1.75; // 窪みの床 z (底の皮)。user 指定「壁厚と同じ 1.2 は過剰、1.75 返す」
 
 function bin_contract(cols, rows, units) = str("CONTRACT units=",
                                                units,
@@ -88,21 +90,21 @@ function card_contract(cols, rows, units) = str("CONTRACT card units=",
                                                 "x",
                                                 card_d + card_clear,
                                                 " at=",
-                                                -(cols * gf_pitch - 0.5) / 2 + wall,
+                                                -(cols * gf_pitch - 0.5) / 2 + wall + card_off[0],
                                                 ",",
-                                                wall,
+                                                wall + card_off[1],
                                                 " hole=",
                                                 (cols - 1) / 2 * gf_pitch - gfb_outer / 2,
                                                 ",",
                                                 (rows - 0.5) * gf_pitch - 0.25 - gfb_outer / 2,
+                                                " hole_r=",
+                                                gfb_outer_r - wall,
                                                 " recess=",
                                                 gfb_outer - 2 * wall,
                                                 "/",
                                                 gfb_base_mid - 2 * wall,
-                                                "/",
-                                                gfb_base_bot - 2 * wall,
                                                 " recess_floor=",
-                                                floor_t,
+                                                recess_skin,
                                                 " r=",
                                                 card_r);
 
@@ -111,6 +113,14 @@ module
 gridfinity_card_case(cols, rows, units = 4)
 {
     echo(card_contract(cols, rows, units));
-    gfb_card_case(
-        cols, rows, units, wall, floor_t, [ card_w, card_d ], card_clear, card_r);
+    gfb_card_case(cols,
+                  rows,
+                  units,
+                  wall,
+                  floor_t,
+                  [ card_w, card_d ],
+                  card_clear,
+                  card_off,
+                  card_r,
+                  recess_skin);
 }

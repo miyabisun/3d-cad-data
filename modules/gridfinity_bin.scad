@@ -139,50 +139,61 @@ gfb_bin(cols,
 }
 
 // 底 1 マスぶんの窪み (くり抜き用の cut)。gfb_base_cell の 3 段の輪郭を、壁厚 wall
-// だけ内側へ・床厚 floor_t だけ上へ寄せた相似形で、天面 (z = 底の高さ + floor_t =
-// 床の天面) の隅は半径 r、下るほど幅と同じ分だけ半径を減らして 45° を保つ。
-// 天面は床の天面と一致するので、その上へ gf_over だけ同じ幅の柱を伸ばして面の
-// 一致を避ける。各段は壁の内面との面の一致を避けるため gf_eps だけ小さい
+// だけ内側へ・床厚 floor_t だけ上へ寄せた相似形を、z = skin (窪みの床) で切り落とした
+// もの。天面 (z = 底の高さ + floor_t = 床の天面) の隅は半径 r で、下るほど幅と同じ分
+// だけ半径を減らして 45° を保つ (r を内壁と同じ 外形 R − wall にすると外形の平行
+// オフセットになる)。天面は床の天面と一致するので、その上へ gf_over だけ同じ幅の
+// 柱を伸ばして面の一致を避ける。各段は壁の内面との面の一致を避けるため gf_eps 小さい
 module
-gfb_recess(wall, floor_t, r)
+gfb_recess(wall, floor_t, r, skin)
 {
     inset = wall + gf_eps;
     w1 = gfb_base_bot - 2 * inset;
     w2 = gfb_base_mid - 2 * inset;
     w3 = gfb_outer - 2 * inset;
-    z0 = floor_t; // 窪みの床 (底の皮 = floor_t)
+    z0 = floor_t;
     z1 = z0 + gfb_base_chamfer_bot;
     z2 = z1 + gfb_base_wall_h;
     z3 = z0 + gfb_base_h; // = 床の天面
     r2 = r - (w3 - w2) / 2;
-    r1 = r - (w3 - w1) / 2;
-    hull()
+    r1 = max(r - (w3 - w1) / 2, gf_eps);
+    intersection()
     {
-        gf_slab(w1, r1, z0);
-        gf_slab(w2, r2, z1 - gf_eps);
+        union()
+        {
+            hull()
+            {
+                gf_slab(w1, r1, z0);
+                gf_slab(w2, r2, z1 - gf_eps);
+            }
+            hull()
+            {
+                gf_slab(w2, r2, z1 - gf_eps);
+                gf_slab(w2, r2, z2 - gf_eps);
+            }
+            hull()
+            {
+                gf_slab(w2, r2, z2 - gf_eps);
+                gf_slab(w3, r, z3 - gf_eps);
+            }
+            translate([ 0, 0, z3 - gf_eps ]) linear_extrude(gf_over + gf_eps)
+                gf_rounded_square(w3, r);
+        }
+        translate([ -gfb_outer, -gfb_outer, skin ])
+            cube([ 2 * gfb_outer, 2 * gfb_outer, z3 + gf_over - skin ]);
     }
-    hull()
-    {
-        gf_slab(w2, r2, z1 - gf_eps);
-        gf_slab(w2, r2, z2 - gf_eps);
-    }
-    hull()
-    {
-        gf_slab(w2, r2, z2 - gf_eps);
-        gf_slab(w3, r, z3 - gf_eps);
-    }
-    translate([ 0, 0, z3 - gf_eps ]) linear_extrude(gf_over + gf_eps)
-        gf_rounded_square(w3, r);
 }
 
 // カードケース。gfb_bin (ラベル無し) の内側を床の天面から壁の上端 (units*7) まで
 // 無垢で埋め、そこから 2 つを抜く:
-// - カード (card = [X, Y]、寝かせる) + clearance のポケット。左手前の壁に付ける
-//   (壁の内面がそのままポケットの壁)。床は bin の床
-// - 右奥のマスの穴。埋めは壁の内面まで抜き、床と底のマスは gfb_recess の窪みにする
-//   (外形の 3 段に沿って 45° で下がり、底の皮 floor_t を残す。貫通しない)
-// ポケットと穴の平面の隅は半径 r。ポケットと穴は角で繋がり、カードの右奥の角が
-// 窪みの上に張り出すので、指をその下へ入れて 1 枚目を掬える。リップはそのまま
+// - カード (card = [X, Y]、寝かせる) + clearance のポケット。左手前の壁の内側の角から
+//   offset = [X, Y] だけ内側に置く (offset は 0 より大きいこと: 壁に付けると隅の
+//   円弧が壁面に接線で触れ、その STL を CGAL が projection で再読込できない)。
+//   床は bin の床。平面の隅は半径 r
+// - 右奥のマスの穴。埋めは壁の内面まで抜き (隅は hole_r = 内壁と同じ 外形 R − wall)、
+//   床と底のマスは gfb_recess の窪みにする (外形に平行に 45° で下がり、床は z = skin)
+// ポケットと穴は角で繋がり、カードの右奥の角が窪みの上に張り出すので、指をその下へ
+// 入れて 1 枚目を掬える。リップはそのまま
 module
 gfb_card_case(cols,
               rows,
@@ -191,7 +202,9 @@ gfb_card_case(cols,
               floor_t = 1.2,
               card = [ 53.7, 85.5 ],
               clearance = 1,
-              r = 4)
+              offset = [ 10, 10 ],
+              r = 4,
+              skin = 2.95)
 {
     h = units * gfb_unit;
     floor_top = gfb_base_h + floor_t;
@@ -199,6 +212,7 @@ gfb_card_case(cols,
     inner_d = rows * gf_pitch - 0.5 - 2 * wall;
     pw = card[0] + clearance;
     pd = card[1] + clearance;
+    hole_r = gfb_outer_r - wall;
     // 右奥のマスの中心と、そのマスの手前左の角 (埋めの穴の縁)
     cx = (cols - 1) / 2 * gf_pitch;
     cy = (rows - 0.5) * gf_pitch - 0.25;
@@ -210,24 +224,24 @@ gfb_card_case(cols,
         {
             gfb_bin(cols, rows, units, wall, floor_t);
             // 埋め: 壁へ gf_eps 食い込ませて胴体と溶かす。ポケットと穴は 2D で
-            // 引く。壁に接する辺は壁へ gf_eps だけ食い込ませる: 辺を壁の内面に
-            // ぴったり合わせると隅の円弧が壁面に接線で触れ、その STL を CGAL が
-            // 再読込 (projection) できなくなる
+            // 引く。穴の壁に接する辺は壁へ gf_eps だけ食い込ませる (面の一致と
+            // 隅の円弧の接線接触を避ける)
             translate([ 0, 0, floor_top - gf_eps ])
                 linear_extrude(h - floor_top + gf_eps) difference()
             {
                 gfb_footprint(cols, rows, wall - gf_eps);
-                translate([ -inner_w / 2 - gf_eps + pw / 2, wall - gf_eps + pd / 2 ])
-                    gf_rounded_square_wd(pw, pd, r);
+                translate([
+                    -inner_w / 2 + offset[0] + pw / 2, wall + offset[1] + pd / 2
+                ]) gf_rounded_square_wd(pw, pd, r);
                 translate([
                     (hx0 + inner_w / 2 + gf_eps) / 2,
                     (hy0 + wall + inner_d + gf_eps) / 2
                 ])
                     gf_rounded_square_wd(inner_w / 2 + gf_eps - hx0,
                                          wall + inner_d + gf_eps - hy0,
-                                         r);
+                                         hole_r);
             }
         }
-        translate([ cx, cy, 0 ]) gfb_recess(wall, floor_t, r);
+        translate([ cx, cy, 0 ]) gfb_recess(wall, floor_t, hole_r, skin);
     }
 }
