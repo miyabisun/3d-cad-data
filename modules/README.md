@@ -83,12 +83,12 @@ Gridfinity bin (箱) の共有 module。`gridfinity.scad` のピッチ・角丸�
 | `gfb_base_cell()` | 1 マスぶんの無垢の底 (35.6 → 37.2 → 41.5、高さ 4.75) |
 | `gfb_bin(cols, rows, units, wall, floor_t, label_d, label_t, label_r)` | 薄いリップの bin。`label_d > 0` で手前の壁上端に内側へ張り出すラベル天板と、その下の 45° 無垢くさび (先端の境目 R `label_r`) |
 | `gfb_recess(wall, floor_t, r, skin)` | 底 1 マスぶんの窪みの cut。`gfb_base_cell` の 3 段を `wall` だけ内側・`floor_t` だけ上へ寄せた相似形 (45°) を z=`skin` で切った形。天面の隅は R `r` |
-| `gfb_card_case(cols, rows, units, wall, floor_t, card, clearance, offset, r, skin)` | `gfb_bin` (ラベル無し) の内側を壁の上端まで埋め、左手前の角から `offset` 内側に `card + clearance` のポケット (隅 R `r`)、右奥のマスに壁の内面までの穴 (隅は内壁と同じ R) + `gfb_recess` の窪み (床 z=`skin`) を抜いたカードケース |
+| `gfb_card_case(cols, rows, units, wall, floor_t, card, clearance, offset, r, skin, edge_r)` | `gfb_bin` (ラベル無し) の内側を壁の上端まで埋め、X 中央・手前の壁の内面から `offset` (スカラー、Y) 奥に `card + clearance` のポケット (隅 R `r`)、右奥のマスに壁の内面までの穴 (隅は内壁と同じ R) + `gfb_recess` の窪み (床 z=`skin`) を抜いたカードケース。ポケットと穴が交わる所の埋めの凸の縦エッジは R `edge_r` (抜く輪郭の閉演算) |
 
 ## gridfinity_bin_4u.scad
 
 `assets/gridfinity-bin/` の bin 群の共通値 (壁 1.2・床 1.2・ラベル天板 13×1・
-境目 R1、カードケースのカード 53.7×85.5・余裕 1・隅からの距離 10・R4・窪みの床 2.95) と、サイズ 3 引数の
+境目 R1、カードケースのカード 54×85.6 (ID-1)・余裕 1・手前の壁からの距離 10・隅 R3・縦エッジ R2・窪みの床 2.95) と、サイズ 3 引数の
 払い出し口 `gridfinity_bin(cols, rows, units)` / `gridfinity_card_case(cols, rows, units)`。
 単体では何も描かない。保証する範囲は bin が cols 1..5 × rows 1..5 × units 4、
 カードケースが 2×3×4。

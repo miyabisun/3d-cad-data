@@ -186,25 +186,34 @@ gfb_recess(wall, floor_t, r, skin)
 
 // カードケース。gfb_bin (ラベル無し) の内側を床の天面から壁の上端 (units*7) まで
 // 無垢で埋め、そこから 2 つを抜く:
-// - カード (card = [X, Y]、寝かせる) + clearance のポケット。左手前の壁の内側の角から
-//   offset = [X, Y] だけ内側に置く (offset は 0 より大きいこと: 壁に付けると隅の
+// - カード (card = [X, Y]、寝かせる) + clearance のポケット。X は中央、手前の壁の
+//   内側から offset だけ奥に置く (offset は 0 より大きいこと: 壁に付けると隅の
 //   円弧が壁面に接線で触れ、その STL を CGAL が projection で再読込できない)。
-//   床は bin の床。平面の隅は半径 r
+//   床は bin の床。平面の隅は半径 r (カードの隅と同じ R にして、隅で突っ掛から
+//   ないようにする)。左右の埋めの天面は (内幅 − ポケット幅) / 2 の平面で、
+//   ラベルを貼る帯になる
 // - 右奥のマスの穴。埋めは壁の内面まで抜き (隅は hole_r = 内壁と同じ 外形 R − wall)、
 //   床と底のマスは gfb_recess の窪みにする (外形に平行に 45° で下がり、床は z = skin)
 // ポケットと穴は角で繋がり、カードの右奥の角が窪みの上に張り出すので、指をその下へ
-// 入れて 1 枚目を掬える。リップはそのまま
+// 入れて 1 枚目を掬える。リップはそのまま。
+// ポケットと穴が交わる所には埋めの凸の縦エッジが 2 本できる (ポケットの右の辺 × 穴の
+// 手前の辺、穴の左の辺 × ポケットの奥の辺)。指が痛くないよう、この縦エッジを半径
+// edge_r で丸める: 抜く輪郭 (ポケット ∪ 穴) に閉演算 (offset +edge_r → −edge_r) を
+// 掛けると、輪郭の凹の角だけが半径 edge_r の弧になり (= 埋めの凸の角が丸くなる)、
+// 凸の角 (ポケットの隅 r、穴の隅 hole_r) は変わらない。壁は上端まで垂直のままなので
+// カードの収まる枚数は減らない
 module
 gfb_card_case(cols,
               rows,
               units = 4,
               wall = 1.2,
               floor_t = 1.2,
-              card = [ 53.7, 85.5 ],
+              card = [ 54, 85.6 ],
               clearance = 1,
-              offset = [ 10, 10 ],
-              r = 4,
-              skin = 2.95)
+              offset = 10,
+              r = 3,
+              skin = 2.95,
+              edge_r = 2)
 {
     h = units * gfb_unit;
     floor_top = gfb_base_h + floor_t;
@@ -224,24 +233,45 @@ gfb_card_case(cols,
         {
             gfb_bin(cols, rows, units, wall, floor_t);
             // 埋め: 壁へ gf_eps 食い込ませて胴体と溶かす。ポケットと穴は 2D で
-            // 引く。穴の壁に接する辺は壁へ gf_eps だけ食い込ませる (面の一致と
-            // 隅の円弧の接線接触を避ける)
+            // 引く (交点の凹の角は閉演算で丸める)
             translate([ 0, 0, floor_top - gf_eps ])
                 linear_extrude(h - floor_top + gf_eps) difference()
             {
-                gfb_footprint(cols, rows, wall - gf_eps);
-                translate([
-                    -inner_w / 2 + offset[0] + pw / 2, wall + offset[1] + pd / 2
-                ]) gf_rounded_square_wd(pw, pd, r);
-                translate([
-                    (hx0 + inner_w / 2 + gf_eps) / 2,
-                    (hy0 + wall + inner_d + gf_eps) / 2
-                ])
-                    gf_rounded_square_wd(inner_w / 2 + gf_eps - hx0,
-                                         wall + inner_d + gf_eps - hy0,
-                                         hole_r);
+                gfb_card_fill(cols, rows, wall);
+                offset(r = -edge_r, $fn = gf_fn) offset(r = edge_r, $fn = gf_fn)
+                {
+                    gfb_card_pocket(wall, pw, pd, offset, r);
+                    gfb_card_hole(inner_w, inner_d, wall, hx0, hy0, hole_r);
+                }
             }
         }
         translate([ cx, cy, 0 ]) gfb_recess(wall, floor_t, hole_r, skin);
     }
+}
+
+// 埋めの輪郭: 壁の内面より gf_eps 外 (胴体と溶かす)
+module
+gfb_card_fill(cols, rows, wall)
+{
+    gfb_footprint(cols, rows, wall - gf_eps);
+}
+
+// ポケットの輪郭: X 中央、手前の壁の内面から offset 奥
+module
+gfb_card_pocket(wall, pw, pd, offset, r)
+{
+    translate([ 0, wall + offset + pd / 2 ]) gf_rounded_square_wd(pw, pd, r);
+}
+
+// 穴の輪郭: 右奥のマスの手前左の角 (hx0, hy0) から壁の内面まで。壁に接する辺は壁へ
+// gf_eps だけ食い込ませる (面の一致と隅の円弧の接線接触を避ける)
+module
+gfb_card_hole(inner_w, inner_d, wall, hx0, hy0, hole_r)
+{
+    translate([
+        (hx0 + inner_w / 2 + gf_eps) / 2,
+        (hy0 + wall + inner_d + gf_eps) / 2
+    ]) gf_rounded_square_wd(inner_w / 2 + gf_eps - hx0,
+                            wall + inner_d + gf_eps - hy0,
+                            hole_r);
 }

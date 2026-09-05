@@ -1,5 +1,13 @@
 # 3D CAD ledger Update Log
 
+## 2026-09-05
+
+- **Update**: [Gridfinity 4U bin](designs/gridfinity-bin-4u.md)のカードケースに
+  印刷後のuserのフィードバックを反映した。ポケットをID-1規格の指定値（55 × 86.6、
+  隅R3。旧54.7 × 86.5・R4はsuperseded）にしてX中央へ寄せ、左右の埋めの天面を13.05の
+  平面（12mmラベル帯）にし、ポケットと穴が交わる所の埋めの凸の縦エッジ2本を閉演算で
+  R2に丸めた。開口の上縁を丸める案はuserが退けたのでsuperseded。穴の位置は右奥のまま。
+
 ## 2026-09-03
 
 - **Update**: [Gridfinity 4U bin](designs/gridfinity-bin-4u.md)のカードケースに
