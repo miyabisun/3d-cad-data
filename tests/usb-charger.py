@@ -119,7 +119,7 @@ with tempfile.TemporaryDirectory(prefix="usb-charger-test-") as temp:
         arc = [p for p in loop if p[0] > cx + 0.1 and (p[1] < cy - 0.1 if cy == 4 else p[1] > cy + 0.1)]
         assert len(arc) >= 6
         assert all(abs(math.dist(p, (cx, cy)) - radius) < 0.03 for p in arc)
-    for p in [(0, -2.9), (0, -0.1), (0, 31.9), (0, 35.7), (38, 15)]:
+    for p in [(0, -2.9), (0, -0.1), (0, 31.9), (12, 35.7), (38, 15)]:
         assert inside(plan, p), ("wall missing", p)
     assert not inside(plan, (0, 0.1)) and not inside(plan, (0, 31.7))
     loop_at(section("z", 76.5), (-35.1, 35.1, 0, 31.8))
@@ -141,4 +141,27 @@ with tempfile.TemporaryDirectory(prefix="usb-charger-test-") as temp:
                 # 穴の内接円が六角ビットの全回転包絡円 + 半径0.5mmを包む。
                 assert flat / 2 > 6.35 / math.sqrt(3) + 0.5
             assert not inside(loops, (x, 61.6))
-    print("usb-charger: STL dimensions, radii, floor opening, tapered hex holes and single closed solid passed")
+    # 中央の突起を全高で逃がす。16×1.3の矩形領域に丸みの肉を戻さない。
+    empty_rect(plan, (-8, 8, 34.5, 36))
+    assert inside(plan, (0, 34.49)) and not inside(plan, (0, 34.51))
+    assert inside(plan, (9.31, 35.79)) and not inside(plan, (9.29, 35.79))
+    for sign in [-1, 1]:
+        arc = [p for p in outer if 8.01 < sign * p[0] < 9.29 and 34.51 < p[1] < 35.79]
+        assert len(arc) >= 6, ("missing rib relief fillet", sign)
+        assert all(abs(math.dist(p, (sign * 8, 35.8)) - 1.3) < 0.03 for p in arc)
+    empty_rect(section("y", 35), (-8, 8, -0.1, 76.7))
+    # 最小残肉2.7mmの裏側(充電器側)と工具側の壁は連続して残る。
+    assert inside(section("y", 34.4), (0, 38))
+
+    # 上段で固定したときの中段・下段4箇所。奥面から深さ1mmで止まる。
+    for y in [34.81, 35.3, 35.79]:
+        loops = section("y", y)
+        for x in [-20, 20]:
+            for z in [36.6, 11.6]:
+                hex_at(loops, x, z, 6.4)
+    for y in [31.9, 34.79, -1.5]:
+        loops = section("y", y)
+        for x in [-20, 20]:
+            for z in [36.6, 11.6]:
+                assert inside(loops, (x, z)), ("tip pocket breaks through or is on wrong wall", x, y, z)
+    print("usb-charger: fit dimensions, rib relief R1.3, four blind tip pockets and single closed solid passed")

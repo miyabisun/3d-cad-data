@@ -11,11 +11,16 @@ mount_wall = 4;
 floor_t = 3;
 
 mount_pitch = 40;
+mount_row_pitch = 25;
 mount_from_top = 15; // 未実測の仮値。穴中心から上端まで
 screw_flat = 6.4;
 head_flat = 12.4; // 皿頭未実測の仮値 (対辺)
 head_depth = 3;
 driver_flat = 8.5;
+tip_depth = 1;
+rib_w = 16;
+rib_depth = 1.3;
+rib_r = 1.3;
 
 jack_w = 17;
 jack_d = 9;
@@ -30,6 +35,7 @@ inner_w = charger_w + clearance;
 inner_d = charger_d + clearance;
 height = charger_h + floor_t;
 mount_z = height - mount_from_top;
+mount_y = inner_d + mount_wall;
 // 両側の測定から推定した中心を平均し、前側のクリアランス半分を加える。
 jack_y = (jack_front + jack_d / 2 + charger_d - jack_back - jack_d / 2) / 2 + clearance / 2;
 head_slope = (head_flat - screw_flat) / head_depth;
@@ -62,6 +68,12 @@ module lx_charger_holder() {
     linear_extrude(height = height) outline_2d();
     translate([0, 0, floor_t]) linear_extrude(height = charger_h + eps) cavity_2d();
 
+    // 中央16×1.3を全高で逃がす。Rの肉が逃げを狭めないよう左右へ広げる。
+    // 入口幅は16+2*1.3=18.6、中央の残肉は4-1.3=2.7。
+    translate([-rib_w / 2, mount_y - rib_depth + rib_r, -eps])
+      linear_extrude(height = height + 2 * eps)
+        offset(r = rib_r, $fn = arc_fn) square([rib_w, rib_depth + eps]);
+
     // 底穴は21×13の角丸矩形。くびれを作らずプラグの通り道を確保する。
     translate([-jack_w / 2 - jack_margin + jack_r,
                jack_y - jack_d / 2 - jack_margin + jack_r, -eps])
@@ -78,6 +90,10 @@ module lx_charger_holder() {
         hex_taper_y(head_flat + eps * head_slope, screw_flat, head_depth + eps);
       translate([x, -wall / 2, mount_z])
         rotate([-90, 0, 0]) hex_hole(driver_flat, wall + 2 * eps);
+      // 最上段を固定に使用。残る中・下段はクランプ側から深さ1mmの止まり穴。
+      for (row = [1, 2])
+        translate([x, mount_y - tip_depth, mount_z - row * mount_row_pitch])
+          hex_taper_y(screw_flat, screw_flat, tip_depth + eps);
     }
   }
 }
