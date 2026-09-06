@@ -1,5 +1,12 @@
 # 3D CAD ledger Update Log
 
+## 2026-09-06
+
+- **Creation**: [LXに固定するUSB充電器ホルダー](designs/lx-usb-charger-holder.md)を
+  新設した。実測した充電器へ幅・奥行きの総量1mmを足した収納部、横40mm間隔の
+  M6用六角穴と皿座、対向する工具穴、偏心した底の電源穴を持つ。
+  穴の縦位置と皿頭寸法は仮値として調整可能にした。
+
 ## 2026-09-05
 
 - **Update**: [Gridfinity 4U bin](designs/gridfinity-bin-4u.md)のカードケースに
