@@ -1,5 +1,11 @@
 # 3D CAD ledger Update Log
 
+## 2026-09-07
+
+- **Update**: [LXに固定するUSB充電器ホルダー](designs/lx-usb-charger-holder.md)を
+  `assets/ergotron/usb-charger/`へ移動した。他製品用ホルダーを同じ取付方法で追加するため、
+  エルゴトロン用の階層を設けた。形状は維持し、参照と生成物の出力先を更新した。
+
 ## 2026-09-06
 
 - **Update**: [LXに固定するUSB充電器ホルダー](designs/lx-usb-charger-holder.md)の

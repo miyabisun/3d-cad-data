@@ -26,8 +26,8 @@ SCAD冒頭の`mount_from_top`・`head_flat`・`head_depth`で調整できます�
 STL生成:
 
 ```sh
-mkdir -p dist/usb-charger
-openscad -o dist/usb-charger/lx_holder.stl assets/usb-charger/lx_holder.scad
+mkdir -p dist/ergotron/usb-charger
+openscad -o dist/ergotron/usb-charger/lx_holder.stl assets/ergotron/usb-charger/lx_holder.scad
 ```
 
 底面Z=0を下にして配置します。六角穴の天井と皿座付近の印刷状態はスライサーで
@@ -35,4 +35,4 @@ openscad -o dist/usb-charger/lx_holder.stl assets/usb-charger/lx_holder.scad
 中央突起とネジ先端の逃げを追加した改訂版の実機確認は未実施です。
 
 形状検査は`python3 tests/usb-charger.py`です。設計の根拠と依頼原文は
-[設計台帳](../../ledger/designs/lx-usb-charger-holder.md)にあります。
+[設計台帳](../../../ledger/designs/lx-usb-charger-holder.md)にあります。

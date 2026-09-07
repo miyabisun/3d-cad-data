@@ -1,4 +1,4 @@
-use <../../modules/bolts.scad>
+use <../../../modules/bolts.scad>
 
 // X=左右中心、Y=内側前端(工具側)、+Y=クランプ側、Z=底面。
 charger_w = 69.2;
