@@ -18,6 +18,9 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
     assert SOURCE.is_file(), "leverless/controller.scad is missing"
     volumes = {}
     measured_buttons = {}
+    measured_auxiliary = {}
+    pcb_rect = (72.99, 169.149, 22.99, 68.222)
+    usb_rect = (169.149, 194.149, 40.352, 50.352)
 
     def inner_round(loops, center, x_sign=1):
         arc = [p for loop in loops for p in loop
@@ -180,64 +183,72 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
                     near((x1 - x0,), (y1 - y0,))
                     buttons.append(((x0 + x1) / 2, (y0 + y1) / 2, x1 - x0))
             buttons.sort(key=lambda b: (-b[1], b[0]))
-            assert len(buttons) == (5 if name == "top_left" else 13)
+            assert len(buttons) == (7 if name == "top_left" else 12), "expected two auxiliary buttons on each panel"
             measured_buttons[name] = buttons
             for x, y, diameter in buttons:
                 near((diameter,), (30.4 if diameter > 28 else 24.4,))
                 loop_at(cut("z", 5.9), (x - diameter / 2, x + diameter / 2, y - diameter / 2, y + diameter / 2))
-            for i, a in enumerate(buttons):
-                for b in buttons[i + 1:]:
-                    required = (33 if a[2] > 28 else 27) / 2 + (33 if b[2] > 28 else 27) / 2
-                    assert math.dist(a[:2], b[:2]) >= required - 0.01, "button rims overlap"
+            def at(x, y):
+                result = min(buttons, key=lambda b: math.dist(b[:2], (x, y)))
+                assert math.dist(result[:2], (x, y)) < 0.03, ("missing button", (x, y), result)
+                return result
+
             def pitch(a, b, length=27):
                 near((math.dist(a[:2], b[:2]),), (length,))
-            if name == "top_left":
-                ring, middle, index, jump, parry = buttons
-                assert ring[0] < middle[0] < index[0]
-                near((ring[1],), (middle[1],))
-                assert middle[1] > index[1] + 5, "index finger is not toward the player"
-                pitch(ring, middle); pitch(middle, index)
-                assert jump[1] < min(ring[1], index[1]) - 27
-                pitch(jump, parry)
-                # 公開v1.1aを部品面がケース内部へ向く姿勢で配置した穴中心。
-                for x, y in [(38.922, 28.852), (127.322, 28.952), (39.022, 66.452), (127.322, 66.252)]:
-                    for z, radius in [(0.1, 1.7), (5.4, 3), (5.61, 3.2), (5.9, 3.2)]:
-                        loop_at(cut("z", z), (x - radius, x + radius, y - radius, y + radius))
-                # 基板の外形に3mmの配線余白を加えても、操作ボタンの縁に触れない。
-                for x, y, d in buttons:
-                    nearest = (min(max(x, 35), 131.139), min(max(y, 25), 70.212))
-                    assert math.dist((x, y), nearest) >= 13.5 + 3, "PCB overlaps button or wiring margin"
-            else:
-                # 中/強パンチ、弱P、30、小指下24などを座標の近傍から特定。
-                def at(x, y):
-                    result = min(buttons, key=lambda b: math.dist(b[:2], (x, y)))
-                    assert math.dist(result[:2], (x, y)) < 0.1
-                    return result
-                wp, mp, hp = at(78.269, 134.455), at(103.124, 145), at(130.124, 145)
-                wk, mk, hk = at(78.269, 107.455), at(103.124, 118), at(130.124, 118)
-                big = next(b for b in buttons if b[2] > 28)
-                lower = at(151.825, 101.936)
-                jump, parry = at(59.177, 88.363), at(40.085, 69.272)
-                assert wp[1] < mp[1] and wk[1] < mk[1], "weak column should be toward the player"
-                near((big[1],), ((hp[1] + hk[1]) / 2,))
-                assert big[0] > hp[0] and lower[0] > hk[0] and lower[1] < hk[1]
-                for a, b in [(wp, mp), (mp, hp), (wk, mk), (mk, hk), (wp, wk), (mp, mk), (hp, hk), (hk, lower), (wk, jump), (jump, parry)]:
+
+            def angle(a, b, degrees):
+                near((math.degrees(math.atan2(b[1] - a[1], b[0] - a[0])),), (degrees,))
+
+            auxiliary = [at(x, 160.5) for x in ([146.5, 175.5] if name == "top_left" else [24.5, 53.5])]
+            measured_auxiliary[name] = auxiliary
+            pitch(*auxiliary, 29)
+            near((180 - auxiliary[0][1] - 14.5,), (5,))
+            near((200 - auxiliary[1][0] - 14.5 if name == "top_left" else auxiliary[0][0] - 14.5,), (10,))
+
+            def rim(b):
+                return 33 if b[2] > 28 else (29 if b in auxiliary else 27)
+
+            for i, a in enumerate(buttons):
+                for b in buttons[i + 1:]:
+                    assert math.dist(a[:2], b[:2]) >= (rim(a) + rim(b)) / 2 - 0.01, "button bodies overlap"
+
+            if name == "top_right":
+                # 全体20度を解除した元配列から、右を中央へ10mm移す。
+                wp, mp, hp = at(53.189, 129.852), at(87.174, 144.336), at(120.124, 145)
+                wk, mk, hk = at(68.269, 107.455), at(93.124, 118), at(120.124, 118)
+                big, lower = at(146.915, 131.5), at(141.825, 101.935)
+                jump, parry = at(61.280, 81.375), at(54.292, 55.295)
+                angle(mk, hk, 0); angle(hk, hp, 90)
+                # 弱P/中Pは各Kから半径27の円弧上を16/6mm、反時計回り。
+                for kick, punch, arc_length in [(wk, wp, 16), (mk, mp, 6)]:
+                    rotation = math.atan2(punch[1] - kick[1], punch[0] - kick[0]) - math.pi / 2
+                    near((27 * rotation,), (arc_length,))
+                angle(wk, jump, -105); angle(jump, parry, -105)
+                for a, b in [(wk, mk), (mk, hk), (wp, wk), (mp, mk), (hp, hk), (hk, lower), (wk, jump), (jump, parry)]:
                     pitch(a, b)
                 for b in [hp, hk, lower]: pitch(big, b, 30)
                 assert parry[0] < jump[0] < wk[0] and parry[1] < jump[1] < wk[1]
-                gameplay = [b for b in buttons if b[1] < 160]
-                radius = lambda b: 16.5 if b[2] > 28 else 13.5
-                near((min(b[0] - radius(b) for b in gameplay),), (200 - max(b[0] + radius(b) for b in gameplay),))
-                # 補助ボタンは主配列より奥、後壁と柱を避けた位置。
-                for x in [73, 100, 127]:
-                    at(x, 178)
-                left_mirror = [(200 - b[0], b[1], b[2]) for b in [hp, mp, wp, jump, parry]]
-                for actual, expected in zip(measured_buttons["top_left"], left_mirror):
+                # 主指3穴・親指2穴・補助2穴を全て鏡像にする。
+                for b in [hp, mp, wp, jump, parry, *auxiliary]:
+                    expected = (200 - b[0], b[1], b[2])
+                    actual = min(measured_buttons["top_left"], key=lambda p: math.dist(p[:2], expected[:2]))
                     near(actual, expected)
-            # 掌部を含む天板は一定厚。皿座/ボタン以外の凹みの輪郭が存在しない。
-            assert len(cut("z", 5.9)) == len(buttons) + (9 if name == "top_left" else 5)
-            for x in [70, 100, 130]:
-                assert inside(cut("z", 5.99), (x, 48)), "palm recess remains"
+                # 部品面は内側、長辺は横向きのまま右天板へ移設する。
+                for x, y in [(76.922, 26.852), (165.322, 26.952), (77.022, 64.452), (165.322, 64.252)]:
+                    for z, radius in [(0.1, 1.7), (5.4, 3), (5.61, 3.2), (5.9, 3.2)]:
+                        loop_at(cut("z", z), (x - radius, x + radius, y - radius, y + radius))
+                # 公開基板外形の保守的な外接矩形と、幅10×長さ25mmのUSB挿入予約枠。
+                # ケーブル外装の実寸は未取得。予約枠が実ケーブルを保証するわけではない。
+                for rect, clearance in [(pcb_rect, 3), (usb_rect, 0)]:
+                    for b in buttons:
+                        x, y = b[:2]
+                        nearest = (min(max(x, rect[0]), rect[1]), min(max(y, rect[2]), rect[3]))
+                        assert math.dist((x, y), nearest) >= rim(b) / 2 + clearance, "PCB or USB reservation overlaps a button"
+            # 基板穴4個は右だけ。左の旧穴や、掌の凹み等の余分な輪郭を検出する。
+            assert len(loops) == len(buttons) + (5 if name == "top_left" else 9)
+            assert len(cut("z", 5.9)) == len(loops)
+            for x, y in [(100, 30), (150, 30), (170, 60)]:
+                assert inside(cut("z", 5.99), (x, y)), "palm recess remains"
 
     # 指定した基板穴は金属スペーサーをネジで留めるための通し穴。
     cut = part("top_left", (200, 200, 6), ('pcb_mounts_left=[[60,80],[80,80]]',))
@@ -257,8 +268,12 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
     empty_rect(loops, (25, 375, 25, 175))
     for name, buttons in measured_buttons.items():
         offset = 200 if name == "top_right" else 0
-        for x, y, d in buttons:
-            radius = 16.5 if d > 28 else 13.5
+        for b in buttons:
+            x, y, d = b
+            radius = 16.5 if d > 28 else (14.5 if b in measured_auxiliary[name] else 13.5)
             empty_rect(loops, (offset + x - radius, offset + x + radius, y - radius, y + radius))
+    # 右天板下の基板外形とUSBプラグ予約枠も、既存の柱/壁を避ける。
+    for x0, x1, y0, y1 in [pcb_rect, usb_rect]:
+        empty_rect(loops, (200 + x0, 200 + x1, y0, y1))
     assert inside(loops, (200, 10)) and inside(loops, (200, 190))
-    print("leverless: full-height M4 bores, inner R3, planar nut entries and bridges, mirrored/centered buttons, auxiliary-button clearance, PCB countersinks, closed meshes and assembly fit passed")
+    print("leverless: full-height M4 bores, inner R3, planar nut entries and bridges, arc-adjusted punches and mirrored thumb buttons, 29mm auxiliary-button clearance, PCB countersinks, closed meshes and assembly fit passed")

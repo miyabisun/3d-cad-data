@@ -56,22 +56,35 @@ function button_rim(b) = b[2] == large_button_d ? large_rim_d : rim_d;
 right_min = min([for (b = right_gameplay_raw) b[0] - button_rim(b) / 2]);
 right_max = max([for (b = right_gameplay_raw) b[0] + button_rim(b) / 2]);
 right_shift = (half_w - right_min - right_max) / 2;
-right_gameplay = [for (b = right_gameplay_raw) b + [right_shift, 0, 0]];
-// Start / Select / Home。後壁と隅柱の間に、操作列より奥へ置く。
-aux_count = 3; // [2,3,4]
-buttons_aux = [for (i = [0 : aux_count - 1]) hole([half_w / 2 + (i - (aux_count - 1) / 2) * pitch, 178])];
-buttons_right = concat(right_gameplay, buttons_aux);
-// 強P・中P・弱P・ジャンプ・パリィの鏡像。薬指と中指は同じ高さ。
-buttons_left = [for (i = [2, 1, 0, 8, 9])
+right_reference = [for (b = right_gameplay_raw) b + [right_shift, 0, 0]];
+// 全体は回さず、各Kを軸にPの中心を指定した円弧長(mm)だけ反時計回りへ。
+punch_arc = [16, 6];
+thumb_angle = 30;
+center_shift = 10;
+function turn_hole(b, pivot, a) = let(x = b[0] - pivot[0], y = b[1] - pivot[1])
+  [pivot[0] + x * cos(a) - y * sin(a), pivot[1] + x * sin(a) + y * cos(a), b[2]];
+right_gameplay = [for (i = [0 : len(right_reference) - 1])
+  (i < 2 ? turn_hole(right_reference[i], right_reference[i + 4], punch_arc[i] / pitch * 180 / PI) :
+   i >= 8 ? turn_hole(right_reference[i], right_reference[4], thumb_angle) : right_reference[i])
+  - [center_shift, 0, 0]];
+left_gameplay = [for (i = [2, 1, 0, 8, 9])
   [half_w - right_gameplay[i][0], right_gameplay[i][1], button_d]];
+// 補助ボタンは左右の奥・中央寄りに2個ずつ。f2ash-tap向けの中心間隔29mm。
+aux_pitch = 29;
+aux_rim_d = 29;
+// 中央から外装縁まで10mm、中央柱から外装の奥端まで5mm空ける。
+buttons_aux = [for (i = [0 : 1])
+  hole([10 + aux_rim_d / 2 + i * aux_pitch, case_d - post_w - 5 - aux_rim_d / 2])];
+buttons_right = concat(right_gameplay, buttons_aux);
+buttons_left = concat(left_gameplay, [for (b = buttons_aux) [half_w - b[0], b[1], b[2]]]);
 
 // 公開PicoFightingBoard v1.1aの座標。BOOTH Type-C改造版との同寸性は未確認。
 // 出典・穴の微小な非対称性はREADME参照。部品面をケース内側へ向け、USBは+X。
 // KiCadの部品面表示を長辺X軸で裏返すので、CADの+Yを天板の+Yへ対応させる。
-pcb_origin = [35, 25];
-pcb_mounts_left = [for (p = [[107.3, 83.1], [195.7, 83.2], [107.4, 120.7], [195.7, 120.5]])
+pcb_origin = [73, 23];
+pcb_mounts_left = [];
+pcb_mounts_right = [for (p = [[107.3, 83.1], [195.7, 83.2], [107.4, 120.7], [195.7, 120.5]])
   pcb_origin + [p[0] - 103.378, p[1] - 79.248]];
-pcb_mounts_right = [];
 pcb_bolt_d = 3.4;
 pcb_head_d = 6.4;
 
@@ -237,7 +250,6 @@ module assembly() {
 assert(half_w == 200 && case_d == 200, "ボタン/パッド座標は200mm天板用です");
 assert(pad_depth < bottom_t && 2 * bridge_step < nut_roof);
 assert(inner_chamfer * sqrt(2) > nut_flat, "ナット入口全体を45度の平面に収めてください");
-assert(aux_count >= 2 && aux_count <= 4 && aux_count == floor(aux_count));
 if (part == "assembly") assembly();
 else if (part == "frame") frame();
 else if (part == "top_left") plate();
@@ -250,6 +262,7 @@ else if (part == "wall") wall();
 else if (part == "button_layout") {
   echo(buttons_left = buttons_left, buttons_right = buttons_right);
   echo(pcb_mounts_left = pcb_mounts_left);
+  echo(pcb_mounts_right = pcb_mounts_right);
   projection() for (right = [false, true]) translate([right ? half_w : 0, 0, 0]) plate(right = right);
 }
 else assert(false, str("Unknown part: ", part));
