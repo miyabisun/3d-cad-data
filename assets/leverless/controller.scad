@@ -11,12 +11,12 @@ edge_r = 3;
 inner_chamfer = 5.5; // ナット入口の全幅7.3を収める45度平面。外周Rとは独立。
 
 bolt_d = 4.4;
-head_d = 9.4; // 90度皿頭の仮値。購入ネジの実寸に合わせる。
+head_d = 8.4; // M4皿頭の逃げ。90度テーパの高さは2mm。
 nut_flat = 7.3;
 nut_t = 3.5;
 nut_roof = 5;
 side_bolt_z = post_h / 2;
-head_recess = 0.4;
+head_recess = 0.2;
 bridge_step = 0.4;
 plug_clearance = 0.4; // 幅・高さの合計の逃げ。各面は0.2mm。
 plug_protrusion = 1; // 入口から外へ出し、溶かして固定する分。
@@ -107,14 +107,13 @@ module hex_hole(flat, h) {
   ]);
 }
 
-module countersunk_hole(h, up = true, d = bolt_d, head = head_d, hex_shaft = false) {
+module countersunk_hole(h, up = true, d = bolt_d, head = head_d) {
   seat = (head - d) / 2;
   assert(seat > 0 && seat + head_recess < h);
   translate([0, 0, up ? 0 : h]) scale([1, 1, up ? 1 : -1]) {
     rotate_extrude($fn = arc_fn)
       polygon([[0, -eps], [d / 2, -eps], [d / 2, h - head_recess - seat],
                [head / 2, h - head_recess], [head / 2, h + eps], [0, h + eps]]);
-    if (hex_shaft) translate([0, 0, -eps]) hex_hole(d, h + 2 * eps);
   }
 }
 
@@ -191,7 +190,7 @@ module wall() {
   difference() {
     translate([wall_gap, 0, 0]) cube([wall_length - 2 * wall_gap, post_h, wall_t]);
     for (x = [post_w / 2, wall_length - post_w / 2])
-      translate([x, side_bolt_z, 0]) countersunk_hole(wall_t, up = false, hex_shaft = true);
+      translate([x, side_bolt_z, 0]) countersunk_hole(wall_t, up = false);
   }
 }
 

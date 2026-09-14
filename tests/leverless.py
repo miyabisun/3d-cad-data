@@ -57,6 +57,15 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
         top = [p for p in loop if abs(p[1] - y - flat / 2) < 0.01]
         assert len(top) >= 2 and max(p[0] for p in top) - min(p[0] for p in top) >= flat / math.sqrt(3) - 0.03, "bridge ceiling is missing"
 
+    def round_at(loops, x, y, radius):
+        loop = loop_at(loops, (x - radius, x + radius, y - radius, y + radius))
+        assert len(loop) >= 32 and all(abs(math.hypot(px - x, py - y) - radius) < 0.03 for px, py in loop), "countersink is not round"
+
+    def m4_seat(cut, x, y, thickness, up=True):
+        # 外面から0.2mmまではφ8.4、その奥2mmが90度テーパ、以降はφ4.4。
+        for depth, radius in [(0.1, 4.2), (0.19, 4.2), (0.4, 4), (1.2, 3.2), (2.21, 2.2), (thickness - 0.1, 2.2)]:
+            round_at(cut("z", thickness - depth if up else depth), x, y, radius)
+
     def slot_frame(loops, x, corner=False):
         # 生産STLのXY断面を挿入方向に合わせる。隅柱はL字の開口に向かう45度。
         angle = math.radians(-45 if corner else 0)
@@ -175,10 +184,7 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
     for name, length in [("wall", 160)]:
         cut = part(name, (length, 50, 5), x_margin=0.25)
         for x in [10, length - 10]:
-            hex_at(cut("z", 4), x, 25, 4.4)
-            for z in [0.1, 0.39]:
-                loop_at(cut("z", z), (x - 4.7, x + 4.7, 20.3, 29.7))
-            loop_at(cut("z", 0.6), (x - 4.5, x + 4.5, 20.5, 29.5))
+            m4_seat(cut, x, 25, 5, up=False)
         for z in [0.1, 2, 4.9]:
             plan = cut("z", z)
             assert len(loop_at(plan, (0.25, length - 0.25, 0, 50))) == 4, "wall perimeter is not a rectangle"
@@ -194,8 +200,7 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
         assert all(abs(math.dist(p, (3 if left else 197, thickness - 3)) - 3) < 0.03 for p in points)
         for x in [10, 190]:
             for y in [10, 190]:
-                loop_at(cut("z", 1), (x - 2.2, x + 2.2, y - 2.2, y + 2.2))
-                loop_at(cut("z", thickness - 0.1), (x - 4.7, x + 4.7, y - 4.7, y + 4.7))
+                m4_seat(cut, x, y, thickness)
         if name == "bottom":
             for y in [16, 107]:
                 loop_at(cut("z", 4.5), (16.5, 183.5, y, y + 77))
@@ -263,8 +268,8 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
                     near(actual, expected)
                 # 部品面は内側、長辺は横向きのまま右天板へ移設する。
                 for x, y in [(76.922, 26.852), (165.322, 26.952), (77.022, 64.452), (165.322, 64.252)]:
-                    for z, radius in [(0.1, 1.7), (5.4, 3), (5.61, 3.2), (5.9, 3.2)]:
-                        loop_at(cut("z", z), (x - radius, x + radius, y - radius, y + radius))
+                    for z, radius in [(0.1, 1.7), (4.3, 1.7), (5, 2.4), (5.6, 3), (5.81, 3.2), (5.9, 3.2)]:
+                        round_at(cut("z", z), x, y, radius)
                 # 公開基板外形の保守的な外接矩形と、幅10×長さ25mmのUSB挿入予約枠。
                 # ケーブル外装の実寸は未取得。予約枠が実ケーブルを保証するわけではない。
                 for rect, clearance in [(pcb_rect, 3), (usb_rect, 0)]:
@@ -304,4 +309,4 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
     for x0, x1, y0, y1 in [pcb_rect, usb_rect]:
         empty_rect(loops, (200 + x0, 200 + x1, y0, y1))
     assert inside(loops, (200, 10)) and inside(loops, (200, 190))
-    print("leverless: nut plugs with 0.4mm clearance and 1mm protrusion, full-height M4 bores, inner R3, planar nut entries and bridges, arc-adjusted punches and mirrored thumb buttons, 29mm auxiliary-button clearance, PCB countersinks, closed meshes and assembly fit passed")
+    print("leverless: round M4 4.4/8.4mm countersinks with 0.2mm seats, nut plug fit, full-height M4 bores, inner R3, planar nut entries and bridges, button clearance, M3 countersinks, closed meshes and assembly fit passed")
