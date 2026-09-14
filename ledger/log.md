@@ -2,6 +2,8 @@
 
 ## 2026-09-14
 
+- [レバーレス筐体](designs/leverless-controller.md)の左右天板を、ユーザー指定により6mmから5mmへ変更した。
+  底板5mm・柱50mmを維持し、組立全高を60mmにした。皿穴と目隠しキャップの適合も5mm板で検査する。
 - **Add**: [天馬ルームケースプチ](designs/temna-roomcase-puchi-gridfinity.md)の浅型用ベースプレートを追加。左端に細幅セル、奥側2隅にR5を設けた。
 - **Move**: 既存モデルを `assets/letter-case/iris-oyama-a4-lcj/` に分類し、天馬側と同階層にした。アイリスオーヤマの形状と既存3MFは維持。
 

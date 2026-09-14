@@ -197,7 +197,7 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
             for x in [1, 10, length - 10, length - 1]:
                 assert inside(plan, (x, 0.1)) and inside(plan, (x, 49.9)), "wall still has an end tab or bevel"
 
-    for name, thickness in [("top_left", 6), ("top_right", 6), ("bottom", 5)]:
+    for name, thickness in [("top_left", 5), ("top_right", 5), ("bottom", 5)]:
         cut = part(name, (200, 200, thickness))
         edge = cut("y", 100)
         left = name != "top_right"
@@ -226,7 +226,7 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
             measured_buttons[name] = buttons
             for x, y, diameter in buttons:
                 near((diameter,), (30.4 if diameter > 28 else 24.4,))
-                loop_at(cut("z", 5.9), (x - diameter / 2, x + diameter / 2, y - diameter / 2, y + diameter / 2))
+                loop_at(cut("z", thickness - 0.1), (x - diameter / 2, x + diameter / 2, y - diameter / 2, y + diameter / 2))
             def at(x, y):
                 result = min(buttons, key=lambda b: math.dist(b[:2], (x, y)))
                 assert math.dist(result[:2], (x, y)) < 0.03, ("missing button", (x, y), result)
@@ -275,8 +275,8 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
                     near(actual, expected)
                 # 部品面は内側、長辺は横向きのまま右天板へ移設する。
                 for x, y in [(76.922, 26.852), (165.322, 26.952), (77.022, 64.452), (165.322, 64.252)]:
-                    for z, radius in [(0.1, 1.7), (4.3, 1.7), (5, 2.4), (5.6, 3), (5.81, 3.2), (5.9, 3.2)]:
-                        round_at(cut("z", z), x, y, radius)
+                    for depth, radius in [(0.1, 3.2), (0.19, 3.2), (0.4, 3), (1, 2.4), (1.71, 1.7), (thickness - 0.1, 1.7)]:
+                        round_at(cut("z", thickness - depth), x, y, radius)
                 # 公開基板外形の保守的な外接矩形と、幅10×長さ25mmのUSB挿入予約枠。
                 # ケーブル外装の実寸は未取得。予約枠が実ケーブルを保証するわけではない。
                 for rect, clearance in [(pcb_rect, 3), (usb_rect, 0)]:
@@ -291,20 +291,20 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
                             assert gap >= clearance, "PCB or USB reservation overlaps a button"
             # 基板穴4個は右だけ。左の旧穴や、掌の凹み等の余分な輪郭を検出する。
             assert len(loops) == len(buttons) + (5 if name == "top_left" else 9)
-            assert len(cut("z", 5.9)) == len(loops)
+            assert len(cut("z", thickness - 0.1)) == len(loops)
             for x, y in [(100, 30), (150, 30), (170, 60)]:
-                assert inside(cut("z", 5.99), (x, y)), "palm recess remains"
+                assert inside(cut("z", thickness - 0.01), (x, y)), "palm recess remains"
 
     # 指定した基板穴は金属スペーサーをネジで留めるための通し穴。
-    cut = part("top_left", (200, 200, 6), ('pcb_mounts_left=[[60,80],[80,80]]',))
+    cut = part("top_left", (200, 200, 5), ('pcb_mounts_left=[[60,80],[80,80]]',))
     for x in [60, 80]:
         loop_at(cut("z", 0.1), (x - 1.7, x + 1.7, 78.3, 81.7))
-        assert not inside(cut("z", 5.9), (x, 80))
+        assert not inside(cut("z", 4.9), (x, 80))
 
     # 中央は前後の柱だけで接続し、配線用の内部空間に仕切りがない。
     render(SOURCE, work / "assembly.stl", ('part="assembly"',), binary=True)
     assembled = closed_mesh(work / "assembly.stl")
-    near(bounds(assembled), (0, 400, 0, 200, 0, 61))
+    near(bounds(assembled), (0, 400, 0, 200, 0, 60))
     expected_volume = sum(volumes[name] * count for name, count in {
         "top_left": 1, "top_right": 1, "bottom": 2, "corner_post": 2, "corner_post_right": 2,
         "center_post": 2, "wall": 5, "wall_usb": 1}.items())
@@ -328,4 +328,4 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
     for x, y in [(100, 2.5), (300, 2.5), (100, 197.5), (2.5, 100), (397.5, 100)]:
         assert inside(loops, (x, y)), "another wall acquired a USB opening"
     assert inside(loops, (200, 10)) and inside(loops, (200, 190))
-    print("leverless: one centered 21mm USB wall, round M4 4.4/8.4mm countersinks with 0.2mm seats, nut plug fit, full-height M4 bores, inner R3, planar nut entries and bridges, button clearance, M3 countersinks, closed meshes and assembly fit passed")
+    print("leverless: 5mm top/bottom panels, 60mm assembly, one centered 21mm USB wall, round M4 4.4/8.4mm countersinks with 0.2mm seats, nut plug fit, full-height M4 bores, inner R3, planar nut entries and bridges, button clearance, M3 countersinks, closed meshes and assembly fit passed")

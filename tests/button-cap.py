@@ -91,7 +91,7 @@ with tempfile.TemporaryDirectory(prefix="button-cap-test-") as temp:
         assert sum(d > 0.18 for d in changes) >= 4, "45-degree thread flanks missing"
 
     # 実STLの体積交差を調べる。空のintersectionを既知の小立方体で観測する。
-    # 板厚3/6mmの着座から、先端へ抜くまで右ねじ方向に回せること。
+    # 板厚3/5/6mmの着座から、先端へ抜くまで右ねじ方向に回せること。
     # bodyのねじ起点z=4、nut起点z=0なので回転角は絶対高さ差から求める。
     def collision(extra):
         source, target = work / "collision.scad", work / "collision.stl"
@@ -99,11 +99,11 @@ with tempfile.TemporaryDirectory(prefix="button-cap-test-") as temp:
         render(source, target, binary=True)
         near(bounds(closed_mesh(target)), (40, 41, 0, 1, 0, 1))
 
-    for z in [4.2, 4.8, 5.4, 6.0, 6.6, 7.2, 8.4, 9.6, 10.8]:
+    for z in [4.2, 4.8, 5.4, 6.0, 6.2, 6.6, 6.8, 7.2, 8.4, 9.6, 10.8]:
         placed_nut = f'translate([0,0,{z}]) rotate([0,0,{(z - 4) * 360 / 2.4}]) import("{nut}");'
         collision(f'intersection() {{ import("{body}"); {placed_nut} }}')
 
-    for thickness in [3, 6]:
+    for thickness in [3, 5, 6]:
         z = 1.2 + thickness
         placed_nut = f'translate([0,0,{z}]) rotate([0,0,{(z - 4) * 360 / 2.4}]) import("{nut}");'
         # STLのfloat丸めを避け、板の内部を上下各0.005mmだけ縮めて検査する。
@@ -117,4 +117,4 @@ with tempfile.TemporaryDirectory(prefix="button-cap-test-") as temp:
 
     # 補助ボタン中心間29mm・隣接外装φ29に対し、キャップ/ナットφ26は1.5mm空く。
     collision(f'intersection() {{ union() {{ import("{body}"); import("{nut}"); }} translate([29,0,0]) cylinder(d=29,h=12,$fn=96); }}')
-    print("button-cap: closed parts, 3mm cap floor/wall, six 4.8x4mm OSB grip slots, 26x8mm nut, right-hand pitch 2.4, 45-degree flanks, 3/6mm plate fit and screw travel passed")
+    print("button-cap: closed parts, 3mm cap floor/wall, six 4.8x4mm OSB grip slots, 26x8mm nut, right-hand pitch 2.4, 45-degree flanks, 3/5/6mm plate fit and screw travel passed")
