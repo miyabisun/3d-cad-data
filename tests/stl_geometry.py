@@ -94,8 +94,9 @@ def section(stl, work, axis, position):
     source.write_text(f'projection(cut=true) {transform} import("{stl}");\n')
     render(source, svg)
     loops = []
+    number = r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?"
     for path in ET.parse(svg).getroot().iter("{http://www.w3.org/2000/svg}path"):
         for sub in path.attrib["d"].split("M")[1:]:
-            loops.append([(float(x), float(y) * (-1 if axis == "z" else 1)) for x, y in re.findall(r"(-?\d+\.?\d*),(-?\d+\.?\d*)", sub)])
+            loops.append([(float(x), float(y) * (-1 if axis == "z" else 1)) for x, y in re.findall(rf"({number}),({number})", sub)])
     assert loops
     return loops
