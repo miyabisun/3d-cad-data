@@ -63,13 +63,19 @@ right_reference = [for (b = right_gameplay_raw) b + [right_shift, 0, 0]];
 // 全体は回さず、各Kを軸にPの中心を指定した円弧長(mm)だけ反時計回りへ。
 punch_arc = [16, 6];
 thumb_angle = 30;
+thumb_shift = [-4, 3]; // 30度の基準配列から、ジャンプ・パリィを横へ微調整。
 center_shift = 10;
 function turn_hole(b, pivot, a) = let(x = b[0] - pivot[0], y = b[1] - pivot[1])
   [pivot[0] + x * cos(a) - y * sin(a), pivot[1] + x * sin(a) + y * cos(a), b[2]];
-right_gameplay = [for (i = [0 : len(right_reference) - 1])
+right_base = [for (i = [0 : len(right_reference) - 1])
   (i < 2 ? turn_hole(right_reference[i], right_reference[i + 4], punch_arc[i] / pitch * 180 / PI) :
    i >= 8 ? turn_hole(right_reference[i], right_reference[4], thumb_angle) : right_reference[i])
   - [center_shift, 0, 0]];
+// 横移動後、中心間27mmを保って基準ボタンの手前側から奥へ詰める。
+function below_button(x, b) = hole([x, b[1] - sqrt(pitch * pitch - pow(x - b[0], 2))]);
+right_jump = below_button(right_base[8][0] + thumb_shift[0], right_base[4]);
+right_parry = below_button(right_base[9][0] + thumb_shift[1], right_jump);
+right_gameplay = concat([for (i = [0 : 7]) right_base[i]], [right_jump, right_parry]);
 left_gameplay = [for (i = [2, 1, 0, 8, 9])
   [half_w - right_gameplay[i][0], right_gameplay[i][1], button_d]];
 // 補助ボタンは左右の奥・中央寄りに2個ずつ。f2ash-tap向けの中心間隔29mm。

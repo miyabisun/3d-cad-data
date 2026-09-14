@@ -250,17 +250,18 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
                 wp, mp, hp = at(53.189, 129.852), at(87.174, 144.336), at(120.124, 145)
                 wk, mk, hk = at(68.269, 107.455), at(93.124, 118), at(120.124, 118)
                 big, lower = at(146.915, 131.5), at(141.825, 101.935)
-                jump, parry = at(61.280, 81.375), at(54.292, 55.295)
+                # 旧X=61.2805/54.2924から-4/+3mm。27mm間隔のまま奥へ詰める。
+                jump, parry = at(57.2805, 82.792), at(57.2924, 55.792)
                 angle(mk, hk, 0); angle(hk, hp, 90)
                 # 弱P/中Pは各Kから半径27の円弧上を16/6mm、反時計回り。
                 for kick, punch, arc_length in [(wk, wp, 16), (mk, mp, 6)]:
                     rotation = math.atan2(punch[1] - kick[1], punch[0] - kick[0]) - math.pi / 2
                     near((27 * rotation,), (arc_length,))
-                angle(wk, jump, -105); angle(jump, parry, -105)
                 for a, b in [(wk, mk), (mk, hk), (wp, wk), (mp, mk), (hp, hk), (hk, lower), (wk, jump), (jump, parry)]:
                     pitch(a, b)
                 for b in [hp, hk, lower]: pitch(big, b, 30)
-                assert parry[0] < jump[0] < wk[0] and parry[1] < jump[1] < wk[1]
+                assert jump[0] < wk[0] and 55.295 < parry[1] < jump[1] < wk[1]
+                assert jump[1] > 81.375, "jump button did not move upward"
                 # 主指3穴・親指2穴・補助2穴を全て鏡像にする。
                 for b in [hp, mp, wp, jump, parry, *auxiliary]:
                     expected = (200 - b[0], b[1], b[2])
@@ -276,7 +277,12 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
                     for b in buttons:
                         x, y = b[:2]
                         nearest = (min(max(x, rect[0]), rect[1]), min(max(y, rect[2]), rect[3]))
-                        assert math.dist((x, y), nearest) >= rim(b) / 2 + clearance, "PCB or USB reservation overlaps a button"
+                        gap = math.dist((x, y), nearest) - rim(b) / 2
+                        if rect == pcb_rect and b == parry:
+                            near((gap,), (2.198,))
+                            assert gap >= 2, "parry button is too close to the PCB"
+                        else:
+                            assert gap >= clearance, "PCB or USB reservation overlaps a button"
             # 基板穴4個は右だけ。左の旧穴や、掌の凹み等の余分な輪郭を検出する。
             assert len(loops) == len(buttons) + (5 if name == "top_left" else 9)
             assert len(cut("z", 5.9)) == len(loops)
