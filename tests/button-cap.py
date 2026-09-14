@@ -6,7 +6,7 @@ import math
 import sys
 import tempfile
 
-from stl_geometry import bounds, closed_mesh, inside, near, render, section
+from stl_geometry import bounds, closed_mesh, empty_rect, inside, near, render, section
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "assets/leverless/button_cap.scad"
@@ -14,17 +14,25 @@ SOURCE = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "assets/le
 with tempfile.TemporaryDirectory(prefix="button-cap-test-") as temp:
     work = Path(temp)
     assert SOURCE.is_file(), "button_cap.scad is missing"
-    for name, height in [("body", 12), ("nut", 4)]:
+    for name in ["body", "nut"]:
         target = work / f"{name}.stl"
         render(SOURCE, target, (f'part="{name}"',), binary=True)
-        near(bounds(closed_mesh(target)), (-13, 13, -13, 13, 0, height))
 
     body, nut = work / "body.stl", work / "nut.stl"
+    near(bounds(closed_mesh(body)), (-13, 13, -13, 13, 0, 12))
     # 印刷下面はφ24.4、0.8mmかけてφ26へ広がり、残り0.4mmが直壁。
-    for z, radius in [(0.1, 12.3), (0.7, 12.9), (0.9, 13), (1.19, 13), (1.21, 12), (3.99, 12)]:
+    for z, radius in [(0.1, 12.3), (0.7, 12.9), (0.9, 13), (1.19, 13), (1.21, 12), (2.99, 12)]:
         loops = section(body, work, "z", z)
         assert len(loops) == 1 and inside(loops, (0, 0)), "cap face must be solid"
         assert all(abs(math.hypot(x, y) - radius) < 0.02 for x, y in loops[0])
+    # 底Z=0..3を残し、ねじ先端まで同軸φ11.9の空洞を開く。
+    for z in [3.01, 3.99, 6, 11.99]:
+        loops = section(body, work, "z", z)
+        assert len(loops) == 2 and not inside(loops, (0, 0)), "cap cavity is missing or blocked"
+        inner = min(loops, key=lambda loop: max(math.hypot(x, y) for x, y in loop))
+        assert all(abs(math.hypot(x, y) - 5.95) < 0.02 for x, y in inner), "cap cavity diameter is wrong"
+        outer = max(loops, key=lambda loop: max(math.hypot(x, y) for x, y in loop))
+        assert min(math.hypot(x, y) for x, y in outer) - 5.95 >= 2.98, "cap wall is thinner than 3mm"
     # 先端はC0.8。筒部分φ24はφ24.4の穴に片側0.2mmの余裕で入る。
     assert max(math.hypot(x, y) for loop in section(body, work, "z", 11.9) for x, y in loop) < 9.08
 
@@ -33,11 +41,28 @@ with tempfile.TemporaryDirectory(prefix="button-cap-test-") as temp:
     for dz in [1.2, 1.8, 2.4, 3.0, 3.6]:
         angle = math.radians(dz * 360 / 2.4)
         loops = section(body, work, "z", 4 + dz)
-        radii = [math.hypot(x, y) for loop in loops for x, y in loop]
+        outer = max(loops, key=lambda loop: max(math.hypot(x, y) for x, y in loop))
+        radii = [math.hypot(x, y) for x, y in outer]
         near((min(radii), max(radii)), (8.95, 9.75))
         assert inside(loops, (9.7 * math.cos(angle), 9.7 * math.sin(angle))), "thread lead/hand is wrong"
         assert not inside(loops, (-9.1 * math.cos(angle), -9.1 * math.sin(angle))), "thread valley is missing"
 
+    near(bounds(closed_mesh(nut)), (-13, 13, -13, 13, 0, 8))
+    # 板側4mmは一周つながったリング。その先の4mmにOSB式の6つの切り欠き。
+    for z in [0.01, 2, 3.99]:
+        loops = section(nut, work, "z", z)
+        assert len(loops) == 2 and not inside(loops, (0, 0)), "nut bearing ring is interrupted"
+        for a in range(0, 360, 5):
+            assert inside(loops, (12 * math.cos(math.radians(a)), 12 * math.sin(math.radians(a))))
+    for z in [4.01, 6, 7.5, 7.99]:
+        loops = section(nut, work, "z", z)
+        assert len(loops) == 6, "nut needs six separate finger grips above the bearing ring"
+        for a in range(30, 360, 60):
+            # 各スリットを+Y方向へ回し、幅4.8mmが内穴から外側へ貫通することを測る。
+            c, s = math.cos(math.radians(90 - a)), math.sin(math.radians(90 - a))
+            rotated = [[(x * c - y * s, x * s + y * c) for x, y in loop] for loop in loops]
+            empty_rect(rotated, (-2.4, 2.4, 8.5, 14))
+            assert inside(rotated, (-2.43, 11)) and inside(rotated, (2.43, 11)), "grip slot is too wide"
     loops = section(nut, work, "z", 2)
     assert len(loops) == 2 and not inside(loops, (0, 0)), "nut must have a through bore"
     inner = min(loops, key=lambda loop: max(math.hypot(x, y) for x, y in loop))
@@ -46,7 +71,7 @@ with tempfile.TemporaryDirectory(prefix="button-cap-test-") as temp:
     assert 13 - max(radii) >= 2.99, "nut wall is thinner than 3mm"
     # 層高0.2mmでの輪郭の張り出しを軸断面から実測する。
     # twistの三角形分割による0.02mm以下の凹凸は、1層の幅で評価する。
-    for stl, base, layers in [(body, 4, 38), (nut, 0, 18)]:
+    for stl, base, layers in [(body, 4, 38), (nut, 0, 38)]:
         loops = section(stl, work, "y", 0)
 
         def radius_at(z):
@@ -92,4 +117,4 @@ with tempfile.TemporaryDirectory(prefix="button-cap-test-") as temp:
 
     # 補助ボタン中心間29mm・隣接外装φ29に対し、キャップ/ナットφ26は1.5mm空く。
     collision(f'intersection() {{ union() {{ import("{body}"); import("{nut}"); }} translate([29,0,0]) cylinder(d=29,h=12,$fn=96); }}')
-    print("button-cap: closed parts, 26x1.2mm flange/C0.8, 24x2.8mm pilot, right-hand pitch 2.4, 3mm nut wall, 45-degree flanks, 3/6mm plate fit and screw travel passed")
+    print("button-cap: closed parts, 3mm cap floor/wall, six 4.8x4mm OSB grip slots, 26x8mm nut, right-hand pitch 2.4, 45-degree flanks, 3/6mm plate fit and screw travel passed")
