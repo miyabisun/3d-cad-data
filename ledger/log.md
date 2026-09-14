@@ -1,5 +1,9 @@
 # 3D CAD ledger Update Log
 
+## 2026-09-15
+
+- [天馬ルームケースプチ](designs/temna-roomcase-puchi-gridfinity.md)をuser指定で横幅231mm・左端21mm（0.5セル）へ変更した。奥行321mmと奥側R5を維持し、userが印刷して嵌合を確認する。
+
 ## 2026-09-14
 
 - [レバーレス筐体](designs/leverless-controller.md)の左右天板を、ユーザー指定により6mmから5mmへ変更した。

@@ -4,14 +4,14 @@ include <xbrace.scad>
 // 天馬 ルームケースプチ A4-23 浅型。アイリスオーヤマ側とは独立した実測値。
 drawer_w = 232;
 drawer_d = 323;
-fit_clearance = 1; // 片側。コンベックス実測の約1mmの誤差を含む
+fit_clearance = [ 0.5, 1 ]; // 片側の余裕 [左右, 前後]。左端を21mmの半セルにする
 socket_clearance = 0.1;
 back_corner_r = 5;
 front_rows = 4;
 win_line = 2;
 
-plate_w = drawer_w - 2 * fit_clearance;
-plate_d = drawer_d - 2 * fit_clearance;
+plate_w = drawer_w - 2 * fit_clearance[0];
+plate_d = drawer_d - 2 * fit_clearance[1];
 cols = plate_w / gf_pitch;
 rows = floor(plate_d / gf_pitch);
 rear_rows = rows - front_rows;
