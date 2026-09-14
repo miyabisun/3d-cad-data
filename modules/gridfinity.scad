@@ -23,11 +23,12 @@ gf_fn = 32;
 gf_eps = 0.01; // hull 用の薄板の厚さ
 gf_over = 0.5; // 切削の抜き代
 
-// 角丸正方形 (一辺 w、角 R)
+// 角丸正方形または矩形 (w は一辺、または [幅, 奥行き]、角 R)
 module
 gf_rounded_square(w, r)
 {
-    offset(r = r, $fn = gf_fn) square(w - 2 * r, center = true);
+    offset(r = r, $fn = gf_fn)
+        square(is_list(w) ? w - [ 2 * r, 2 * r ] : w - 2 * r, center = true);
 }
 
 // 厚さ gf_eps の角丸正方形の薄板を z に置く (hull の骨)
@@ -39,38 +40,45 @@ gf_slab(w, r, z)
 
 // ソケット1個の切削体。z=0 がソケットの底 (床の天面)、+Z へ 4.65 で天面に出る。
 // clearance は嵌合の逃げで、輪郭を全周へ clearance だけ外へ出す (幅 +2c、角 R
-// +c)。 既定 0 が Gridfinity の公称輪郭。深さとピッチは変えない
+// +c)。pitch_x は X 方向のセル幅。端数でも角 R と面取りの寸法を保つ。
 module
-gf_socket_cut(clearance = 0)
+gf_socket_cut(clearance = 0, pitch_x = gf_pitch)
 {
     z1 = gf_chamfer_bot;
     z2 = z1 + gf_wall_h;
     z3 = gf_socket_depth;
     c = clearance;
+    assert(pitch_x > gf_pitch - gf_socket_top + 2 * gf_socket_r_top,
+           "Cell width is too small for the socket corner radius");
+    delta = [ pitch_x - gf_pitch, 0 ];
+    bot = [ gf_socket_bot + 2 * c, gf_socket_bot + 2 * c ] + delta;
+    mid = [ gf_socket_mid + 2 * c, gf_socket_mid + 2 * c ] + delta;
+    top = [ gf_socket_top + 2 * c, gf_socket_top + 2 * c ] + delta;
     hull()
     {
-        gf_slab(gf_socket_bot + 2 * c, gf_socket_r_bot + c, 0);
-        gf_slab(gf_socket_mid + 2 * c, gf_socket_r_mid + c, z1 - gf_eps);
+        gf_slab(bot, gf_socket_r_bot + c, 0);
+        gf_slab(mid, gf_socket_r_mid + c, z1 - gf_eps);
     }
     hull()
     {
-        gf_slab(gf_socket_mid + 2 * c, gf_socket_r_mid + c, z1 - gf_eps);
-        gf_slab(gf_socket_mid + 2 * c, gf_socket_r_mid + c, z2 - gf_eps);
+        gf_slab(mid, gf_socket_r_mid + c, z1 - gf_eps);
+        gf_slab(mid, gf_socket_r_mid + c, z2 - gf_eps);
     }
     hull()
     {
-        gf_slab(gf_socket_mid + 2 * c, gf_socket_r_mid + c, z2 - gf_eps);
-        gf_slab(gf_socket_top + 2 * c, gf_socket_r_top + c, z3 - gf_eps);
+        gf_slab(mid, gf_socket_r_mid + c, z2 - gf_eps);
+        gf_slab(top, gf_socket_r_top + c, z3 - gf_eps);
     }
     // 天面より上へ抜く (天面と同一平面の退化した面を残さない)
-    gf_slab(gf_socket_top + 2 * c, gf_socket_r_top + c, z3 - gf_eps);
+    gf_slab(top, gf_socket_r_top + c, z3 - gf_eps);
     translate([ 0, 0, z3 - gf_eps ]) linear_extrude(gf_over + gf_eps)
-        gf_rounded_square(gf_socket_top + 2 * c, gf_socket_r_top + c);
+        gf_rounded_square(top, gf_socket_r_top + c);
 }
 
 // ベースプレート。cols x rows のソケットを床 floor_t の上に彫る。
 // rim = [left, right, front, back] はソケット列の外側に残す縁の幅。
 // 板の幅 = cols*42 + left + right、奥行き = rows*42 + front + back。
+// cols の端数は左端の細幅セルになる。rows は正の整数。
 // clearance はソケットの嵌合の逃げ (gf_socket_cut を参照)。
 module
 gf_baseplate(cols, rows, rim = [ 0, 0, 0, 0 ], floor_t = 1, clearance = 0)
@@ -80,15 +88,17 @@ gf_baseplate(cols, rows, rim = [ 0, 0, 0, 0 ], floor_t = 1, clearance = 0)
     plate_w = grid_w + rim[0] + rim[1];
     plate_d = grid_d + rim[2] + rim[3];
     x0 = -plate_w / 2 + rim[0]; // ソケット列の左端
+    first_pitch = grid_w - (ceil(cols) - 1) * gf_pitch;
     difference()
     {
         translate([ -plate_w / 2, 0, 0 ])
             cube([ plate_w, plate_d, floor_t + gf_socket_depth ]);
-        for (c = [0:cols - 1], r = [0:rows - 1])
+        for (c = [0:ceil(cols) - 1], r = [0:rows - 1])
             translate([
-                x0 + (c + 0.5) * gf_pitch,
+                x0 + (c == 0 ? first_pitch / 2
+                             : first_pitch + (c - 0.5) * gf_pitch),
                 rim[2] + (r + 0.5) * gf_pitch,
                 floor_t
-            ]) gf_socket_cut(clearance);
+            ]) gf_socket_cut(clearance, c == 0 ? first_pitch : gf_pitch);
     }
 }

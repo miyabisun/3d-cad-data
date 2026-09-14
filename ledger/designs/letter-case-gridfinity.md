@@ -4,7 +4,7 @@ title: レターケースのGridfinityベースプレート
 description: 既製のスタック式レターケースの引き出しへ敷く、左右奥のくぼみを縁で跨ぐ前後2分割の5×7 Gridfinityベースプレート
 status: draft
 tags: [gridfinity, letter-case, baseplate]
-scope: assets/letter-case
+scope: assets/letter-case/iris-oyama-a4-lcj
 ---
 
 # レターケースのGridfinityベースプレート

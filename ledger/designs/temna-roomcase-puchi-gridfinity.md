@@ -1,0 +1,56 @@
+---
+type: Design
+title: 天馬ルームケースプチのGridfinityベースプレート
+description: 実測232×323mmの浅型引き出しへ、左端数列と奥側R5を持つ前後2枚を敷く
+status: active
+tags: [gridfinity, letter-case, tenma, baseplate]
+scope: assets/letter-case/temna-roomcase-puchi
+---
+
+# 天馬ルームケースプチのGridfinityベースプレート
+
+天馬ルームケースプチ A4-23 の浅型を対象とする。アイリスオーヤマ A4-LCJと
+製品・実測値・試作調整を分離し、`letter-case/` の下に製品フォルダを並べる。
+参照URLはuserが提示した商品確認先であり、設計寸法はuserの実測を採用する。
+
+## 今回の判断（2026-09-14）
+
+- 横232・奥行323・高さ70mmの実測には約1mmの誤差があり得るため、
+  担当判断で片側1mmの余裕を初期値とした。印刷・実物との嵌合は未確認。
+- 横の余りを左右の飾り縁へ分けず、左側の細幅bin用ソケットとして使う。
+  5.6セルは235.2mmで実測幅を超えるため、幅230mmに収まる20/42セルを左端に置く。
+  端数でも角Rと面取りを保ち、専用の細幅binが座る形にする。bin自体は今回の制作対象外。
+- 奥の余りはbin置き場にしない。前から7行を置き、奥の27mmは位置決めの縁として
+  残す。奥縁は厚さ2mmとし、X筋交いで肉抜きして、奥の左右角だけuser指定のR5にする。
+- 既存の印刷運用に合わせ4行と3行で分割する。ソケットは床なし、厚さ4.65mm。
+  床の段差・追加の側面延長など、アイリスオーヤマの調整値は持ち込まない。
+
+現行寸法・印刷方法・調整箇所は
+[製品README](../../assets/letter-case/temna-roomcase-puchi/README.md)、
+形状は `modules/temna_roomcase_puchi.scad` と共有Gridfinity moduleが正本。
+検証は `python3 tests/roomcase-puchi.py`（STL外形、全ソケットの断面と角R、
+床なし、継ぎ目ピッチ、奥R5、閉曲面）。
+
+## user 原文 (verbatim)
+
+> 別会社のレターケースを購入してきました
+> https://tenmafitsworld.com/SHOP/roomcase-puchi.html
+>
+> 実測値: 横232mm, 縦323mm, 高さ70mm
+> (コンベックス計測なので1mm程度の誤差はあるかも)
+>
+> > (2)浅：幅22×奥行31.5×高さ7cm（×2段）
+> これです。
+>
+> - これのGridfinity 用のベースプレートを作成してください。
+>   - もう一つのレターケースはletter-caseディレクトリを占有しているのでアイリスオーヤマ(iris-oyama-a4-lcj)ディレクトリを作成し、
+>     サブフォルダにtemna-roomcase-puchiを作成して分類してください。
+>   - iris-oyama-a4-lcjはGridfinityのセルの端数は切り捨てて、真ん中に寄せていましたが、
+>     Gridfinityは本来小数点分のセルも定義出来るはずなので、左に0.6セル分のbin置き場みたいなものを定義して横幅いっぱいにものがおけるように作ってください。
+>     因みに奥は隠れて使い勝手を阻害するだけなので不要
+>   - 奥側両サイドはradius 5mmにしてください
+>     - プラスチックカードケース(R3mm)を隅に当てたらあれよりRが大きくてカタカタなった
+
+> letter-case 配下に2製品を並べる（推奨）
+
+> tenma社のボックスはiris-oyama社とは何の関係もないですからね

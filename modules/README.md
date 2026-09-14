@@ -55,10 +55,13 @@ Gridfinity ベースプレートの共通モジュール。ピッチ 42mm、ソ�
 
 | モジュール | 用途 |
 |-----------|------|
-| `gf_socket_cut(clearance)` | ソケット 1 個の切削体（z=0 がソケット底、+Z へ抜ける）。`clearance` で輪郭を全周へ逃がす（幅 +2c、角 R +c。既定 0 = 公称） |
+| `gf_socket_cut(clearance, pitch_x)` | ソケット 1 個の切削体（z=0 がソケット底、+Z へ抜ける）。`clearance` で輪郭を全周へ逃がす（幅 +2c、角 R +c。既定 0 = 公称） |
 | `gf_baseplate(cols, rows, rim, floor_t, clearance)` | cols×rows のソケットを床 `floor_t` の上に彫った板。`rim=[left,right,front,back]` でソケット列の外側に縁を残す |
 
 座標系は X が列方向（中央 0）、Y が行方向（板の前端 0）、Z=0 が底面。
+`gf_baseplate` の `cols` は端数を左端に配置できる（`rows` は整数）。
+`gf_socket_cut` の `pitch_x` はX方向のセル幅（既定42mm）。角R・面取りは
+保ったまま横幅だけを変更する。角Rが成立しない8.5mm以下の幅は拒否する。
 
 ## xbrace.scad
 
@@ -68,9 +71,9 @@ Gridfinity ベースプレートの共通モジュール。ピッチ 42mm、ソ�
 |-----------|------|
 | `xbrace_window(size, line)` | 矩形 `size=[w,d]` (中心が原点) の窓から、対角 2 本の筋交い (幅 `line`) を残した 4 つの三角形の開口 |
 
-## letter_case.scad
+## iris_oyama_a4_lcj.scad
 
-`assets/letter-case/` の前片・奥片が include する project 固有の共通値と
+`assets/letter-case/iris-oyama-a4-lcj/` の前片・奥片が include する project 固有の共通値と
 `letter_case_plate(rows, rim)`。共有モジュールではないが、単体では何も描かない
 ので render 対象の `assets/` には置かない。
 
@@ -92,3 +95,9 @@ Gridfinity bin (箱) の共有 module。`gridfinity.scad` のピッチ・角丸�
 払い出し口 `gridfinity_bin(cols, rows, units)` / `gridfinity_card_case(cols, rows, units)`。
 単体では何も描かない。保証する範囲は bin が cols 1..5 × rows 1..5 × units 4、
 カードケースが 2×3×4。
+
+## temna_roomcase_puchi.scad
+
+`assets/letter-case/temna-roomcase-puchi/` の前後片が include する天馬専用の
+実測値・調整値と `roomcase_puchi_plate(part_rows, rear)`。横幅の端数は左端セル、
+奥行きの端数はX筋交い付きの縁にし、奥の左右角をR5にする。

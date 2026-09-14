@@ -371,8 +371,8 @@ PYEOF
 }
 
 
-render front assets/letter-case/baseplate_front.scad
-render rear assets/letter-case/baseplate_rear.scad
+render front assets/letter-case/iris-oyama-a4-lcj/baseplate_front.scad
+render rear assets/letter-case/iris-oyama-a4-lcj/baseplate_rear.scad
 
 # ---------------------------------------------------------------------------
 # 0. 設計契約。引き出し内寸 240x318 からクリアランス 1 を片側ずつ引いた

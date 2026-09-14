@@ -1,5 +1,10 @@
 # 3D CAD ledger Update Log
 
+## 2026-09-14
+
+- **Add**: [天馬ルームケースプチ](designs/temna-roomcase-puchi-gridfinity.md)の浅型用ベースプレートを追加。左端に細幅セル、奥側2隅にR5を設けた。
+- **Move**: 既存モデルを `assets/letter-case/iris-oyama-a4-lcj/` に分類し、天馬側と同階層にした。アイリスオーヤマの形状と既存3MFは維持。
+
 ## 2026-09-12
 
 - **Fix**: 外部レビューで基板取付穴の表裏の座標変換に誤りが見つかり、

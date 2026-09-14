@@ -72,6 +72,8 @@ Designの本文はuserの当該発言を`## user 原文 (verbatim)`見出しの�
 
 ## Design
 
+- [天馬ルームケースプチのGridfinityベースプレート](designs/temna-roomcase-puchi-gridfinity.md) - 浅型引き出しの実測に合わせ、左端数列と奥側R5を持つ前後2枚
+
 - [左右の指配置を分けたレバーレス筐体](designs/leverless-controller.md) - 200mmの天底板を中央前後の柱でつなぎ、横差しナットで固定する
 - [LXに固定するUSB充電器ホルダー](designs/lx-usb-charger-holder.md) - LX台座の空きM6穴2個へ固定し、底から電源ケーブルを挿せる上開きのホルダー
 - [レターケースのGridfinityベースプレート](designs/letter-case-gridfinity.md) - 既製のスタック式レターケースの引き出しへ敷く、左右奥のくぼみを縁で跨ぐ前後2分割の5×7 Gridfinityベースプレート
