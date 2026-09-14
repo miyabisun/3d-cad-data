@@ -1,10 +1,11 @@
 // 部品は印刷姿勢。assemblyだけ組立座標: X=左右、Y=手前→奥、Z=高さ。
-part = "assembly"; // [assembly,frame,top_left,top_right,bottom,corner_post,corner_post_right,center_post,corner_nut_plug,center_nut_plug,wall,button_layout]
+part = "assembly"; // [assembly,frame,top_left,top_right,bottom,corner_post,corner_post_right,center_post,corner_nut_plug,center_nut_plug,wall,wall_usb,button_layout]
 half_w = 200;
 case_d = 200;
 post_w = 20;
 post_h = 50;
 wall_t = 5;
+usb_hole_d = 21; // USBパネルマウント用。ユーザー指定径。
 top_t = 6;
 bottom_t = 5;
 edge_r = 3;
@@ -192,9 +193,11 @@ module post(center = false) {
 }
 
 // 外側面をベッドに置く。X=壁長、Y=組立時の高さ、Z=壁厚。
-module wall() {
+module wall(usb = false) {
   difference() {
     translate([wall_gap, 0, 0]) cube([wall_length - 2 * wall_gap, post_h, wall_t]);
+    if (usb) translate([wall_length / 2, post_h / 2, -eps])
+      cylinder(d = usb_hole_d, h = wall_t + 2 * eps, $fn = arc_fn);
     for (x = [post_w / 2, wall_length - post_w / 2])
       translate([x, side_bolt_z, 0]) countersunk_hole(wall_t, up = false);
   }
@@ -245,7 +248,8 @@ module frame() {
       translate([half_w - center_w / 2, 0, 0]) post(center = true);
       for (right = [false, true])
         translate([right ? 2 * half_w - post_w : post_w, 0, 0]) scale([right ? -1 : 1, 1, 1])
-          multmatrix([[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]]) wall();
+          multmatrix([[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])
+            wall(usb = back && right);
     }
   for (right = [false, true])
     translate([right ? 2 * half_w : 0, post_w, 0]) scale([right ? -1 : 1, 1, 1])
@@ -276,6 +280,7 @@ else if (part == "center_post") post(center = true);
 else if (part == "corner_nut_plug") nut_plug(corner = true);
 else if (part == "center_nut_plug") nut_plug();
 else if (part == "wall") wall();
+else if (part == "wall_usb") wall(usb = true);
 else if (part == "button_layout") {
   echo(buttons_left = buttons_left, buttons_right = buttons_right);
   echo(pcb_mounts_left = pcb_mounts_left);

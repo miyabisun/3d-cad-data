@@ -181,13 +181,19 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
     for center in [(3, 17), (23, 37)]:
         inner_round(cut("z", 20), center, -1)
 
-    for name, length in [("wall", 160)]:
+    for name, length in [("wall", 160), ("wall_usb", 160)]:
         cut = part(name, (length, 50, 5), x_margin=0.25)
         for x in [10, length - 10]:
             m4_seat(cut, x, 25, 5, up=False)
         for z in [0.1, 2, 4.9]:
             plan = cut("z", z)
             assert len(loop_at(plan, (0.25, length - 0.25, 0, 50))) == 4, "wall perimeter is not a rectangle"
+            if name == "wall_usb":
+                round_at(plan, 80, 25, 10.5)
+                assert not inside(plan, (80, 25)), "USB hole is not open"
+                assert len(plan) == 4, "USB wall has an extra opening"
+            else:
+                assert inside(plan, (80, 25)) and len(plan) == 3, "plain wall has a USB opening"
             for x in [1, 10, length - 10, length - 1]:
                 assert inside(plan, (x, 0.1)) and inside(plan, (x, 49.9)), "wall still has an end tab or bevel"
 
@@ -301,7 +307,7 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
     near(bounds(assembled), (0, 400, 0, 200, 0, 61))
     expected_volume = sum(volumes[name] * count for name, count in {
         "top_left": 1, "top_right": 1, "bottom": 2, "corner_post": 2, "corner_post_right": 2,
-        "center_post": 2, "wall": 6}.items())
+        "center_post": 2, "wall": 5, "wall_usb": 1}.items())
     assert abs(volume(assembled) - expected_volume) < expected_volume * 0.00002, "assembled parts intersect"
     loops = section(work / "assembly.stl", work, "z", 30)
     empty_rect(loops, (25, 375, 25, 175))
@@ -314,5 +320,12 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
     # 右天板下の基板外形とUSBプラグ予約枠も、既存の柱/壁を避ける。
     for x0, x1, y0, y1 in [pcb_rect, usb_rect]:
         empty_rect(loops, (200 + x0, 200 + x1, y0, y1))
+    # 背面右の壁1枚だけにUSB穴。全体座標で中心(300,197.5,30)。
+    for y in [195.1, 197.5, 199.9]:
+        back = section(work / "assembly.stl", work, "y", y)
+        round_at(back, 300, 30, 10.5)
+        assert not inside(back, (300, 30))
+    for x, y in [(100, 2.5), (300, 2.5), (100, 197.5), (2.5, 100), (397.5, 100)]:
+        assert inside(loops, (x, y)), "another wall acquired a USB opening"
     assert inside(loops, (200, 10)) and inside(loops, (200, 190))
-    print("leverless: round M4 4.4/8.4mm countersinks with 0.2mm seats, nut plug fit, full-height M4 bores, inner R3, planar nut entries and bridges, button clearance, M3 countersinks, closed meshes and assembly fit passed")
+    print("leverless: one centered 21mm USB wall, round M4 4.4/8.4mm countersinks with 0.2mm seats, nut plug fit, full-height M4 bores, inner R3, planar nut entries and bridges, button clearance, M3 countersinks, closed meshes and assembly fit passed")
