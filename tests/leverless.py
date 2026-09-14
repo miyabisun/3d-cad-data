@@ -76,9 +76,36 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
         empty_rect(local, (-3.65, 3.65, face_v + 0.01, face_v + 0.5))
         assert all(inside(local, (u, face_v - 0.1)) for u in [-3.6, 0, 3.6]), "nut entry has a curved or stepped ceiling"
 
+    plug_sizes = {}
+    for name, length in [("corner_nut_plug", 14.989768), ("center_nut_plug", 6.958548)]:
+        part(name, (6.9, length, 3.1))
+        x0, x1, y0, y1, z0, z1 = bounds(closed_mesh(work / f"{name}.stl"))
+        plug_sizes[name] = (x1 - x0, y1 - y0, z1 - z0)
+
+    def plug_fit(cut, x, corner=False, mirrored=False):
+        width, length, height = plug_sizes["corner_nut_plug" if corner else "center_nut_plug"]
+        # 溝に収まる六角ナット先端へ当て、実測した栓の外端が入口から1mm出る。
+        tip = 7 / math.sqrt(3)
+        face = 25.5 / math.sqrt(2) if corner else 10
+        near((7.3 - width, 3.5 - height, tip + length - face), (0.4, 0.4, 1))
+
+        def local_at(z):
+            loops = cut("z", z)
+            if mirrored:
+                loops = [[(40 - px, py) for px, py in loop] for loop in loops]
+            return slot_frame(loops, x, corner)
+
+        face_section = local_at(20)
+        assert inside(face_section, (0, face - 0.02)) and not inside(face_section, (0, face + 0.02))
+        for base in [5, 41.5]:
+            for z in [base + 0.21, base + 0.2 + height / 2, base + 0.2 + height - 0.01]:
+                empty_rect(local_at(z), (-width / 2, width / 2, tip, tip + length))
+
     for name, width, depth, centers, side_centers in [
         ("corner_post", 40, 40, [10], [30]), ("center_post", 80, 20, [30, 50], [10, 70])]:
         cut = part(name, (width, depth, 50))
+        for x in centers:
+            plug_fit(cut, x, corner=name == "corner_post")
         for x in centers:
             # 縦断面全体を測り、止まり穴の天井や中間の膜が残っていないことを確認する。
             empty_rect(cut("y", 10), (x - 2.19, x + 2.19, -0.1, 50.1))
@@ -135,6 +162,7 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
             assert inside(cut("z", 25), (10, 17))
 
     cut = part("corner_post_right", (40, 40, 50))
+    plug_fit(cut, 10, corner=True, mirrored=True)
     empty_rect(cut("y", 10), (27.81, 32.19, -0.1, 50.1))
     loop_at(cut("z", 25), (27.8, 32.2, 7.8, 12.2))
     assert not inside(cut("z", 20), (10, 30)) and inside(cut("z", 20), (30, 30))
@@ -276,4 +304,4 @@ with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
     for x0, x1, y0, y1 in [pcb_rect, usb_rect]:
         empty_rect(loops, (200 + x0, 200 + x1, y0, y1))
     assert inside(loops, (200, 10)) and inside(loops, (200, 190))
-    print("leverless: full-height M4 bores, inner R3, planar nut entries and bridges, arc-adjusted punches and mirrored thumb buttons, 29mm auxiliary-button clearance, PCB countersinks, closed meshes and assembly fit passed")
+    print("leverless: nut plugs with 0.4mm clearance and 1mm protrusion, full-height M4 bores, inner R3, planar nut entries and bridges, arc-adjusted punches and mirrored thumb buttons, 29mm auxiliary-button clearance, PCB countersinks, closed meshes and assembly fit passed")

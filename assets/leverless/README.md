@@ -14,6 +14,8 @@
 | `bottom` | 2 | 200 × 200 × 5 |
 | `corner_post` / `corner_post_right` | 各2 | 40 × 40 × 50、腕厚20のL字 |
 | `center_post` | 2 | 80 × 20 × 50、中央の壁と左右の受けを一体化 |
+| `corner_nut_plug` | 8 | 幅6.9 × 差込方向14.9898 × 高さ3.1、左右隅柱共通 |
+| `center_nut_plug` | 8 | 幅6.9 × 差込方向6.9585 × 高さ3.1、中央柱用 |
 | `wall` | 6 | 長さ160 × 高さ50 × 厚さ5、全周共通 |
 
 壁は6枚とも同じ形状。端面に片側0.25mmの逃げがあり、実長は159.5mm。
@@ -26,12 +28,15 @@
 ネジ本体の通し穴φ4.4は維持する。底用ナットも印刷時の上側に足場を作る。
 隅柱の上下ナットはL字の内隅から斜め45度に差し込む。
 この45度は平面上の通路の向きで、壁の高さ方向に斜面はない。
-中央部品の上下ナットはケース内面から直線で差し込む。抜け止め栓は使わない。
+中央部品の上下ナットはケース内面から直線で差し込む。
+上下ナットのスリットは別体の栓で塞ぐ。栓は高さ3.1mmのまま平置きで印刷する。
 
 ```sh
 mkdir -p dist/leverless
 openscad --export-format binstl -o dist/leverless/corner_post.stl -D 'part="corner_post"' assets/leverless/controller.scad
 openscad --export-format binstl -o dist/leverless/top_right.stl -D 'part="top_right"' assets/leverless/controller.scad
+openscad --export-format binstl -o dist/leverless/corner_nut_plug.stl -D 'part="corner_nut_plug"' assets/leverless/controller.scad
+openscad --export-format binstl -o dist/leverless/center_nut_plug.stl -D 'part="center_nut_plug"' assets/leverless/controller.scad
 ```
 
 STLはバイナリ形式を使う。OpenSCAD 2021.01のASCII出力では、丸みと皿穴の
@@ -51,7 +56,17 @@ STLはバイナリ形式を使う。OpenSCAD 2021.01のASCII出力では、丸�
   ケース内側からM4六角ナットを横差しし、ネジを通して保持する。
   柱のM4縦穴はφ4.4を全高50mmに貫通させ、上下の止まり穴の間に天井を作らない。
   ナット溝の二段ブリッジは保持する。
-  隅柱の腕の端にあった長い入口と、別体の抜け止め栓は廃止した。
+  隅柱の腕の端にあった長い入口は廃止した。
+- 上下ナットをネジで所定位置に保持し、栓の短辺側を先にスリットへ入れる。
+  断面は幅7.3 × 高さ3.5mmの溝からそれぞれ合計0.4mm小さくし、片側0.2mmの逃げを設ける。
+  二面幅7mmの六角ナット先端に当たった位置で、内側の入口面から差込方向へ1mm突出する。
+  長さはナット中心から入口までの距離（隅柱は25.5/√2、中央柱は10mm）から
+  ナットの外接半径7/√3を引き、突出1mmを加えた値。
+  突出部分をはんだごてで溶かして入口に固定する。実ナットの寸法や回転の遊びで
+  突出量は変わるため、溶かす前に位置を確認する。実寸調整はSCADの`plug_nut_flat`、
+  嵌合の調整は`plug_clearance`、突出量は`plug_protrusion`で行う。
+  上下共通で隅用8個・中央用8個。側壁用の六角ナット穴には使わない。
+  組立表示にはネジ・ナット・栓を含めず、栓は各`part`で単体表示する。
 - 側壁用ナットは柱の内面に開いた二面幅7.3・深さ3.5mmの六角穴へ入れる。
   側壁用の通し穴は柱・壁とも二面幅4.4mmの上辺が水平な六角形。
   ナット穴も二面幅7.3mmで上辺を水平にし、天井をブリッジで印刷する。

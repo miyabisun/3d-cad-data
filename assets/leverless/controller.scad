@@ -1,5 +1,5 @@
 // 部品は印刷姿勢。assemblyだけ組立座標: X=左右、Y=手前→奥、Z=高さ。
-part = "assembly"; // [assembly,frame,top_left,top_right,bottom,corner_post,corner_post_right,center_post,wall,button_layout]
+part = "assembly"; // [assembly,frame,top_left,top_right,bottom,corner_post,corner_post_right,center_post,corner_nut_plug,center_nut_plug,wall,button_layout]
 half_w = 200;
 case_d = 200;
 post_w = 20;
@@ -18,6 +18,9 @@ nut_roof = 5;
 side_bolt_z = post_h / 2;
 head_recess = 0.4;
 bridge_step = 0.4;
+plug_clearance = 0.4; // 幅・高さの合計の逃げ。各面は0.2mm。
+plug_protrusion = 1; // 入口から外へ出し、溶かして固定する分。
+plug_nut_flat = 7; // 窪み7.3mmと区別する、栓が当たる実ナットの二面幅。
 wall_gap = 0.25; // 壁の長手方向の端面に片側ずつ。
 wall_length = case_d - 2 * post_w;
 center_w = 2 * half_w - 2 * wall_length; // 壁を6枚共通化する中央部品の幅。左右の受け各20を含む。
@@ -130,6 +133,13 @@ module vertical_nut_cut(x, top = true, corner = false) {
     translate([-bridge_d / 2, -bridge_d / 2, z + nut_t - eps])
       cube([bridge_d, bridge_d, 2 * bridge_step + eps]);
   }
+}
+
+// X=幅、Y=差込方向、Z=高さ。上下・左右共通で平置き印刷する。
+module nut_plug(corner = false) {
+  face = corner ? (post_w + inner_chamfer) / sqrt(2) : post_w / 2;
+  nut_tip = plug_nut_flat / sqrt(3);
+  cube([nut_flat - plug_clearance, face - nut_tip + plug_protrusion, nut_t - plug_clearance]);
 }
 
 // 正面用: 軸+Y、六角収納口は柱の内面Y=20。
@@ -258,6 +268,8 @@ else if (part == "bottom") plate(bottom = true);
 else if (part == "corner_post") post();
 else if (part == "corner_post_right") translate([2 * post_w, 0, 0]) mirror([1, 0, 0]) post();
 else if (part == "center_post") post(center = true);
+else if (part == "corner_nut_plug") nut_plug(corner = true);
+else if (part == "center_nut_plug") nut_plug();
 else if (part == "wall") wall();
 else if (part == "button_layout") {
   echo(buttons_left = buttons_left, buttons_right = buttons_right);
