@@ -333,40 +333,14 @@ sys.exit(0 if ok else 1)
 PYEOF
 }
 
-# check_single_solid <name> — STL の三角形を頂点の共有で繋いで連結成分を数える。
-# 単一プリント部品なので 1 でなければならない (2以上 = 宙に浮いた島がある)
+# 閉曲面・非縮退・単一連結を共有STL検査で確認する。
 check_single_solid() {
-  name=$1
-  python3 - "$WORK/$name.stl" "$name" <<'PYEOF' || fail=1
-import re, sys
-src = open(sys.argv[1]).read()
-name = sys.argv[2]
-vs = [(round(float(a), 4), round(float(b), 4), round(float(c), 4))
-      for a, b, c in re.findall(r'vertex\s+(\S+)\s+(\S+)\s+(\S+)', src)]
-parent = {}
-
-
-def find(a):
-    while parent[a] != a:
-        parent[a] = parent[parent[a]]
-        a = parent[a]
-    return a
-
-
-def union(a, b):
-    ra, rb = find(a), find(b)
-    if ra != rb:
-        parent[ra] = rb
-
-
-for v in vs:
-    parent.setdefault(v, v)
-for i in range(0, len(vs), 3):  # facet ごとに3頂点を繋ぐ
-    union(vs[i], vs[i + 1])
-    union(vs[i + 1], vs[i + 2])
-n = len({find(v) for v in parent})
-print(f"solids {name}: {n} connected component(s) from {len(vs) // 3} facets")
-sys.exit(0 if n == 1 else 1)
+  PYTHONPATH="$SCRIPT_DIR" python3 - "$WORK/$1.stl" <<'PYEOF' || fail=1
+from pathlib import Path
+import sys
+from stl_geometry import closed_mesh
+closed_mesh(Path(sys.argv[1]))
+print("closed single solid:", sys.argv[1])
 PYEOF
 }
 
@@ -374,129 +348,72 @@ PYEOF
 render front assets/letter-case/iris-oyama-a4-lcj/baseplate_front.scad
 render rear assets/letter-case/iris-oyama-a4-lcj/baseplate_rear.scad
 
-# ---------------------------------------------------------------------------
-# 0. 設計契約。引き出し内寸 240x318 からクリアランス 1 を片側ずつ引いた
-#    238x316 の板に、実プリントの合わせ込み (左右 +1.3 ずつ、手前 −2.5) を
-#    足した 240.6x313.5 の板に 5x7 のソケットを置く。横は 5x42=210 を中央へ置いて
-#    左右 15.3 が縁になる。奥行きは高い床 (318-14=304) の中央へ 7x42=294 を
-#    置くので、前 4−2.5=1.5 / 奥 18 (= くぼみ 14 + 余り 5 − クリアランス 1) が
-#    縁になる。前 4 行 + 奥 3 行に分割し、前片は奥行き 1.5+168=169.5、奥片は
-#    126+18=144。奥片の奥側 2 隅は R6
-# ---------------------------------------------------------------------------
-CONTRACT="CONTRACT plate=240.6x313.5 grid=5x7 pitch=42 socket=41.5/37.2/35.8 fit=0.1 depth=4.65 floor=0 rim=L15.3/R15.3/F1.5/B18 xwin=2 corner=6"
+# 外形・奥行き方向の分割は既存の合わせ込み値を維持する。
+# セル幅231mmを中央に置き、左半セル21mm＋標準5列、左右の無垢縁4.8mm。
+CONTRACT="CONTRACT plate=240.6x313.5 grid=5.5x7 pitch=42 socket=41.5/37.2/35.8 fit=0.1 depth=4.65 floor=0 rim=L4.8/R4.8/F1.5/B18 xwin=2 corner=6"
 expect_echo front "$CONTRACT split=front rows=4 len=169.5"
 expect_echo rear "$CONTRACT split=rear rows=3 len=144"
-
-# 外形。X は中央が 0、Y は各片の前端が 0、Z=0 が底面。床は無いので高さはソケットの 4.65
 check_bbox front -120.3 120.3 0 169.5 0 4.65
 check_bbox rear -120.3 120.3 0 144 0 4.65
 check_single_solid front
 check_single_solid rear
 
-# ---------------------------------------------------------------------------
-# 1. ソケットの配置 (42mm ピッチ)。上の面取り (Z 2.5..4.65) の中の z=4.0 で
-#    切ると、各ソケットは 41.7 − 2×0.65 = 40.4 角の loop になる (輪郭は公称
-#    41.5/37.2/35.8 に嵌合クリアランス 0.1 を全周へ足した 41.7/37.4/36.0)。縁の窓も
-#    同じ断面に loop として出る (数は 4. で数える) ので、grid 節は 40.4 角の
-#    loop (40.4 角) だけを拾い、20 / 15 個すべての中心を集合として固定する。
-#    列の中心は x = -84,-42,0,42,84。前片の行の中心は y = 22.5,64.5,106.5,148.5、
-#    奥片は y = 21,63,105 で、前片の全長 169.5 を足すと 190.5,232.5,274.5 になり
-#    148.5 + 42 = 190.5 で継ぎ目を跨いでも 42mm ピッチである
-# ---------------------------------------------------------------------------
+# 標準列は42mmピッチ。前片最終行148.5と奥片先頭21+169.5=190.5の差も42。
+# 前片は外形1＋24ソケット、奥片は外形1＋18ソケット＋奥6窓×4三角。
 check_plan front cells 4.0 \
-  "rect -120.3 120.3 0 169.5; grid -84 42 5 22.5 42 4 40.4;
-   loop -84 22.5 40.4 40.4; loop 84 22.5 40.4 40.4; loop 0 106.5 40.4 40.4;
-   loop -84 148.5 40.4 40.4; loop 84 148.5 40.4 40.4;
-   void 0 22.5; solid -105 22.5; solid 105 22.5; solid 0 1; solid -63 64.5; solid 0 169.1"
+  "loops 25; rect -120.3 120.3 0 169.5; grid -73.5 42 5 22.5 42 4 40.4;
+   loop -105 22.5 19.4 40.4; loop -105 148.5 19.4 40.4;
+   solid -94.5 22.5; solid 115.5 22.5; solid 0 1; solid -52.5 64.5; solid 0 169.1"
 check_plan rear cells 4.0 \
-  "rect -120.3 120.3 0 144; grid -84 42 5 21 42 3 40.4;
-   loop -84 21 40.4 40.4; loop 84 21 40.4 40.4; loop 0 63 40.4 40.4;
-   loop -84 105 40.4 40.4; loop 84 105 40.4 40.4;
-   void 0 21; solid -105 63; solid 105 63; solid 0 135; solid 0 143; solid -63 63"
+  "loops 43; rect -120.3 120.3 0 144; grid -73.5 42 5 21 42 3 40.4;
+   loop -105 21 19.4 40.4; loop -105 105 19.4 40.4;
+   solid -94.5 63; solid 115.5 63; solid 10.5 135; solid 0 143; solid -52.5 63"
 
-# ---------------------------------------------------------------------------
-# 2. ソケット輪郭の3段 (底から 0.7 面取り / 1.8 垂直 / 2.15 面取り)。
-#    垂直部 (Z 0.7..2.5) の z=1.6 で切ると 37.4 角、下の面取り (Z 0..0.7) の
-#    z=0.35 で切ると 36.0 + 2×0.35 = 36.7 角になる
-# ---------------------------------------------------------------------------
-#    縁の窓は貫通なので、どの高さの断面でも loop 総数は z=4.0 と同じ
-#    (前片 53、奥片 60。内訳は 4. を参照)。総数を固定して全ソケットの存在を測る
-check_plan front wall 1.6 "loops 53; loop -84 22.5 37.4 37.4; loop 0 106.5 37.4 37.4"
-check_plan front chamfer-bottom 0.35 "loops 53; loop -84 22.5 36.7 36.7; loop 84 148.5 36.7 36.7"
-check_plan rear wall 1.6 "loops 60; loop 84 105 37.4 37.4"
-check_plan rear chamfer-bottom 0.35 "loops 60; loop 0 21 36.7 36.7"
+# 全7個の半セル: 幅21mm、段差・角Rは標準と同じ。X方向の単純scaleを拒否する。
+PYTHONPATH="$SCRIPT_DIR" python3 - "$WORK" <<'PYEOF' || fail=1
+from pathlib import Path
+import math, sys
+from stl_geometry import loop_at, section
+work = Path(sys.argv[1])
+for name, centers in [("front", [22.5, 64.5, 106.5, 148.5]), ("rear", [21, 63, 105])]:
+    for z, span, radius in [(0.35, 36.7, 1.6), (1.6, 37.4, 1.95), (4, 40.4, 3.45), (4.64, 41.7, 4.1)]:
+        loops = section(work / (name + ".stl"), work, "z", z)
+        for y in centers:
+            width = span - 21
+            loop = loop_at(loops, (-105 - width / 2, -105 + width / 2, y - span / 2, y + span / 2))
+            center = (-105 + width / 2 - radius, y + span / 2 - radius)
+            arc = [p for p in loop if p[0] > center[0] + 0.05 and p[1] > center[1] + 0.05]
+            assert len(arc) >= 5 and all(abs(math.dist(p, center) - radius) < 0.03 for p in arc), (name, y, z, "half-cell radius")
+print("half cells: 21mm pitch, all profiles and corner radii passed")
+PYEOF
+check_plan front wall 1.6 "loops 25; loop -73.5 22.5 37.4 37.4; loop 10.5 106.5 37.4 37.4"
+check_plan front chamfer-bottom 0.35 "loops 25; loop -73.5 22.5 36.7 36.7; loop 94.5 148.5 36.7 36.7"
+check_plan rear wall 1.6 "loops 43; loop 94.5 105 37.4 37.4"
+check_plan rear chamfer-bottom 0.35 "loops 43; loop 10.5 21 36.7 36.7"
 
-# ---------------------------------------------------------------------------
-# 3. 縦断面 (X-Z) で、ソケットが底 (z=0) から天面まで抜けていること (床が無い)、
-#    ソケット際の枠 (|x| = 105..107) と外周の枠 (118.3..120.3) が全高で
-#    詰まっていること。ソケットの穴は z=0 で 35.8 角 (半幅 17.9) なので、
-#    半幅 17.5 の矩形 x∈[-101.5,-66.5] z∈[0.05,4.6] は完全に空でなければならない。
-#    床を混入させると z=0.05 の probe が材料になって red
-# ---------------------------------------------------------------------------
-# 全 7 行 × 5 列のソケットを、行ごとの縦断面で 1 個ずつ void_rect にする。
-# 局所的な床の混入 (1 個のソケットの下だけ薄い膜) は体積の上限に掛からないので、
-# ここで全数を測る
-ALL_CELLS="void_rect -101.5 -66.5 0.05 4.6; void_rect -59.5 -24.5 0.05 4.6;
-   void_rect -17.5 17.5 0.05 4.6; void_rect 24.5 59.5 0.05 4.6; void_rect 66.5 101.5 0.05 4.6"
+# 全42ソケットが底から天面まで空で、左右4.8mmの縁は全高で連続する。
+ALL_CELLS="void_rect -112.4 -97.6 0.05 4.6; void_rect -91 -56 0.05 4.6;
+   void_rect -49 -14 0.05 4.6; void_rect -7 28 0.05 4.6;
+   void_rect 35 70 0.05 4.6; void_rect 77 112 0.05 4.6"
 for y in 22.5 64.5 106.5 148.5; do
-  check_section front "row-y$y" "$y" "$ALL_CELLS; solid -63 2.5; solid 63 2.5; solid -106 2; solid 106 2"
+  check_section front "row-y$y" "$y" "$ALL_CELLS; solid -94.5 2.5; solid 73.5 2.5; solid -117 2; solid 117 2; solid -119.8 4.5"
 done
 for y in 21 63 105; do
-  check_section rear "row-y$y" "$y" "$ALL_CELLS; solid -63 2.5; solid 63 2.5; solid -106 2; solid 106 2"
+  check_section rear "row-y$y" "$y" "$ALL_CELLS; solid -94.5 2.5; solid 73.5 2.5; solid -117 2; solid 117 2; solid 119.8 4.5"
 done
-# 縁の枠 (ソケット際 105..107、外周 118.3..120.3) が全高で詰まっていること
-check_section front row1 22.5 \
-  "void -84 0.2; void 0 0.2; solid -119.3 2; solid 119.3 2; solid -119.8 4.5; void -84 3"
-check_section rear row3 105 "void 84 0.2; solid 119.3 2; solid -119.3 2; void 84 3"
-# 前縁 (1.5) は全幅で詰まった板
 check_section front front-rim 1 "solid 0 3; solid -119.8 3; solid 119.8 3; void 0 4.7"
-# 奥片の、左右の窓と奥の窓の間の無垢の帯 (y 125..128)
 check_section rear rear-band 126.5 "solid 0 3; solid -112 3; solid 112 3; solid -119.8 3; void 0 4.7"
 
-# ---------------------------------------------------------------------------
-# 4. 縁の X 筋交い窓。z=4.0 の断面で数える。左右の縁 (15.3) には bin の境目
-#    (42mm ピッチ) に沿って、幅 11.3 (枠 2 を外周とソケット際に残す)・長さ 40
-#    (境目に 2mm のリブ) の窓を行ごとに開け、窓の対角に幅 2 の X を渡す。
-#    窓の中心は x = ±112.65。各片の端 (継ぎ目・前縁側) は 2mm 残すので
-#    継ぎ目側の端の窓は 39 になる。
-#    前片の左右: y = [2.5,42.5] [44.5,84.5] [86.5,126.5] [128.5,167.5]、
-#    奥片: [2,41] [43,83] [85,125]。
-#    奥の縁 (18) には列ごとに 40×14 の窓 (x = 中心 ±20、y = [128,142])。
-#    X は窓を 4 つの三角に割るので、窓 1 つが loop 4 本になる:
-#    前片 1 + 20 + 8窓×4 = 53、奥片 1 + 15 + 6窓×4 + 5窓×4 = 60。
-#    三角の重心 (端の三角は中心から長辺の 2/3 = 13.3、脇の三角は短辺の
-#    2/3 = 3.77) が void、X の交点・リブ・枠が solid。
-#    窓の実寸は winbox で測る (4 つの三角の union bbox = 窓の矩形)。
-#    筋交いの幅 2 は、窓の中心から対角に沿って 8 進んだ点を法線方向へ
-#    ±0.8 ずらすと solid、±1.2 ずらすと void になることで測る (もう 1 本の
-#    筋交いの中心線はそこから 2.7mm 以上離れていて、半幅 1 の外にある)。
-#    左右の窓 11.3×40 の対角の向きは (0.272, 0.962)、法線は (0.962, -0.272)。
-#    奥の窓 40×14 は (0.944, 0.330) と (-0.330, 0.944)
-#    (-0.330, 0.944)
-# ---------------------------------------------------------------------------
-check_plan front xwin 4.0 \
-  "loops 53;
-   void -112.65 35.8; void -112.65 9.2; void -116.42 22.5; void -108.88 22.5;
-   void 112.65 35.8; void 112.65 161; void 112.65 135; void -112.65 161;
-   solid -112.65 22.5; solid 112.65 148; solid -112.65 43.5; solid -112.65 1; solid -112.65 168.5;
-   solid -106 22.5; solid -119.3 22.5; solid 106 64.5; solid 119.3 64.5;
-   winbox -112.65 22.5 11.3 40; winbox 112.65 64.5 11.3 40; winbox -112.65 148 11.3 39; winbox 112.65 148 11.3 39;
-   solid -109.71 29.98; solid -111.25 30.42; void -109.32 29.87; void -111.63 30.52"
+# 奥のX窓は左半セル19×14、標準列40×14が5個。線幅2mmを維持する。
 check_plan rear xwin 4.0 \
-  "loops 60;
-   void -112.65 15.3; void -112.65 111; void 112.65 70; void -116.42 21; void 108.88 21;
-   solid -112.65 21; solid -112.65 42; solid -112.65 1; solid -112.65 125.5;
-   void 13.3 135; void -13.3 135; void 0 139.7; void 0 130.3; void 84 139.7; void -84 130.3;
-   solid 0 135; solid 21 135; solid -21 135; solid 0 143; solid 0 127; solid -112.65 135; solid 112.65 135;
-   winbox -112.65 21.5 11.3 39; winbox 112.65 63 11.3 40; winbox -112.65 105 11.3 40;
-   winbox 0 135 40 14; winbox 84 135 40 14; winbox -84 135 40 14;
-   solid 7.29 138.40; solid 7.81 136.88; void 7.15 138.77; void 7.95 136.51"
+  "loops 43;
+   winbox -105 135 19 14; winbox -73.5 135 40 14; winbox -31.5 135 40 14;
+   winbox 10.5 135 40 14; winbox 52.5 135 40 14; winbox 94.5 135 40 14;
+   solid -105 135; solid 10.5 135; solid -94.5 135; solid 0 143; solid 0 127;
+   void -105 139.7; void -105 130.3; void 10.5 139.7; void 10.5 130.3;
+   solid 17.79 138.40; solid 18.31 136.88; void 17.65 138.77; void 18.45 136.51"
 
-# ---------------------------------------------------------------------------
-# 5. 材料。STL の体積 (facet の符号付き体積の和) が、床 0 化と縁の肉抜きの目標
-#    (床 1 で 96.6 / 92.6 cm³ → 床 0 で 55.6 / 58.3 → ハニカムで 49.1 / 46.6
-#    → X 窓) を下回ること。床の混入や窓の消失は体積で red になる
-# ---------------------------------------------------------------------------
+# 床や肉抜きの退行を従来の体積上限でも検査する。
 check_volume() {
   name=$1 max=$2
   python3 - "$WORK/$name.stl" "$name" "$max" <<'PYEOF' || fail=1

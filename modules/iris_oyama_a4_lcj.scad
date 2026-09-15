@@ -10,10 +10,8 @@ include <xbrace.scad>
 // 引き出しの床は、左右と奥の 14mm 幅が 3.5mm 低い (中央が高い)。板は高い
 // 中央床 (212x304) の上に乗り、縁はくぼみの上を浮いて跨ぐ (くぼみの斜面には
 // 触れない)。そのため板の外形は引き出し内寸いっぱいで、引き出し内で滑らない。
-// 床は持たない (ソケットは底まで抜け、bin は引き出しの床に直接乗る)。
-// くぼみを跨ぐ左右と奥の縁は、bin の境目 (42mm ピッチ) に沿った四角い窓を
-// 貫通で開け、窓の対角に X の筋交いを渡して肉抜きする。枠・リブ・筋交いは
-// すべて同じ線幅。前縁 (1.5mm) はそのまま。
+// 床は持たない。5.5列では左右端のbinの底も一部がくぼみを跨ぐ。
+// 左右の縁 (4.8mm) は無垢。奥縁だけを列幅に沿ったX筋交い窓で肉抜きする。
 //
 // 座標系 (各片の datum):
 //   X = 横方向。板の中央が 0
@@ -41,19 +39,20 @@ socket_clearance =
     0.1; // 試作3: bin がきつく板がしなるので、ソケット輪郭を全周 0.1 外へ
 back_corner_r = 6; // 引き出しの奥の内角が丸いので、奥片の奥側 2 隅を R6 にする
 floor_t = 0; // ソケット底の床厚。0 = 床なし (bin が引き出しの床に乗る)
-cols = 5;       // 横のマス数 (240/42 = 5.71)
-rows = 7;       // 奥行きのマス数 (318/42 = 7.57)
+cols = 5.5; // 左に21mmの半セル、右に標準5列
+rows = 7;   // 奥行きのマス数 (318/42 = 7.57)
 front_rows = 4; // 前片の行数。残りが奥片。分割は 42mm 境界で行う
 rear_rows = rows - front_rows;
-// 縁の X 筋交い窓。枠 (外周・ソケット際・各片の端)、窓の間のリブ、筋交いの線幅
+// 奥縁のX筋交い窓。枠・リブ・筋交いの線幅
 win_line = 2;
 
 // --- 派生値 ---
 plate_w = drawer_w - 2 * fit_clearance + 2 * side_extend; // 240.6
 plate_d = drawer_d - 2 * fit_clearance - front_trim;      // 313.5
-grid_w = cols * gf_pitch;                                 // 210
+grid_w = cols * gf_pitch;                                 // 231
 grid_d = rows * gf_pitch;                                 // 294
-side_rim = (plate_w - grid_w) / 2; // 15.3 (くぼみの幅 14 + 1.3)
+side_rim = (plate_w - grid_w) / 2;                        // 4.8
+first_pitch = grid_w - (ceil(cols) - 1) * gf_pitch;       // 左半セル21mm
 // 奥行きは高い床 (drawer_d − recess_w = 304) の中央へ grid を置く
 raised_d = drawer_d - recess_w;                        // 304
 raised_slack = (raised_d - grid_d) / 2;                // 5
@@ -61,7 +60,6 @@ front_rim = raised_slack - fit_clearance - front_trim; // 1.5
 back_rim = recess_w + raised_slack - fit_clearance;    // 18
 front_len = front_rim + front_rows * gf_pitch;         // 169.5
 rear_len = rear_rows * gf_pitch + back_rim;            // 144
-side_win_w = side_rim - 2 * win_line; // 11.3: 左右の窓の幅 (X 方向)
 back_win_d = back_rim - 2 * win_line; // 14: 奥の窓の奥行き (Y 方向)
 
 contract = str("CONTRACT plate=",
@@ -99,11 +97,8 @@ contract = str("CONTRACT plate=",
                " corner=",
                back_corner_r);
 
-// 板 1 枚。rows 行のソケットに縁 rim = [left, right, front, back] を付け、
-// 左右の縁に行ごとの窓、back > 0 なら奥の縁に列ごとの窓を開ける。
-// 左右の窓は行の境目 (42mm ピッチ) に線幅のリブを置くため、各行の範囲を
-// 前後 line/2 ずつ縮めた長さになる。ただし各片の端 (継ぎ目・前縁側) は
-// 端から line を残すので、端の窓だけ line/2 短い
+// 板1枚。rim = [left, right, front, back]。back > 0
+// なら奥縁に列ごとの窓を開ける。
 module
 letter_case_plate(rows, rim)
 {
@@ -126,24 +121,19 @@ letter_case_plate(rows, rim)
                         square(back_corner_r + gf_over);
                     circle(r = back_corner_r, $fn = gf_fn * 2);
                 }
-        for (r = [0:rows - 1]) {
-            y0 = max(rim[2] + r * gf_pitch + win_line / 2, win_line);
-            y1 =
-                min(rim[2] + (r + 1) * gf_pitch - win_line / 2, len - win_line);
-            for (sx = [ -1, 1 ])
-                translate(
-                    [ sx * (plate_w - side_rim) / 2, (y0 + y1) / 2, -gf_over ])
-                    linear_extrude(cut_h)
-                        xbrace_window([ side_win_w, y1 - y0 ], win_line);
-        }
         if (rim[3] > 0)
-            for (c = [0:cols - 1])
+            for (c = [0:ceil(cols) - 1])
                 translate([
-                    (c - (cols - 1) / 2) * gf_pitch,
+                    -grid_w / 2 + (c == 0 ? first_pitch / 2
+                                          : first_pitch + (c - 0.5) * gf_pitch),
                     len - rim[3] / 2,
                     -gf_over
                 ]) linear_extrude(cut_h)
-                    xbrace_window([ gf_pitch - win_line, back_win_d ],
-                                  win_line);
+                    xbrace_window(
+                        [
+                            (c == 0 ? first_pitch : gf_pitch) - win_line,
+                            back_win_d
+                        ],
+                        win_line);
     }
 }

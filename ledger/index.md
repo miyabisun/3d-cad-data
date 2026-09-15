@@ -76,7 +76,7 @@ Designの本文はuserの当該発言を`## user 原文 (verbatim)`見出しの�
 
 - [左右の指配置を分けたレバーレス筐体](designs/leverless-controller.md) - 200mmの天底板を中央前後の柱でつなぎ、横差しナットで固定する
 - [LXに固定するUSB充電器ホルダー](designs/lx-usb-charger-holder.md) - LX台座の空きM6穴2個へ固定し、底から電源ケーブルを挿せる上開きのホルダー
-- [レターケースのGridfinityベースプレート](designs/letter-case-gridfinity.md) - 既製のスタック式レターケースの引き出しへ敷く、左右奥のくぼみを縁で跨ぐ前後2分割の5×7 Gridfinityベースプレート
+- [レターケースのGridfinityベースプレート](designs/letter-case-gridfinity.md) - アイリスオーヤマ A4-LCJへ敷く、左半セル列付き5.5×7セルの前後2分割ベースプレート
 - [スチールラック 500x400](designs/steel-rack-500x400.md) - 汎用L字アングルとアクリル天板で安価に組む自作ラック。接合部を3Dプリントで埋め、スライドレール式のPC2台をラックへ収容するまで到達した
 - [ゲームデスクのイヤホン・マイク置き](designs/game-desk-earphone-mic-holder.md) - デスククランプの立ち上がり板へ皿ネジ1本で留め、イヤホンケースとピンマイクケースを左右に受ける単一プリント部品
 - [Gridfinity 4U bin（薄いリップ・ラベル棚）](designs/gridfinity-bin-4u.md) - レターケースのベースプレートへ並べる4Uのbin。底は穴なし、リップは薄く、手前に12mmラベルシール用の13mm棚を持つ
