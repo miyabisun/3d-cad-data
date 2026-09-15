@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""マグホルダーの実STLで収納寸法・排水・取付界面を測る。"""
+"""マグホルダーの実STLで収納寸法・排水・面取り・取付界面を測る。"""
 
 import math
 from pathlib import Path
@@ -9,7 +9,7 @@ import tempfile
 from stl_geometry import bounds, closed_mesh, empty_rect, inside, loop_at, near, render, section
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "assets/mug-holder/mug_holder.scad"
+SOURCE = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "assets/clamp/mug-holder/mug_holder.scad"
 
 with tempfile.TemporaryDirectory(prefix="mug-holder-test-") as temp:
     work = Path(temp)
@@ -17,25 +17,31 @@ with tempfile.TemporaryDirectory(prefix="mug-holder-test-") as temp:
     assert SOURCE.is_file(), "mug_holder.scad is missing"
     render(SOURCE, stl, binary=True)
     vertices = closed_mesh(stl)
-    near(bounds(vertices), (-43.8, 43.8, -43.8, 53.2, 0, 34.6))
+    near(bounds(vertices), (-43.8, 43.8, -43.8, 53.2, 0, 35.6))
 
-    # 取っ手は上に逃げる。下端・上端とも切り欠きのない円筒。
-    for z in [2.01, 34.59]:
+    # 収納円筒は内径83.6。底Z3からR2で繋ぎ、上の1mmだけR1で広げる。
+    for z, radius in [(3.1, 39.8 + math.sqrt(4 - 1.9 ** 2)),
+                      (4, 39.8 + math.sqrt(3)), (5.01, 41.8), (34.59, 41.8),
+                      (35.1, 42.8 - math.sqrt(0.75)), (35.59, 42.8 - math.sqrt(1 - 0.99 ** 2))]:
         plan = section(stl, work, "z", z)
-        cavity = loop_at(plan, (-41.8, 41.8, -41.8, 41.8))
-        assert all(abs(math.hypot(x, y) - 41.8) < 0.03 for x, y in cavity)
+        cavity = loop_at(plan, (-radius, radius, -radius, radius))
+        assert all(abs(math.hypot(x, y) - radius) < 0.03 for x, y in cavity)
         assert not inside(plan, (0, 0))
 
-    # 円筒の左右断面: 底面上Z=2から34.6まで内径83.6、側壁2。
     vertical = section(stl, work, "y", 0)
-    empty_rect(vertical, (-41.78, 41.78, 2.01, 34.7))
+    empty_rect(vertical, (-39.78, 39.78, 3.01, 35.7))
+    empty_rect(vertical, (-41.78, 41.78, 5.01, 35.7))
     for sign in [-1, 1]:
-        for z in [2.1, 15, 34.5]:
+        for z in [5.1, 15, 34.5]:
             assert inside(vertical, (sign * 41.83, z))
             assert inside(vertical, (sign * 43.77, z))
             assert not inside(vertical, (sign * 43.83, z))
+        for cx, cz, radius, z0, z1 in [(39.8, 5, 2, 3.001, 4.999), (42.8, 34.6, 1, 34.601, 35.599)]:
+            arc = [(sign * x, z) for loop in vertical for x, z in loop if sign * x > 39.8 and abs(sign * x - cx) <= radius + 0.02 and z0 < z < z1]
+            assert len(arc) >= 8, "fillet arc is missing"
+            assert all(abs(math.hypot(x - cx, z - cz) - radius) < 0.03 for x, z in arc)
 
-    for z in [0.01, 1, 1.99]:
+    for z in [0.01, 1.5, 2.99]:
         floor = section(stl, work, "z", z)
         holes = [loop for loop in floor if max(math.hypot(x, y) for x, y in loop) < 41.8]
         assert len(holes) >= 40, "honeycomb drainage is missing"
@@ -51,33 +57,50 @@ with tempfile.TemporaryDirectory(prefix="mug-holder-test-") as temp:
         empty_rect(floor, (-1.5, 1.5, -2.9, 2.9))
         assert inside(floor, (0, 4)), "2mm honeycomb web is missing"
         assert inside(floor, (40, 0)), "solid floor perimeter is missing"
-    empty_rect(vertical, (-3.44, 3.44, -0.1, 2.01))
-    assert inside(vertical, (40, 1.99)) and not inside(vertical, (40, 2.01))
+    empty_rect(vertical, (-3.44, 3.44, -0.1, 3.01))
+    assert inside(vertical, (39, 2.99)) and not inside(vertical, (39, 3.01))
 
-    # 頭は収納円筒の外へ沈める。頭径13.8と軸径7.8に総すきま0.6。
-    # コの字外高28.1、上腕3.8: 穴中心Z=34.6+3.8-28.1/2=24.35。
-    for y, diameter in [(42, 14.4), (44.99, 14.4), (45.01, 8.4), (49.39, 8.4)]:
+    # 頭は対辺14.2 (=13.8+0.4)、軸は対辺8.4の上下flat六角。穴中心Z25.35。
+    for y, flat in [(42, 14.2), (44.99, 14.2), (45.01, 8.4), (49.39, 8.4)]:
         cross = section(stl, work, "y", y)
-        hole = loop_at(cross, (-diameter / 2, diameter / 2, 24.35 - diameter / 2, 24.35 + diameter / 2))
-        assert all(abs(math.hypot(x, z - 24.35) - diameter / 2) < 0.03 for x, z in hole)
-        assert not inside(cross, (0, 24.35))
-    assert inside(section(stl, work, "y", 45.01), (5, 24.35)), "head bearing shoulder is missing"
+        radius = flat / math.sqrt(3)
+        hole = loop_at(cross, (-radius, radius, 25.35 - flat / 2, 25.35 + flat / 2))
+        for x, z in hole:
+            support = max(x * math.cos(math.radians(a)) + (z - 25.35) * math.sin(math.radians(a)) for a in range(30, 390, 60))
+            assert abs(support - flat / 2) < 0.03, "screw hole is not a flat-up hexagon"
+        top = [x for x, z in hole if abs(z - (25.35 + flat / 2)) < 0.02]
+        near((min(top), max(top)), (-radius / 2, radius / 2))
+        assert not inside(cross, (0, 25.35))
+    assert inside(section(stl, work, "y", 45.01), (5, 25.35)), "head bearing shoulder is missing"
 
-    # 左右2mmの回転止め。中央24.4mmは板厚3.8ぶん逃がし、両外端はデスクへ当たる。
-    for z in [10.5, 16, 33, 34.59]:
+    # 上下の処理範囲を除き、回転止めは幅2、逃げは24.4x3.8を維持する。
+    for z in [11.5, 16, 33, 34.59]:
         plan = section(stl, work, "z", z)
         empty_rect(plan, (-12.2, 12.2, 49.4, 53.3))
         assert inside(plan, (0, 49.38)), "clamp bearing face is missing"
         for sign in [-1, 1]:
-            assert inside(plan, (sign * 12.22, 53.18))
-            assert inside(plan, (sign * 14.18, 53.18))
+            assert inside(plan, (sign * 12.22, 51))
+            assert inside(plan, (sign * 14.18, 51))
+            assert inside(plan, (sign * 13.2, 53.18)), "rotation stop no longer reaches the desk"
             assert not inside(plan, (sign * 14.22, 51)), "rotation stop width is wrong"
     back = section(stl, work, "y", 51)
     for sign in [-1, 1]:
-        loop_at(back, (12.2, 14.2, 0, 34.6) if sign == 1 else (-14.2, -12.2, 0, 34.6))
-        assert inside(back, (sign * 13.2, 34.59)), "rotation stop is not flush with the desk"
-    empty_rect(back, (-12.2, 12.2, -0.1, 38.5))
-    # 座面Y=45から軸長8: 先端Y=53、デスク面Y=53.2に0.2の逃げ。
-    # 頭の前面Y=42は収納半径41.8の外。上の実測座面に対する寸法関係。
+        loop_at(back, (12.2, 14.2, 0, 35.6) if sign == 1 else (-14.2, -12.2, 0, 35.6))
+        assert inside(back, (sign * 13.2, 35.59)), "rotation stop top is too low"
+    empty_rect(back, (-12.2, 12.2, -0.1, 39.5))
 
-    print("mug-holder: closed solid, cup fit, honeycomb drainage, recessed M8 seat, desk-flush top and rotation stops passed")
+    # 上R1は円筒外周・取付座・回転止め・クランプ逃げの全上縁へ掛かる。
+    # 下は球面ではなく、Zが0.1進むと輪郭も0.1広がるC0.4の45度。
+    for z, inset in [(0.1, 0.3), (0.3, 0.1), (0.41, 0),
+                     (35.1, 1 - math.sqrt(0.75)), (35.5, 1 - math.sqrt(0.19))]:
+        plan = section(stl, work, "z", z)
+        near(bounds([p for loop in plan for p in loop]), (-43.8 + inset, 43.8 - inset, -43.8 + inset, 53.2 - inset))
+        empty_rect(plan, (-12.2, 12.2, 49.4 - inset, 53.3))
+        for sign in [-1, 1]:
+            for x in [12.2 + inset + 0.035, 14.2 - inset - 0.035]:
+                assert inside(plan, (sign * x, 51)), "rounded/chamfered stop is too thin"
+            assert not inside(plan, (sign * (12.2 + inset - 0.035), 51)), "stop inner edge is sharp"
+            assert not inside(plan, (sign * (14.2 - inset + 0.035), 51)), "stop outer edge is sharp"
+        assert inside(plan, (0, 49.4 - inset - 0.035)), "mount upper/bottom edge lost too much material"
+
+    print("mug-holder: closed solid, flat-up 8.4/14.2 hex holes, 3mm floor, R2 inner floor, R1 top, C0.4 bottom and clamp fit passed")
