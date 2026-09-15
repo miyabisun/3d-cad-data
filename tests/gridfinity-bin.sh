@@ -1,5 +1,5 @@
 #!/bin/bash
-# Gridfinity bin (cols 1..5 × rows 1..5 の 4U 全 25 種、薄いリップ、手前に 13mm のラベル天板) と、
+# Gridfinity bin の代表4U（1x1・1x2・3x5、薄いリップ、13mmのラベル天板）と、
 # 2x3x4U のカードケース (内側を埋めて隅にカードのポケット、右奥のマスに指の窪みを抜いたもの) のレンダリング検証。
 # - openscad が exit 0 で非空の STL を生成し、console に ERROR / WARNING が無いこと
 # - 設計契約 (CONTRACT echo) が台帳の確定値と一致すること
@@ -353,76 +353,25 @@ sys.exit(0 if ok else 1)
 PYEOF
 }
 
-# check_single_solid <name> — STL の三角形を頂点の共有で繋いで連結成分を数える。
-# 単一プリント部品なので 1 でなければならない (2以上 = 宙に浮いた島がある)
+# 共通STL検査で単一連結・閉曲面・非縮退を確認する。
 check_single_solid() {
-  name=$1
-  python3 - "$WORK/$name.stl" "$name" <<'PYEOF' || fail=1
-import re, sys
-src = open(sys.argv[1]).read()
-name = sys.argv[2]
-vs = [(round(float(a), 4), round(float(b), 4), round(float(c), 4))
-      for a, b, c in re.findall(r'vertex\s+(\S+)\s+(\S+)\s+(\S+)', src)]
-parent = {}
-
-
-def find(a):
-    while parent[a] != a:
-        parent[a] = parent[parent[a]]
-        a = parent[a]
-    return a
-
-
-def union(a, b):
-    ra, rb = find(a), find(b)
-    if ra != rb:
-        parent[ra] = rb
-
-
-for v in vs:
-    parent.setdefault(v, v)
-for i in range(0, len(vs), 3):  # facet ごとに3頂点を繋ぐ
-    union(vs[i], vs[i + 1])
-    union(vs[i + 1], vs[i + 2])
-n = len({find(v) for v in parent})
-print(f"solids {name}: {n} connected component(s) from {len(vs) // 3} facets")
-sys.exit(0 if n == 1 else 1)
+  PYTHONPATH="$ROOT/tests" python3 - "$WORK/$1.stl" <<'PYEOF' || fail=1
+from pathlib import Path
+import sys
+from stl_geometry import closed_mesh
+closed_mesh(Path(sys.argv[1]))
 PYEOF
 }
 
-
-
-# 全 25 種 (cols 1..5 × rows 1..5、すべて 4U) を render し、契約・外形・連結を測る。
-# 断面の深掘りは代表の 1x1 と、両軸が最大の 5x5 に集中する
-for c in 1 2 3 4 5; do
-  for r in 1 2 3 4 5; do
-    render "b${c}x${r}" "assets/gridfinity-bin/bin_${c}x${r}x4u.scad"
-  done
-done
-
-# ---------------------------------------------------------------------------
-# 0. 設計契約。外形は 42 ピッチ − 0.5 (1x1 = 41.5 角、1x2 = 41.5 x 83.5)。
-#    高さは 4U = 28 (壁の上端) + 薄いリップ 4.4 = 32.4。底は公称の 3 段
-#    (35.6 → 45° 0.8 → 37.2 → 垂直 1.8 → 45° 2.15 → 41.5、高さ 4.75) で穴なし。
-#    壁 1.2、床は底の上に 1.2 (床の天面 z=5.95)。ラベル天板は手前 (y=0 側) の壁の
-#    上端 (z=28) と面一で内側へ 13 張り出す厚さ 1 の板で、その下は 45° の無垢の
-#    くさびが壁まで下りる。天板の先端 (垂直面) と 45° 面の境目は R1
-# ---------------------------------------------------------------------------
+# 全56種の検証はgridfinity-bin-matrix.py。このテストは整数binと専用品の詳細断面を保つ。
 CONTRACT="CONTRACT units=4 pitch=42 outer=41.5 h=28 lip=4.4 base=35.6/37.2/41.5 base_h=4.75 wall=1.2 floor_top=5.95 label=13x1 wedge=45 fillet=1"
-# echo の size は c*42−0.5 × r*42−0.5 (例 1x1 → 41.5x41.5、5x5 → 209.5x209.5)
-for c in 1 2 3 4 5; do
-  for r in 1 2 3 4 5; do
-    expect_echo "b${c}x${r}" "$CONTRACT bin=${c}x${r} size=$((c * 42 - 1)).5x$((r * 42 - 1)).5"
-  done
-done
-
-# 外形。X は中央が 0 なので半幅は (c*42−0.5)/2 = c*21−0.25。Y は手前 (ラベル側) が 0、Z=0 が底面
-for c in 1 2 3 4 5; do
+for bin_size in 1x1 1x2 3x5; do
+  c=${bin_size%x*} r=${bin_size#*x}
+  render "b$bin_size" "assets/gridfinity-bin/4u/$bin_size.scad"
+  expect_echo "b$bin_size" "$CONTRACT bin=$bin_size size=$((c * 42 - 1)).5x$((r * 42 - 1)).5"
   half=$((c * 21 - 1)).75
-  for r in 1 2 3 4 5; do
-    check_bbox "b${c}x${r}" -$half $half 0 $((r * 42 - 1)).5 0 32.4
-    check_single_solid "b${c}x${r}"
-  done
+  check_bbox "b$bin_size" -$half $half 0 $((r * 42 - 1)).5 0 32.4
+  check_single_solid "b$bin_size"
 done
 
 # ---------------------------------------------------------------------------
@@ -522,23 +471,20 @@ check_section_yz b1x2 corner-clip-l -19.5 "$CORNER"
 check_section_yz b1x2 corner-inside 18.5 "$INSIDE"
 
 # ---------------------------------------------------------------------------
-# 6. 5x5 (両軸が最大)。底の格子 5×5 (中心 x=0/±42/±84、y=20.75+42k)、角のクリップ、
-#    ラベル天板が内幅 (207.1) いっぱいであること
+# 6. 最大の整数サイズ3x5。底の格子3×5、角のクリップ、ラベル天板の内幅123.1。
 # ---------------------------------------------------------------------------
-# grid 節は最大の loop を外形として除外するので、外形の無いこの断面では使わない。
-# 25 個の底を loop 節で 1 個ずつ名指しする (中心と 37.2 角の両方を固定する)
-GRID5="loops 25"
-for x in -84 -42 0 42 84; do
+GRID="loops 15"
+for x in -42 0 42; do
   for j in 0 1 2 3 4; do
-    GRID5="$GRID5; loop $x $((j * 42 + 20)).75 37.2 37.2"
+    GRID="$GRID; loop $x $((j * 42 + 20)).75 37.2 37.2"
   done
 done
-check_plan b5x5 base-mid 2.0 "$GRID5"
-check_section_yz b5x5 corner-clip-r 103.5 "$CORNER"
-check_section_yz b5x5 corner-clip-l -103.5 "$CORNER"
-check_section_yz b5x5 corner-inside 102.5 "$INSIDE"
-check_section b5x5 label-width 8 \
-  "solid 0 27.5; solid -103.5 27.5; solid 103.5 27.5; solid 0 22; solid 103.5 22; solid -103.5 22; void 0 19.5"
+check_plan b3x5 base-mid 2.0 "$GRID"
+check_section_yz b3x5 corner-clip-r 61.5 "$CORNER"
+check_section_yz b3x5 corner-clip-l -61.5 "$CORNER"
+check_section_yz b3x5 corner-inside 60.5 "$INSIDE"
+check_section b3x5 label-width 8 \
+  "solid 0 27.5; solid -61.5 27.5; solid 61.5 27.5; solid 0 22; solid 61.5 22; solid -61.5 22; void 0 19.5"
 
 # ---------------------------------------------------------------------------
 # 7. カードケース 2x3x4U。外形・底・リップは bin と同じでラベル天板無し。内側は床の天面 (5.95) から
@@ -556,7 +502,7 @@ check_section b5x5 label-width 8 \
 #      (-1.75, 99.8))。壁は上端まで垂直 (開口の上縁は丸めない)
 #    - カードの右奥の角 (x 0.25..27.0、y 84..97.3) が穴の上に張り出す。その下は床の天面から 45° で下がる窪み
 # ---------------------------------------------------------------------------
-render card "assets/gridfinity-bin/card_case_2x3x4u.scad"
+render card "assets/gridfinity-bin/goods/card_case_2x3x4u.scad"
 expect_echo card "CONTRACT card units=4 bin=2x3 size=83.5x125.5 h=28 lip=4.4 floor_top=5.95 card=54x85.6 pocket=55x86.6 at=-27.5,11.2 hole=0.25,84 hole_r=2.55 recess=39.1/34.8 recess_floor=2.95 r=3 edge_r=2"
 check_bbox card -41.75 41.75 0 125.5 0 32.4
 check_single_solid card

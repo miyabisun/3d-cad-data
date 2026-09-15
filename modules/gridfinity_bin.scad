@@ -26,27 +26,28 @@ gfb_unit = 7;
 gfb_lip_h = 4.4;
 gfb_lip_chamfer = 0.8;
 
-// bin 1 マスぶんの底 (無垢)。z=0 が底面、gfb_base_h で外形 41.5 角に達する
+// bin 1 マスぶんの底 (無垢)。半セルは幅だけ21mm短縮し、角Rと面取りを保つ。
 module
-gfb_base_cell()
+gfb_base_cell(pitch = [ gf_pitch, gf_pitch ])
 {
+    delta = pitch - [ gf_pitch, gf_pitch ];
     z1 = gfb_base_chamfer_bot;
     z2 = z1 + gfb_base_wall_h;
     z3 = gfb_base_h;
     hull()
     {
-        gf_slab(gfb_base_bot, gfb_base_bot_r, 0);
-        gf_slab(gfb_base_mid, gfb_base_mid_r, z1 - gf_eps);
+        gf_slab([ gfb_base_bot, gfb_base_bot ] + delta, gfb_base_bot_r, 0);
+        gf_slab([ gfb_base_mid, gfb_base_mid ] + delta, gfb_base_mid_r, z1 - gf_eps);
     }
     hull()
     {
-        gf_slab(gfb_base_mid, gfb_base_mid_r, z1 - gf_eps);
-        gf_slab(gfb_base_mid, gfb_base_mid_r, z2 - gf_eps);
+        gf_slab([ gfb_base_mid, gfb_base_mid ] + delta, gfb_base_mid_r, z1 - gf_eps);
+        gf_slab([ gfb_base_mid, gfb_base_mid ] + delta, gfb_base_mid_r, z2 - gf_eps);
     }
     hull()
     {
-        gf_slab(gfb_base_mid, gfb_base_mid_r, z2 - gf_eps);
-        gf_slab(gfb_outer, gfb_outer_r, z3 - gf_eps);
+        gf_slab([ gfb_base_mid, gfb_base_mid ] + delta, gfb_base_mid_r, z2 - gf_eps);
+        gf_slab([ gfb_outer, gfb_outer ] + delta, gfb_outer_r, z3 - gf_eps);
     }
 }
 
@@ -97,15 +98,18 @@ gfb_bin(cols,
     top = h + gfb_lip_h;  // リップの上端
     inner_w = cols * gf_pitch - 0.5 - 2 * wall;
     floor_top = gfb_base_h + floor_t;
+    first = [ cols - ceil(cols) + 1, rows - ceil(rows) + 1 ] * gf_pitch;
     union()
     {
-        // 底: マスごとの無垢の base
-        for (c = [0:cols - 1], r = [0:rows - 1])
+        // 端数の足を左/手前へ置き、残りは42mmピッチの標準の足にする。
+        for (c = [0:ceil(cols) - 1], r = [0:ceil(rows) - 1])
             translate([
-                (c - (cols - 1) / 2) * gf_pitch,
-                (r + 0.5) * gf_pitch - 0.25,
+                -cols * gf_pitch / 2 +
+                    (c == 0 ? first[0] / 2 : first[0] + (c - 0.5) * gf_pitch),
+                (r == 0 ? first[1] / 2 : first[1] + (r - 0.5) * gf_pitch) - 0.25,
                 0
-            ]) gfb_base_cell();
+            ]) gfb_base_cell([ c == 0 ? first[0] : gf_pitch,
+                              r == 0 ? first[1] : gf_pitch ]);
         // 胴体: base の上から top
         // まで。内側は床の上を抜く。リップの内側の上端は 45°
         difference()
