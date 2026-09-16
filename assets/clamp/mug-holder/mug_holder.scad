@@ -1,7 +1,7 @@
 use <../../../modules/bolts.scad>
 
 // X/Y=カップ中心、+Y=クランプ側、Z=印刷底面。上端はデスク上面。
-inner_d = 83.6;
+inner_d = 85.6;
 inner_h = 32.6;
 wall = 2;
 floor_t = 3;
