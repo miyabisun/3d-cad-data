@@ -1,55 +1,66 @@
 # 3D CAD Data
 
-OpenSCADの設計データをGitで管理するrepositoryです。編集する正本は
-`assets/`と`modules/`に置きます。このrepositoryはscad-liveのベースキャンプ
-規約（`assets/`・`modules/`・`dist/`）に従っています。
+収納用品、家具の取付部品、コントローラー筐体などのOpenSCAD設計データ集です。
+モデルを選び、手元の製品に合わせて寸法を調整し、STLへ出力して3Dプリンターで印刷できます。
+適合寸法・印刷方向・実物での確認範囲は、各モデルのREADMEを参照してください。
 
-## scad-liveで使う
+## モデルを選ぶ
 
-このrepositoryのrootで実行するだけです。
+| 用途 | モデル |
+|---|---|
+| 引き出し収納 | [レターケース用ベースプレート](assets/letter-case/README.md)、[Gridfinity bin](assets/gridfinity-bin/README.md) |
+| ラック・机まわり | [500×400mmスチールラック](assets/steel-rack/500x400/README.md)、[マグカップホルダー](assets/clamp/mug-holder/README.md) |
+| モニターアーム | [エルゴトロン取付用ホルダー](assets/ergotron/README.md) |
+| ゲームコントローラー | [レバーレス筐体・ボタン収納](assets/leverless/README.md) |
+| 室内の取付・補修 | [ライトスタンド](assets/work-room/README.md)、[ドア用治具](assets/work-room/door/README.md)、[排水ホース接続](assets/laundry/README.md) |
+
+## STLを作る
+
+[OpenSCAD](https://openscad.org/downloads.html)をインストールし、このリポジトリを取得します。
+以下のコマンド例は、Gitと`openscad`が使えるシェルで実行してください。
 
 ```sh
-cd /path/to/3d-cad-data
-scad-live
+git clone https://github.com/miyabisun/3d-cad-data.git
+cd 3d-cad-data
+mkdir -p dist/steel-rack/500x400
+openscad --export-format binstl -o dist/steel-rack/500x400/separator.stl assets/steel-rack/500x400/separator.scad
 ```
 
-`assets/`の`.scad`を編集し、<http://127.0.0.1:8080>を開いてください。生成した
-STLは`dist/`へ入り、Gitには追加されません。systemdでの常駐はhome-server
-repositoryの`systemd/README.md`を参照してください。
+この例は、外径20mm・高さ3.5mm・穴径4.6mmのセパレーターを出力します。
+他のモデルでは、入力のSCADと出力先を置き換えてください。
+複数部品を持つモデルは、各READMEに従って`part`を指定します。
+組立状態の表示を、そのまま印刷用STLとして使わないでください。
 
-## ディレクトリ
+OpenSCADの画面で編集する場合も、`assets/`のSCADを開きます。
+`modules/`を参照するモデルがあるため、取得したディレクトリ構成を保ってください。
 
-- `assets/`: projectごとの`.scad`
-- `modules/`: 共有OpenSCAD module
+## 印刷する
+
+生成したSTLを、お使いのプリンターに対応するスライサーへ読み込みます。
+モデルの寸法・印刷方向・材質を確認し、嵌合が未確認の部品は少数で試してください。
+設計値の検査だけでは、実物の強度や収縮後の適合を保証できません。
+
+[BambuStudio](https://github.com/bambulab/BambuStudio/releases/latest)用の保存済みプロジェクトは
+`print/`にあります。使用前に機種・材料・設定と、モデルの版を確認してください。
+対応する設計や印刷条件は[台帳](ledger/index.md)から辿れます。
+
+## 編集とプレビュー
+
+ブラウザでプレビューする場合は、別途[scad-live](https://github.com/miyabi-sunny-side/scad-live)を
+導入し、このリポジトリのルートで`scad-live`を実行します。
+`assets/`を編集し、<http://127.0.0.1:8080>で結果を確認できます。
+
+- `assets/`: 用途別のSCADと使い方
+- `modules/`: [共有モジュール](modules/README.md)
 - `dist/`: 生成したSTL（Git管理外）
-- `print/`: BambuStudioのプロジェクト（`.3mf`、Git管理）
-- `ledger/`: `.3mf`と設計思想の台帳（OKF bundle。詳細は[ledger/index.md](ledger/index.md)）
+- `print/`: BambuStudioのプロジェクト（`.3mf`）
+- `ledger/`: 設計の根拠・変更履歴・印刷条件
 
-## 印刷（Windows + BambuStudio）
+全モデルをまとめて変換する`./bin/render`は、先に`dist/`を消去します。
+部品選択や出力形式は指定しないため、個別のREADMEに生成手順があるモデルはそちらを使ってください。
 
-自宅サーバーのSMB共有経由で使います（共有定義はhome-server repositoryの
-`systemd/README.md`を参照）。
-
-- `\\<サーバー>\3dp-stl` → `dist/`（読み取り専用）。STLをここから開く
-- `\\<サーバー>\3dp-3mf` → `print/`（書き込み可）。プロジェクトをここへ保存する
-
-`.3mf`はzipバイナリでGitのdiffが読めないため、意味・状態・経緯は`ledger/`が
-持ちます。`.3mf`を保存・上書きしたら、会話ベースで台帳を更新してcommitします。
-整合（`.3mf`と台帳の1:1対応・sha256一致）は`bin/check`が検査し、`npm test`に
-含まれます。
-
-## 手動実行
-
-scad-liveを使わず単発で全projectを変換する場合:
-
-```sh
-./bin/render
-```
-
-台帳の整合検査を単体で走らせる場合:
-
-```sh
-./bin/check
-```
-
-OpenSCAD fileは2space indentationで、commit時に`openscad-format`を適用します。
+`.3mf`を更新するときは、対応する台帳の条件とSHA-256も更新します。
+`./bin/check`でファイルと台帳の対応・ハッシュを検査できます。
+これらのスクリプトにはBashが必要です。SCADのインデントは2スペースです。
+Node.jsとnpmがあれば、開発用依存を`npm ci`で導入できます。導入後は、
+commit時に変更したSCADへ`openscad-format`が適用されます。

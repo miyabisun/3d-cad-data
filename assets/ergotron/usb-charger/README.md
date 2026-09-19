@@ -3,6 +3,9 @@
 `lx_holder.scad`は、充電ポートを上にしたUSB充電器を受ける一体型ホルダーです。
 LX台座の最上段の横2穴へM6皿ネジで固定します。
 
+取得・STL生成の共通手順は[ルートのREADME](../../../README.md)を参照してください。
+以下のコマンドはリポジトリのルートで実行します。
+
 上から充電器を差し込み、底穴から電源プラグを挿します。固定時は充電器を外し、
 皿ネジをホルダー内側に入れて、前壁の工具穴から長いビットで締めます。
 工具穴は6.35mm六角軸用です。ビットホルダーやチャックを通す寸法ではありません。
@@ -34,5 +37,5 @@ openscad -o dist/ergotron/usb-charger/lx_holder.stl assets/ergotron/usb-charger/
 確認してください。初版は実プリントで充電器の収納とLX背面への取付が確認済みです。
 中央突起とネジ先端の逃げを追加した改訂版の実機確認は未実施です。
 
-形状検査は`python3 tests/usb-charger.py`です。設計の根拠と依頼原文は
+形状検査は`python3 tests/usb-charger.py`です。設計の根拠と変更履歴は
 [設計台帳](../../../ledger/designs/lx-usb-charger-holder.md)にあります。
