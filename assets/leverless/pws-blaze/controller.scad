@@ -44,13 +44,12 @@ weak_k = weak_p - [0, pitch];
 medium_k = medium_p - [0, pitch];
 strong_k = strong_p - [0, pitch];
 pinky = strong_k + [sqrt(mixed_pitch * mixed_pitch - pitch * pitch / 4), pitch / 2];
-// 強Kから27、30mmから30となる2円の交点のうち、右下側を選ぶ。
-pinky_axis = (pinky - strong_k) / mixed_pitch;
-lower_along = pitch * pitch / (2 * mixed_pitch);
-lower_across = sqrt(pitch * pitch - lower_along * lower_along);
-lower_pinky = strong_k + lower_along * pinky_axis + lower_across * [pinky_axis[1], -pinky_axis[0]];
+// 小指下は30mmボタンの真下。強Kとの最短距離よりXの一致を優先する。
+lower_pinky = [pinky[0], pinky[1] - mixed_pitch];
 thumb_step = [pitch / sqrt(2), pitch / sqrt(2)];
 function hole(p, d = button_d) = [p[0], p[1], d];
+// 右0..9: 弱P,中P,強P,小指上30mm,弱K,中K,強K,小指下24mm,ジャンプ,パリィ(R3)。
+// 各要素は[x,y,穴径]。番号と左右対応はREADME「座標とボタン名の対応」を参照。
 right_gameplay_raw = [hole(weak_p), hole(medium_p), hole(strong_p), hole(pinky, large_button_d),
                  hole(weak_k), hole(medium_k), hole(strong_k), hole(lower_pinky),
                  hole(weak_k - thumb_step), hole(weak_k - 2 * thumb_step)];
@@ -64,7 +63,7 @@ right_reference = [for (b = right_gameplay_raw) b + [right_shift, 0, 0]];
 // 全体は回さず、各Kを軸にPの中心を指定した円弧長(mm)だけ反時計回りへ。
 punch_arc = [16, 6];
 thumb_angle = 30;
-thumb_shift = [-4, 3]; // 30度の基準配列から、ジャンプ・パリィを横へ微調整。
+thumb_shift = [-4, -8]; // 30度基準からの累積補正。パリィは旧+3から左11mm。
 center_shift = 10;
 function turn_hole(b, pivot, a) = let(x = b[0] - pivot[0], y = b[1] - pivot[1])
   [pivot[0] + x * cos(a) - y * sin(a), pivot[1] + x * sin(a) + y * cos(a), b[2]];
@@ -77,6 +76,7 @@ function below_button(x, b) = hole([x, b[1] - sqrt(pitch * pitch - pow(x - b[0],
 right_jump = below_button(right_base[8][0] + thumb_shift[0], right_base[4]);
 right_parry = below_button(right_base[9][0] + thumb_shift[1], right_jump);
 right_gameplay = concat([for (i = [0 : 7]) right_base[i]], [right_jump, right_parry]);
+// 最終右配置の主指3穴・ジャンプ・パリィを左天板へ鏡像で反映する。
 left_gameplay = [for (i = [2, 1, 0, 8, 9])
   [half_w - right_gameplay[i][0], right_gameplay[i][1], button_d]];
 // 補助ボタンは左右の奥・中央寄りに2個ずつ。f2ash-tap向けの中心間隔29mm。
