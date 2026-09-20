@@ -72,7 +72,7 @@
   右の操作配列の左右余白を揃え、上側へ補助ボタン3個を仮配置。
   公開PicoFightingBoard v1.1aのCADから、左天板へ横向き基板用のM3皿穴を4個追加した。
   Type-C改造版との寸法一致は未確認。元座標・M3ナットによる固定と安価なPC用候補は
-  [基板資料](../assets/leverless/pcb.md)へ記録した。
+  [基板資料](../assets/leverless/pws-blaze/pcb.md)へ記録した。
 
 ## 2026-09-07
 

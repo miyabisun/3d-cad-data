@@ -1,4 +1,4 @@
-include <../../modules/gridfinity_bin.scad>
+include <../../../modules/gridfinity_bin.scad>
 
 // FlashTap収納: part="upper" / "lower"を各1個印刷。assemblyは確認用。
 part = "assembly";

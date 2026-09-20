@@ -10,12 +10,12 @@ import tempfile
 from stl_geometry import bounds, closed_mesh, empty_rect, inside, loop_at, near, render, section
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "assets/leverless/controller.scad"
+SOURCE = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "assets/leverless/pws-blaze/controller.scad"
 
 
 with tempfile.TemporaryDirectory(prefix="leverless-test-") as temp:
     work = Path(temp)
-    assert SOURCE.is_file(), "leverless/controller.scad is missing"
+    assert SOURCE.is_file(), "leverless/pws-blaze/controller.scad is missing"
     volumes = {}
     measured_buttons = {}
     measured_auxiliary = {}

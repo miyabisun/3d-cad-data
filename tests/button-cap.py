@@ -9,7 +9,7 @@ import tempfile
 from stl_geometry import bounds, closed_mesh, empty_rect, inside, near, render, section
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "assets/leverless/button_cap.scad"
+SOURCE = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "assets/leverless/pws-blaze/button_cap.scad"
 
 with tempfile.TemporaryDirectory(prefix="button-cap-test-") as temp:
     work = Path(temp)

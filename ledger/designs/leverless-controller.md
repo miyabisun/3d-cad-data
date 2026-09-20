@@ -4,7 +4,7 @@ title: 左右の指配置を分けたレバーレス筐体
 description: P1Sで印刷する左右200mmの天底板を、ナット収納付きの柱と壁で一つの筐体に組む
 status: draft
 tags: [controller, leverless, pla, p1s]
-scope: assets/leverless
+scope: assets/leverless/pws-blaze
 ---
 
 # 左右の指配置を分けたレバーレス筐体
@@ -84,8 +84,8 @@ USBパネルマウント用の穴を追加した現在は、通常壁5枚とUSB�
 - 底面はParadise Arcade Nonslip FightStick Pad用167×77×1mmの窪みを各天板下に2個ずつ。
   柱・壁・底板と既存の締結位置は今回の改修でも維持する。大会規定対応は不要。
 
-現行のボタン配置は[天板と底板](../../assets/leverless/README.md#天板と底板)、
-基板の公開元寸法と姿勢は[基板の取付寸法](../../assets/leverless/pcb.md)を参照。
+現行のボタン配置は[天板と底板](../../assets/leverless/pws-blaze/README.md#天板と底板)、
+基板の公開元寸法と姿勢は[基板の取付寸法](../../assets/leverless/pws-blaze/pcb.md)を参照。
 
 二段ブリッジは[Pantheonの設計例](https://pantheondesign.atlassian.net/wiki/spaces/docs/pages/676069672)
 の横長→四角→円の順序と照合した。段差はuserの0.4mmを採用し、二段合計0.8mm。
@@ -97,7 +97,7 @@ USBパネルマウント用の穴を追加した現在は、通常壁5枚とUSB�
 差異はユーザーへ共有し、穴径を`usb_hole_d`で調整可能にする。面取りや座ぐりは不要。
 外形とM4皿穴は既存壁と共用し、交換用の`wall_usb`だけ追加する。
 組立表示の背面右への配置は担当が選んだ例で、現物では任意の壁1枚を交換できる。
-寸法・出力手順は[USB壁](../../assets/leverless/README.md#usbパネルマウント用の壁)を参照。
+寸法・出力手順は[USB壁](../../assets/leverless/pws-blaze/README.md#usbパネルマウント用の壁)を参照。
 
 ### user 原文
 
@@ -121,7 +121,7 @@ C0.8は印刷姿勢の下面、使用時に指が触れる側。フランジを�
 本体は底とねじ谷に3mmを残して中空化し、先端へ開放する。表側の突出1.2mmは保つ。
 雌ねじ最大径20を維持して雄側だけ半径0.25の隙間を設ける（雄最大径19.5）。
 この隙間は実機で調整する初期値。寸法・出力方法・検証範囲は
-[目隠しキャップ](../../assets/leverless/README.md#補助ボタン穴の目隠しキャップ)を参照。
+[目隠しキャップ](../../assets/leverless/pws-blaze/README.md#補助ボタン穴の目隠しキャップ)を参照。
 
 ### user 原文
 

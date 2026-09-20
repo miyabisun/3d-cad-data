@@ -10,7 +10,7 @@ import tempfile
 from stl_geometry import bounds, closed_mesh, inside, near, render, section
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "assets/leverless/button_storage.scad"
+SOURCE = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "assets/leverless/button-storage/button_storage.scad"
 
 with tempfile.TemporaryDirectory(prefix="button-storage-") as temp:
     work = Path(temp)
