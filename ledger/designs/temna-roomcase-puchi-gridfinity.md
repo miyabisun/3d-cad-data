@@ -37,8 +37,8 @@ userの指定で横幅を230mmから231mmへ広げ、左端を21mm（0.5セル�
   床の段差・追加の側面延長など、アイリスオーヤマの調整値は持ち込まない。
 
 現行寸法・印刷方法・調整箇所は
-[製品README](../../assets/letter-case/temna-roomcase-puchi/README.md)、
-形状は `modules/temna_roomcase_puchi.scad` と共有Gridfinity moduleが正本。
+[製品README](../../assets/letter-case/temna-roomcase-puchi/README.md)を参照する。
+形状は `modules/temna_roomcase_puchi.scad` と共有Gridfinity moduleで定義する。
 検証は `python3 tests/roomcase-puchi.py`（STL外形、全ソケットの断面と角R、
 床なし、継ぎ目ピッチ、奥R5、閉曲面）。
 

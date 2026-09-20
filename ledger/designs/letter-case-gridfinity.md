@@ -21,7 +21,7 @@ userの依頼で、天馬側と同じ21mmの半セル列を左端へ追加した
 床厚を追加して高さを奪わず、床なしを維持する。5.5セル版のbinの座りは実機未確認。
 天馬の231mm版の嵌合確認と、アイリスの5.5セル版の実機確認は別に扱う。
 
-現行仕様は[製品README](../../assets/letter-case/iris-oyama-a4-lcj/README.md)とSCADが正本。
+現行仕様は[製品README](../../assets/letter-case/iris-oyama-a4-lcj/README.md)とSCADに記載する。
 以下の5×7セル・側縁の肉抜きの説明は旧版の判断と検証の履歴である。
 
 ### 5.5セル版の検証

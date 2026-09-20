@@ -8,11 +8,11 @@ okf_version: "0.2"
 
 - **Print**（`prints/<slug>.md`）: `print/`のBambuStudioプロジェクト（`.3mf`）
   の台帳。`.3mf`はzipバイナリでGitのdiffが読めないため、意味・状態・経緯は
-  ここが正本として持つ。1つの`.3mf`につき1つのconceptを対応させ、
+  この台帳へ集約する。1つの`.3mf`につき1つのconceptを対応させ、
   `artifact`（repo rootからの相対path）と`content_sha256`で対象を固定する
 - **Design**（`designs/<slug>.md`）: 構造物の設計思想の台帳。なぜこの構成を
-  選び・何を実現し・次にどこへ伸ばすかを、userの発言由来で持つ。形状の実装は
-  `.scad`が正本、部品の機能説明はassetsのREADMEが持ち、`.scad`のコメントは
+  選び・何を実現し・次にどこへ伸ばすかを、userの発言由来で持つ。形状は
+  `.scad`で実装し、部品の機能はassetsのREADMEで説明する。`.scad`のコメントは
   幾何の注記に留める（設計意図をコメント欄に書かない）
 
 ## まず読む

@@ -11,7 +11,7 @@ content_sha256: b70a8bad3f634b925f4ac0ab972e854ec2ba2cb2b9bbb1975a8a41c6b4d2a8fe
 # レターケース ベースプレート（前片・奥片）
 
 設計は[レターケースのGridfinityベースプレート](../designs/letter-case-gridfinity.md)
-が正本。このprojectは2プレート構成で、プレート1が`baseplate_rear.stl`、
+を参照する。このprojectは2プレート構成で、プレート1が`baseplate_rear.stl`、
 プレート2が`baseplate_front.stl`（各1個）。
 
 ## 経緯

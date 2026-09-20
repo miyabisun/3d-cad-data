@@ -17,7 +17,7 @@ scope: assets/ergotron/usb-charger
 
 ## 判断と仮定
 
-形状の正本は`assets/ergotron/usb-charger/lx_holder.scad`。
+形状は`assets/ergotron/usb-charger/lx_holder.scad`で定義する。
 
 - 収納寸法への+1mmは片側ではなく、幅・奥行きそれぞれの合計と解釈した。
 - 充電器全高を受ける上開きの箱とし、底厚を加えた高さにした。
