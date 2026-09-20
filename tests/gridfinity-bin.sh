@@ -411,7 +411,8 @@ check_section b1x1 lip 21 \
    void 19.9 32.0; solid 20.4 32.0; void 0 32.5"
 
 # ---------------------------------------------------------------------------
-# 4. ラベル天板と 45° くさび。手前の壁の内面 (y=1.2) から y=14.2 まで、z=27..28 の
+# 4. ラベル天板と 45° くさび。この節以降、binの断面のyは奥壁から内側への距離。
+#    奥の壁の内面 (y=1.2) から y=14.2 まで、z=27..28 の
 #    天板 (厚さ 1)。その下は 45° の斜面が先端 (14.2, 27) から壁へ下りる無垢の
 #    くさび。斜面 z = 27 − (14.2 − y) は契約値として y=1.3 で 14.1、y=5 で 17.8、
 #    y=10 で 22.8、y=13 で 25.8 にあり、各点を ±0.08 で挟んで 45° を固定する
@@ -423,12 +424,17 @@ check_section b1x1 lip 21 \
 #    断面の頂点のうち y∈[13.5,14.3] z∈[26.6,27.6] にあるものが全部この円弧上に
 #    あることで R を固定する
 # ---------------------------------------------------------------------------
-# Y-Z 断面: 指定 x で切る。2D X = 部品Y、生 y = 部品Z (X-Z 断面と同じ流儀)
+# Y-Z断面: binは奥壁からの距離、cardは元の部品Yを第1軸にする。第2軸は部品Z。
 check_section_yz() {
   stl=$1 name=$2 cut_x=$3 spec=$4
+  local from_back="" test_rows
+  case "$stl" in
+    b*x*) test_rows=${stl#*x}
+      from_back="translate([0, $((test_rows * 42 - 1)).5, 0]) mirror([0, 1, 0])" ;;
+  esac
   cat > "$WORK/yz_$name.scad" <<EOS
 projection(cut = true) rotate([ 90, 0, 0 ]) rotate([ 0, 0, -90 ])
-  translate([ -($cut_x), 0, 0 ]) import("$WORK/$stl.stl");
+  translate([ -($cut_x), 0, 0 ]) $from_back import("$WORK/$stl.stl");
 EOS
   if ! openscad -o "$WORK/sec_$name.svg" "$WORK/yz_$name.scad" > /dev/null 2>&1; then
     err "section $name: failed to render"
@@ -445,9 +451,9 @@ check_section_yz b1x1 wedge-x0 0 "$WEDGE"
 check_section_yz b1x1 wedge-x5 5 "$WEDGE"
 check_section_yz b1x1 wedge-x15 15 "$WEDGE"
 check_section_yz b1x2 wedge-x0 0 "solid 5 27.5; solid 13.8 27.5; void 14.6 27.5; solid 5 20; void 5 16; void 42 27.5; void 80 27.5"
-# X-Z 断面 (y=8、くさびの中): z=22 は内幅いっぱい材料 (斜面は y=8 で z=20.8)、
+# X-Z断面（奥壁から8mm、くさびの中）: z=22は内幅いっぱい材料（斜面はz=20.8）、
 #    z=19.5 は空。内面 (±19.55) の直前 ±19.5 まで材料が続く (側壁に溶けている)
-check_section b1x1 wedge-width 8 \
+check_section b1x1 wedge-width 33.5 \
   "solid 0 27.5; solid -19.5 27.5; solid 19.5 27.5; solid 0 22; solid 15 22; solid -15 22;
    solid 19.5 22; solid -19.5 22; void 19.5 20.72; solid 19.5 20.88;
    void 0 19.5; void 15 19.5; void 0 12"
@@ -483,7 +489,7 @@ check_plan b3x5 base-mid 2.0 "$GRID"
 check_section_yz b3x5 corner-clip-r 61.5 "$CORNER"
 check_section_yz b3x5 corner-clip-l -61.5 "$CORNER"
 check_section_yz b3x5 corner-inside 60.5 "$INSIDE"
-check_section b3x5 label-width 8 \
+check_section b3x5 label-width 201.5 \
   "solid 0 27.5; solid -61.5 27.5; solid 61.5 27.5; solid 0 22; solid 61.5 22; solid -61.5 22; void 0 19.5"
 
 # ---------------------------------------------------------------------------

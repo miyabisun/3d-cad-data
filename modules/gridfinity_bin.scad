@@ -9,7 +9,7 @@ include <gridfinity.scad>
 // 45° に落とすだけ。内側に棚 (厚い肉) を持たないので、上に載せる bin は底の
 // 面取りをこの 45° に座らせる。
 //
-// 座標系: X が列方向 (中央 0)、Y が行方向 (手前 = ラベル側が 0)、Z=0 が底面。
+// 座標系: X が列方向 (中央 0)、Y が行方向 (手前が 0)、Z=0 が底面。
 
 gfb_outer = gf_pitch - 0.5; // 41.5
 gfb_outer_r = 3.75;
@@ -80,10 +80,11 @@ function gfb_label_profile(d, t, h, r) =
                [[ -1, h - t - d - 1 ]]);
 
 // bin 本体。units は高さ (U)。wall / floor_t は壁と床の厚さ。
-// label_d > 0 なら手前 (y=0) の壁の上端 (z = units*7) と面一で内側へ label_d
+// label_d > 0 なら壁の上端 (z = units*7) と面一で内側へ label_d
 // 張り出す厚さ label_t のラベル天板を付ける。天板の下は 45° の無垢のくさびが
 // 壁まで下りる (ブリッジもリブも無い。中身はスライサのインフィル任せ)。
 // 天板の先端と 45° 面の境目は半径 label_r で丸める
+// 全サイズで奥側（+Y）に置き、手前を取り出し口として空ける。
 module
 gfb_bin(cols,
         rows,
@@ -130,12 +131,13 @@ gfb_bin(cols,
             }
         }
         // ラベル天板と 45° くさび (内幅いっぱい、同じ断面)。壁へ 1 食い込ませた
-        // 矩形の柱なので、角の丸み (R3.75) の外へ出ないよう外形で切り取る
+        // 側壁にもgf_epsだけ重ね、接線上の退化面を避ける。外周は角丸の輪郭で切り取る。
         if (label_d > 0)
             intersection()
             {
-                translate([ -inner_w / 2, wall, 0 ]) rotate([ 90, 0, 90 ])
-                    linear_extrude(inner_w) polygon(
+                translate([ 0, rows * gf_pitch - 0.5, 0 ]) mirror([ 0, 1, 0 ])
+                    translate([ -inner_w / 2 - gf_eps, wall, 0 ]) rotate([ 90, 0, 90 ])
+                    linear_extrude(inner_w + 2 * gf_eps) polygon(
                         gfb_label_profile(label_d, label_t, h, label_r));
                 linear_extrude(top) gfb_footprint(cols, rows);
             }

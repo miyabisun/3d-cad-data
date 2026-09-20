@@ -1,5 +1,10 @@
 # 3D CAD ledger Update Log
 
+## 2026-09-20
+
+- [Gridfinity bin](designs/gridfinity-bin-4u.md)の全ラベル付きbin（4U/9U、計56種）は、
+  半セルの位置を保ったままラベルとくさびを奥へ移した。初期配置で手前の取り出し口を確保する。
+
 ## 2026-09-18
 
 - [マグカップホルダー](designs/mug-holder.md)は内径85.6mmでぐらつくとの報告を受け、

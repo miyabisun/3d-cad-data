@@ -39,8 +39,9 @@ def check_bin(stl, cols, rows, units, work):
     assert len(body) == 2
     loop_at(body, (-half, half, 0, depth))
     loop_at(body, (-half + 1.2, half - 1.2, 1.2, depth - 1.2))
-    # ラベルくさびを通る縦断面: 床、空洞、45度の下面、天板、薄いリップ。
-    side = section(stl, work, "y", 8)
+    # 全サイズでラベルは奥側、手前は取り出し口として空ける。
+    label_y = depth - 8
+    side = section(stl, work, "y", label_y)
     assert inside(side, (0, 5.5))
     empty_rect(side, (-half + 1.3, half - 1.3, 6, h - 7.3))
     for x in (0, -half + 1.3, half - 1.3):
@@ -48,6 +49,8 @@ def check_bin(stl, cols, rows, units, work):
         assert inside(side, (x, h - 0.1)) and not inside(side, (x, h + 0.1)), "label top"
     assert inside(side, (half - 0.6, h + 3)) and not inside(side, (half - 1.3, h + 3)), "thin lip"
     assert inside(side, (half - 0.6, h + 4)) and not inside(side, (half - 0.9, h + 4)), "lip chamfer"
+    opposite = section(stl, work, "y", depth - label_y)
+    empty_rect(opposite, (-half + 1.3, half - 1.3, 6, h + 0.1))
 
 
 def check_rotated(output, work):
@@ -67,7 +70,7 @@ def check_rotated(output, work):
         for cols in (1, 2, 3):
             feet = section(output / f"4u/{cols}x5.5.stl", work, "z", z)
             for foot in feet:
-                # 上から時計回り90度。半セルは左端、ラベルは左側になる。
+                # 上から時計回り90度。半セルは左端、ラベルは右側になる。
                 rotated = [(y - 115.25, cols * 21 - x) for x, y in foot]
                 # 各足/ソケットは凸形状。同じソケットに全頂点が入れば辺も収まる。
                 assert any(fits(socket, rotated) for socket in sockets), (cols, z, "rotated foot does not fit")

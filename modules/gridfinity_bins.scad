@@ -5,7 +5,7 @@ include <gridfinity_bin.scad>
 // ledger/designs/gridfinity-bin-4u.md が正本。
 // 通常binは4U/9U、X={1,1.5,2,2.5,3} × Y={1,2,3,4,5,5.5}。
 // 両軸に端数を持つ組み合わせはassetに置かない（各高さ28種）。
-// Xが横、Yがラベルの壁から奥、unitsが高さ（7mm単位）。
+// Xが横、Yが手前から奥、unitsが高さ（7mm単位）。全サイズでラベルは奥側。
 wall = 1.2;    // 0.4 ノズル 3 本
 floor_t = 1.2; // 底 (4.75) の上に載せる床。床の天面 z = 5.95
 label_d = 13;  // 12mm 幅のラベルシールを貼る天板の張り出し
