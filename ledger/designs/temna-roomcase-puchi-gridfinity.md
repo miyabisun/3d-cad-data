@@ -1,7 +1,7 @@
 ---
 type: Design
 title: 天馬ルームケースプチのGridfinityベースプレート
-description: 実測232×323mmの浅型引き出しへ、左端数列と奥側R5を持つ前後2枚を敷く
+description: 実測232×323mmの浅型引き出しへ、左端数列と奥側R4を持つ前後2枚を敷く
 status: active
 tags: [gridfinity, letter-case, tenma, baseplate]
 scope: assets/letter-case/temna-roomcase-puchi
@@ -13,10 +13,16 @@ scope: assets/letter-case/temna-roomcase-puchi
 製品・実測値・試作調整を分離し、`letter-case/` の下に製品フォルダを並べる。
 参照URLはuserが提示した商品確認先であり、設計寸法はuserの実測を採用する。
 
+## 後方の角Rを実測値へ更新（2026-09-22）
+
+userが印刷した測定チップでケース内側のRを確定したため、奥片の後方両隅をR5からR4mmへ変更する。
+外形幅・奥行き、セル配置、前後分割、前方と継ぎ目側の角は維持する。
+以下の試作履歴にあるR5は当時の値であり、現行値はR4mmとする。
+
 ## 量産採用（2026-09-15）
 
 userが横幅231mm版を印刷し、引き出しへスムーズに入ることを確認した。
-現行の外形231×321mm、左21mmの半セル列、奥側R5のまま量産用として採用する。
+この時点の外形231×321mm、左21mmの半セル列、奥側R5で量産用として採用した。
 
 ## 試作寸法の更新（2026-09-15）
 
@@ -40,7 +46,7 @@ userの指定で横幅を230mmから231mmへ広げ、左端を21mm（0.5セル�
 [製品README](../../assets/letter-case/temna-roomcase-puchi/README.md)を参照する。
 形状は `modules/temna_roomcase_puchi.scad` と共有Gridfinity moduleで定義する。
 検証は `python3 tests/roomcase-puchi.py`（STL外形、全ソケットの断面と角R、
-床なし、継ぎ目ピッチ、奥R5、閉曲面）。
+床なし、継ぎ目ピッチ、奥R4、閉曲面）。
 
 ## user 原文 (verbatim)
 
@@ -71,3 +77,10 @@ userの指定で横幅を230mmから231mmへ広げ、左端を21mm（0.5セル�
 
 > 231mmもスルスルでした。これで量産していきましょう。
 > iris-oyamaのレターケースも5.5の幅に変更してください。
+
+> Rを測定するチップをプリントしました。
+>
+> - tenmaのケース内側はR4mmで確定です。
+> - アイリスオーヤマのケース内側はR3mmで確定です。
+>
+> Gridfinity ベースプレートの後方部のRをそれ基準で作成し直してください。

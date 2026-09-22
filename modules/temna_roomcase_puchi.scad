@@ -6,7 +6,7 @@ drawer_w = 232;
 drawer_d = 323;
 fit_clearance = [ 0.5, 1 ]; // 片側の余裕 [左右, 前後]。左端を21mmの半セルにする
 socket_clearance = 0.1;
-back_corner_r = 5;
+back_corner_r = 4; // 測定チップで確定した内角R。奥片の奥側2隅に適用
 front_rows = 4;
 win_line = 2;
 

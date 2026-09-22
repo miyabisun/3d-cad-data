@@ -1,5 +1,11 @@
 # 3D CAD ledger Update Log
 
+## 2026-09-22
+
+- 測定チップで確定したケース内側のRに合わせ、ベースプレートの後方両隅を
+  [天馬](designs/temna-roomcase-puchi-gridfinity.md)はR4mm、
+  [アイリスオーヤマ](designs/letter-case-gridfinity.md)はR3mmへ更新した。
+
 ## 2026-09-20
 
 - [Gridfinity bin](designs/gridfinity-bin-4u.md)の全ラベル付きbin（4U/9U、計56種）は、

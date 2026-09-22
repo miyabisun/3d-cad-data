@@ -1,6 +1,6 @@
 # modules
 
-プロジェクト横断で再利用する共通モジュール。
+OpenSCADモデルが参照するモジュール。
 
 ## bolts.scad
 
@@ -49,9 +49,10 @@ M3 / M4 / M6 / M8 の各サイズに対応。
 
 ## gridfinity.scad
 
-Gridfinity ベースプレートの共通モジュール。ピッチ 42mm、ソケット輪郭は
+Gridfinity ベースプレートの共通モジュール。ピッチは42mm。
+ソケット輪郭は
 上端開口 41.5（R4）→ 45° 面取り 2.15 → 垂直 1.8（37.2 角・R1.85）→
-45° 面取り 0.7 → 底 35.8 角（R1.15）、深さ 4.65。
+45° 面取り 0.7 → 底 35.8 角（R1.15）。深さは4.65。
 
 | モジュール | 用途 |
 |-----------|------|
@@ -73,8 +74,8 @@ Gridfinity ベースプレートの共通モジュール。ピッチ 42mm、ソ�
 
 ## iris_oyama_a4_lcj.scad
 
-`assets/letter-case/iris-oyama-a4-lcj/` の前片・奥片が include する project 固有の共通値と
-`letter_case_plate(rows, rim)`。共有モジュールではないが、単体では何も描かない
+`assets/letter-case/iris-oyama-a4-lcj/` の前片・奥片が include する共通値。
+形状は `letter_case_plate(rows, rim)` で生成する。単体では何も描かない
 ので render 対象の `assets/` には置かない。
 
 ## gridfinity_bin.scad
@@ -90,15 +91,16 @@ Gridfinity bin (箱) の共有 module。`gridfinity.scad` のピッチ・角丸�
 
 ## gridfinity_bins.scad
 
-`assets/gridfinity-bin/` の bin 群の共通値 (壁 1.2・床 1.2・ラベル天板 13×1・
-境目 R1、カードケースのカード 54×85.6 (ID-1)・余裕 1・手前の壁からの距離 10・隅 R3・縦エッジ R2・窪みの床 2.95) と、サイズ 3 引数の
-払い出し口 `gridfinity_bin(cols, rows, units)` / `gridfinity_card_case(cols, rows, units)`。
+`assets/gridfinity-bin/` の bin 群の共通値と、サイズ3引数の生成モジュール。
+共通値は壁1.2・床1.2・ラベル天板13×1・境目R1。
+カードケースはカード54×85.6 (ID-1)・余裕1・手前の壁からの距離10・隅R3・縦エッジR2・窪みの床2.95。
+生成には `gridfinity_bin(cols, rows, units)` / `gridfinity_card_case(cols, rows, units)` を使う。
 単体では何も描かない。通常binはX={1,1.5,2,2.5,3} × Y={1,2,3,4,5,5.5} ×
 units={4,9}から両軸端数を除く56種。端数の足はX左端・Y手前に置く。
 カードケースはgoods配下の2×3×4。
 
 ## temna_roomcase_puchi.scad
 
-`assets/letter-case/temna-roomcase-puchi/` の前後片が include する天馬専用の
-実測値・調整値と `roomcase_puchi_plate(part_rows, rear)`。横幅の端数は左端セル、
-奥行きの端数はX筋交い付きの縁にし、奥の左右角をR5にする。
+`assets/letter-case/temna-roomcase-puchi/` の前後片が include する天馬専用の実測値・調整値。
+形状は `roomcase_puchi_plate(part_rows, rear)` で生成する。横幅の端数は左端セル、
+奥行きの端数はX筋交い付きの縁にし、奥の左右角をR4にする。
