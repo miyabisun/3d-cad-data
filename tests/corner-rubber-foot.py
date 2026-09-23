@@ -20,10 +20,14 @@ with tempfile.TemporaryDirectory(prefix="corner-rubber-foot-") as temp:
 
     # M8ナットはL字内側から挿入。下に厚3.2の座面を残して抜けを止める。
     r = 13.3 / math.sqrt(3)
+    half_extent = r * math.cos(math.radians(15))
     for z in [0.1, 3.19]:
         loop_at(section(foot, work, "z", z), (12.8, 21.2, 12.8, 21.2))
     for z in [3.21, 9.99]:
-        loop_at(section(foot, work, "z", z), (10.35, 23.65, 17 - r, 17 + r))
+        pocket = loop_at(section(foot, work, "z", z), (17 - half_extent, 17 + half_extent) * 2)
+        # L字の二等分線方向が対辺幅13.3、その直交方向が対角幅となる。
+        diagonal = [((x + y - 34) / math.sqrt(2), (y - x) / math.sqrt(2)) for x, y in pocket]
+        near(bounds(diagonal), (-6.65, 6.65, -r, r))
 
     # 両面のM6穴は既存と同じ中心15.7/Z15.2と座面4.6を維持。
     reflected = work / "reflected.scad"
@@ -47,7 +51,7 @@ with tempfile.TemporaryDirectory(prefix="corner-rubber-foot-") as temp:
         near(bounds(closed_mesh(output)), (40, 41, 0, 1, 0, 1))
 
     # AF13×厚6.5の金属ナットを、座面接触から5µm離して上から挿入。
-    nut = 'translate([17,17,3.205]) rotate([0,0,30]) nut_trap(13,6.5,center=false);'
+    nut = 'translate([17,17,3.205]) rotate([0,0,15]) nut_trap(13,6.5,center=false);'
     no_collision(f'intersection() {{ import("{foot}"); hull() {{ {nut} translate([0,0,30]) {{ {nut} }} }} }}')
     # M8を先に入れてから、M6ナットを各面へ入れた状態での非干渉。
     m6_nuts = '''

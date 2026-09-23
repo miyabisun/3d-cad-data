@@ -67,8 +67,9 @@ module corner_acrylic_support(extra_m6_z = undef, m8_foot = false) {
       // M8軸はR5のある高さまで通るため、全高にわたって逃がす。
       translate([m4_center, m4_center, -0.1]) m8_bolt_hole(height + 0.2);
       // 元のM4と同じ内側挿入。下に厚3.2の座面を残し、上まで挿入経路を開ける。
+      // 対辺の法線をL字の二等分線45度へ向ける（六角の初期法線30度＋15度）。
       translate([m4_center, m4_center, base - 6.8])
-        rotate([0, 0, 30])
+        rotate([0, 0, 15])
           m8_nut_trap(height - base + 6.8 + 0.1);
     } else {
       translate([m4_center, m4_center, -0.1]) m4_bolt_hole(base + 0.2);
