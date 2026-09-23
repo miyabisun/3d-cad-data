@@ -66,8 +66,9 @@ module corner_acrylic_support(extra_m6_z = undef, m8_foot = false) {
     if (m8_foot) {
       // M8軸はR5のある高さまで通るため、全高にわたって逃がす。
       translate([m4_center, m4_center, -0.1]) m8_bolt_hole(height + 0.2);
-      // 下から入れたナットの上面で荷重を受ける。座面は厚3.2。
-      translate([m4_center, m4_center, -0.1]) m8_nut_trap(6.8 + 0.1);
+      // 元のM4と同じ内側挿入。下に厚3.2の座面を残し、上まで挿入経路を開ける。
+      translate([m4_center, m4_center, base - 6.8])
+        m8_nut_trap(height - base + 6.8 + 0.1);
     } else {
       translate([m4_center, m4_center, -0.1]) m4_bolt_hole(base + 0.2);
       // R5と重なる箇所も上まで開放し、ナットを真っ直ぐ挿入できるようにする。

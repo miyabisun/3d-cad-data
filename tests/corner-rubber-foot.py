@@ -18,12 +18,12 @@ with tempfile.TemporaryDirectory(prefix="corner-rubber-foot-") as temp:
     render(SOURCE, foot, binary=True)
     near(bounds(closed_mesh(foot)), (0, 27, 0, 27, 0, 25.9))
 
-    # M8ナットは下面から挿入。深6.8の上に厚3.2の座面を残す。
+    # M8ナットはL字内側から挿入。下に厚3.2の座面を残して抜けを止める。
     r = 13.3 / math.sqrt(3)
-    for z in [0.1, 6.79]:
-        loop_at(section(foot, work, "z", z), (17 - r, 17 + r, 10.35, 23.65))
-    for z in [6.81, 9.99]:
+    for z in [0.1, 3.19]:
         loop_at(section(foot, work, "z", z), (12.8, 21.2, 12.8, 21.2))
+    for z in [3.21, 9.99]:
+        loop_at(section(foot, work, "z", z), (17 - r, 17 + r, 10.35, 23.65))
 
     # 両面のM6穴は既存と同じ中心15.7/Z15.2と座面4.6を維持。
     reflected = work / "reflected.scad"
@@ -46,9 +46,15 @@ with tempfile.TemporaryDirectory(prefix="corner-rubber-foot-") as temp:
         render(source, output, binary=True)
         near(bounds(closed_mesh(output)), (40, 41, 0, 1, 0, 1))
 
-    # AF13×厚6.5の金属ナットを、天井接触から5µm離して下から挿入。
-    nut = 'translate([17,17,0.295]) nut_trap(13,6.5,center=false);'
-    no_collision(f'intersection() {{ import("{foot}"); hull() {{ {nut} translate([0,0,-20]) {{ {nut} }} }} }}')
+    # AF13×厚6.5の金属ナットを、座面接触から5µm離して上から挿入。
+    nut = 'translate([17,17,3.205]) nut_trap(13,6.5,center=false);'
+    no_collision(f'intersection() {{ import("{foot}"); hull() {{ {nut} translate([0,0,30]) {{ {nut} }} }} }}')
+    # M8を先に入れてから、M6ナットを各面へ入れた状態での非干渉。
+    m6_nuts = '''
+      translate([7.1,15.7,15.2]) hex_x_flat_up(10,5);
+      translate([15.7,7.1,15.2]) hex_y_flat_up(10,5);
+    '''
+    no_collision(f'intersection() {{ {nut} union() {{ {m6_nuts} }} }}')
     # M8軸は底板より上のR5も通過できること。M6×12の軸も同時に検査。
     shanks = '''
       translate([17,17,-1]) cylinder(d=8,h=28,$fn=64);
@@ -57,18 +63,20 @@ with tempfile.TemporaryDirectory(prefix="corner-rubber-foot-") as temp:
     '''
     no_collision(f'intersection() {{ import("{foot}"); union() {{ {shanks} }} }}')
 
-    # 両方のL字端面の輪郭を実STLで照合する。
+    # 大きくなったM8ナットの挿入経路で内縁が一部切れるが、L字接触面は残す。
     acrylic = work / "acrylic.stl"
     render(ROOT / "assets/steel-rack/500x400/corner_acrylic_support.scad", acrylic, binary=True)
-    def contact_vertices(stl):
-        return sorted((round(x, 3), round(y, 3)) for loop in section(stl, work, "z", 25.89) for x, y in loop)
-    assert contact_vertices(foot) == contact_vertices(acrylic), "L contact faces differ"
+    contact = section(foot, work, "z", 25.89)
+    assert len(contact) == 1, "L contact face is disconnected"
+    outline = contact[0]
+    contact_area = abs(sum(x * by - bx * y for (x, y), (bx, by) in zip(outline, outline[1:] + outline[:1]))) / 2
+    assert contact_area > 400, ("lost L contact area", contact_area)
 
     # 使用姿勢は脚の平面が下、アクリル受けの平面が上。公称Z=25.9で接触。
     # STL座標丸めのゼロ厚接触を除くため、衝突検査では上側を5µm離す。
-    no_collision(f'intersection() {{ import("{foot}"); translate([0,0,51.805]) mirror([0,0,1]) import("{acrylic}"); }}')
+    no_collision(f'intersection() {{ import("{foot}"); translate([0,0,51.805]) rotate(a=180,v=[1,1,0]) import("{acrylic}"); }}')
     assembled = work / "upper.scad"
-    assembled.write_text(f'translate([0,0,51.8]) mirror([0,0,1]) import("{acrylic}");\n')
+    assembled.write_text(f'translate([0,0,51.8]) rotate(a=180,v=[1,1,0]) import("{acrylic}");\n')
     upper = work / "upper.stl"
     render(assembled, upper, binary=True)
     r = 6.4 / math.sqrt(3)
