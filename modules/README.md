@@ -95,8 +95,8 @@ Gridfinity bin (箱) の共有 module。`gridfinity.scad` のピッチ・角丸�
 共通値は壁1.2・床1.2・ラベル天板13×1・境目R1。
 カードケースはカード54×85.6 (ID-1)・余裕1・手前の壁からの距離10・隅R3・縦エッジR2・窪みの床2.95。
 生成には `gridfinity_bin(cols, rows, units)` / `gridfinity_card_case(cols, rows, units)` を使う。
-単体では何も描かない。通常binはX={1,1.5,2,2.5,3} × Y={1,2,3,4,5,5.5} ×
-units={4,9}から両軸端数を除く56種。端数の足はX左端・Y手前に置く。
+単体では何も描かない。通常binはX={1,1.5,2,2.5,3} × Y={1,2,3,4,5,5.5,6} ×
+units={4,9}から両軸端数を除く66種。端数の足はX左端・Y手前に置く。
 カードケースはgoods配下の2×3×4。
 
 ## temna_roomcase_puchi.scad

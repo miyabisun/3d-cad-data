@@ -363,7 +363,7 @@ closed_mesh(Path(sys.argv[1]))
 PYEOF
 }
 
-# 全56種の検証はgridfinity-bin-matrix.py。このテストは整数binと専用品の詳細断面を保つ。
+# 全サイズの検証はgridfinity-bin-matrix.py。このテストは整数binと専用品の詳細断面を保つ。
 CONTRACT="CONTRACT units=4 pitch=42 outer=41.5 h=28 lip=4.4 base=35.6/37.2/41.5 base_h=4.75 wall=1.2 floor_top=5.95 label=13x1 wedge=45 fillet=1"
 for bin_size in 1x1 1x2 3x5; do
   c=${bin_size%x*} r=${bin_size#*x}

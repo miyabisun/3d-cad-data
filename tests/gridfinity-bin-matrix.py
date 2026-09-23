@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""4U/9Uの全56種をSTL実測し、5.5セル版の回転後の嵌合も確認する。"""
+"""4U/9Uの全66種をSTL実測し、5.5セル版の回転後の嵌合も確認する。"""
 
 from concurrent.futures import ThreadPoolExecutor
 from itertools import product
@@ -11,7 +11,7 @@ import tempfile
 from stl_geometry import bounds, closed_mesh, empty_rect, inside, loop_at, near, render, section
 
 ROOT = Path(__file__).resolve().parents[1]
-SIZES = [(c, r, u) for c, r, u in product((1, 1.5, 2, 2.5, 3), (1, 2, 3, 4, 5, 5.5), (4, 9))
+SIZES = [(c, r, u) for c, r, u in product((1, 1.5, 2, 2.5, 3), (1, 2, 3, 4, 5, 5.5, 6), (4, 9))
          if not (c % 1 and r % 1)]
 
 

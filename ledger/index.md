@@ -81,5 +81,5 @@ Designの本文はuserの当該発言を`## user 原文 (verbatim)`見出しの�
 - [レターケースのGridfinityベースプレート](designs/letter-case-gridfinity.md) - アイリスオーヤマ A4-LCJへ敷く、左半セル列付き5.5×7セルの前後2分割ベースプレート
 - [スチールラック 500x400](designs/steel-rack-500x400.md) - 汎用L字アングルとアクリル天板で安価に組む自作ラック。接合部を3Dプリントで埋め、スライドレール式のPC2台をラックへ収容するまで到達した
 - [ゲームデスクのイヤホン・マイク置き](designs/game-desk-earphone-mic-holder.md) - デスククランプの立ち上がり板へ皿ネジ1本で留め、イヤホンケースとピンマイクケースを左右に受ける単一プリント部品
-- [Gridfinity 4U/9U bin（薄いリップ・ラベル棚）](designs/gridfinity-bin-4u.md) - レターケースのベースプレートへ並べる4U/9Uの通常bin56種とgoodsのカードケース。両軸端数は除外。底は穴なし、リップは薄い。12mmラベルシール用の13mm棚は全サイズで奥側
+- [Gridfinity 4U/9U bin（薄いリップ・ラベル棚）](designs/gridfinity-bin-4u.md) - レターケースのベースプレートへ並べる4U/9Uの通常bin66種とgoodsのカードケース。両軸端数は除外。底は穴なし、リップは薄い。12mmラベルシール用の13mm棚は全サイズで奥側
 - [簡易クランプの手回しノブ](designs/clamp-hand-knob.md) - 簡易クランプのM8ボルトを工具無しで締められるよう、先端の六角へ噛ませて回す楕円レバーのノブ
