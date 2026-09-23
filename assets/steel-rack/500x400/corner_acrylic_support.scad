@@ -12,16 +12,16 @@ use <../../../modules/slide_rail_outer_bracket.scad>
 module corner_acrylic_support(extra_m6_z = undef, m8_foot = false) {
   arm = 27;
   wall = 10;
-  base = 10;
+  base = m8_foot ? 14 : 10; // ゴム足用は底面側へ4mm増厚。印刷底面はZ=0。
   outer_r = 2; // 柱に沿う縦稜。平らな接触面と底面は残す。
   inner_r = 5; // 壁同士と底板/壁の凹隅を補強。
   tip_r = 10; // ラック中央側の自由角。中心はM4穴と同じ17×17。
 
   m6_pass_flat = 6.4;
   m6_nut_flat = 10.4;
-  m6_nut_depth = 5.4; // 厚5のナット同士が交差しないよう座面を外側へ寄せる。
+  m6_nut_depth = m8_foot ? 5.6 : 5.4; // 脚用はさらに0.2柱側へ寄せ、M8の遊びも逃がす。
   m6_center = 29.2 - 2 - 8 - 7 / 2; // 自由端→穴縁8、穴幅7: 内側基準15.7。
-  m6_z = base + m6_nut_flat / 2; // 底板を削らず座面へ最も近づける中心15.2。
+  m6_z = base + m6_nut_flat / 2; // 底板を削らない中心。通常15.2、ゴム足用19.2。
   m6_levels = is_undef(extra_m6_z) ? [m6_z] : [m6_z, extra_m6_z];
   height = max(m6_levels) + m6_pass_flat / 2 + 7.5; // 自由端側の余肉を維持。
   m6_seat = wall - m6_nut_depth;
@@ -37,9 +37,10 @@ module corner_acrylic_support(extra_m6_z = undef, m8_foot = false) {
   module m6_cut(z) {
     translate([m6_seat / 2, m6_center, z])
       hex_x_flat_up(m6_pass_flat, m6_seat + 0.2);
-    // 反対側の壁・R5に入口を塞がせない挿入経路。六角は水平な上辺で印刷。
-    translate([(m6_seat + arm + 0.1) / 2, m6_center, z])
-      hex_x_flat_up(m6_nut_flat, arm + 0.1 - m6_seat);
+    // 脚用は直交するM6穴の中心で止め、向こう側の壁を削らない。
+    nut_end = m8_foot ? m6_center : arm + 0.1;
+    translate([(m6_seat + nut_end) / 2, m6_center, z])
+      hex_x_flat_up(m6_nut_flat, nut_end - m6_seat);
   }
 
   difference() {
@@ -64,13 +65,14 @@ module corner_acrylic_support(extra_m6_z = undef, m8_foot = false) {
     }
 
     if (m8_foot) {
+      m8_nut_depth = 4.8; // 従来の6.8から2mm浅くし、厚6.5のナットは1.7mm突出。
       // M8軸はR5のある高さまで通るため、全高にわたって逃がす。
       translate([m4_center, m4_center, -0.1]) m8_bolt_hole(height + 0.2);
-      // 元のM4と同じ内側挿入。下に厚3.2の座面を残し、上まで挿入経路を開ける。
+      // 内側挿入。座面厚9.2。ナットの切削はM6中心高さで止める。
       // 対辺の法線をL字の二等分線45度へ向ける（六角の初期法線30度＋15度）。
-      translate([m4_center, m4_center, base - 6.8])
+      translate([m4_center, m4_center, base - m8_nut_depth])
         rotate([0, 0, 15])
-          m8_nut_trap(height - base + 6.8 + 0.1);
+          m8_nut_trap(m6_z - base + m8_nut_depth);
     } else {
       translate([m4_center, m4_center, -0.1]) m4_bolt_hole(base + 0.2);
       // R5と重なる箇所も上まで開放し、ナットを真っ直ぐ挿入できるようにする。
