@@ -9,7 +9,7 @@ use <../../../modules/slide_rail_outer_bracket.scad>
 // M6は柱の外から。ナットは内側から入れ、座面へ密着させる。
 // 寸法・挿入経路はSTL検証対象。荷重試験と実物の嵌合は未実施。
 // 最上部用は追加のM6中心を渡す。Zは座面から柱に沿って下向きの距離。
-module corner_acrylic_support(extra_m6_z = undef) {
+module corner_acrylic_support(extra_m6_z = undef, m8_foot = false) {
   arm = 27;
   wall = 10;
   base = 10;
@@ -63,10 +63,17 @@ module corner_acrylic_support(extra_m6_z = undef) {
       mirror([1, -1, 0]) m6_cut(z);
     }
 
-    translate([m4_center, m4_center, -0.1]) m4_bolt_hole(base + 0.2);
-    // R5と重なる箇所も上まで開放し、ナットを真っ直ぐ挿入できるようにする。
-    translate([m4_center, m4_center, base - m4_nut_depth])
-      nut_trap(m4_nut_flat, height - base + m4_nut_depth + 0.1, center = false);
+    if (m8_foot) {
+      // M8軸はR5のある高さまで通るため、全高にわたって逃がす。
+      translate([m4_center, m4_center, -0.1]) m8_bolt_hole(height + 0.2);
+      // 下から入れたナットの上面で荷重を受ける。座面は厚3.2。
+      translate([m4_center, m4_center, -0.1]) m8_nut_trap(6.8 + 0.1);
+    } else {
+      translate([m4_center, m4_center, -0.1]) m4_bolt_hole(base + 0.2);
+      // R5と重なる箇所も上まで開放し、ナットを真っ直ぐ挿入できるようにする。
+      translate([m4_center, m4_center, base - m4_nut_depth])
+        nut_trap(m4_nut_flat, height - base + m4_nut_depth + 0.1, center = false);
+    }
   }
 }
 
