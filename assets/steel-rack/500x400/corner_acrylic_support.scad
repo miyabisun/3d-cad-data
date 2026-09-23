@@ -6,7 +6,8 @@ use <../../../modules/slide_rail_outer_bracket.scad>
 // 底板を下に印刷し、使用時は反転して平らなZ=0面でアクリルを受ける。
 // M4ナットは印刷時の上側（内側）から挿入。使用時には天板の裏側となる。
 // M4中心17×17は樹脂部品のX=0/Y=0基準。板の角もこの基準へ合わせる。
-// M6は柱の外から。ナットは内側から入れ、座面へ密着させる。
+// M6は柱の外から。ナットは内側へ斜めから差し込み、座面へ寄せて穴中心へ合わせる。
+// アクリル受けはM6ナットを先に入れ、その後M4でアクリルを締結する。
 // 寸法・挿入経路はSTL検証対象。荷重試験と実物の嵌合は未実施。
 // 最上部用は追加のM6中心を渡す。Zは座面から柱に沿って下向きの距離。
 module corner_acrylic_support(extra_m6_z = undef, m8_foot = false) {
@@ -37,10 +38,9 @@ module corner_acrylic_support(extra_m6_z = undef, m8_foot = false) {
   module m6_cut(z) {
     translate([m6_seat / 2, m6_center, z])
       hex_x_flat_up(m6_pass_flat, m6_seat + 0.2);
-    // 脚用は直交するM6穴の中心で止め、向こう側の壁を削らない。
-    nut_end = m8_foot ? m6_center : arm + 0.1;
-    translate([(m6_seat + nut_end) / 2, m6_center, z])
-      hex_x_flat_up(m6_nut_flat, nut_end - m6_seat);
+    // 直交するM6穴の中心で止め、向こう側の壁を削らない。
+    translate([(m6_seat + m6_center) / 2, m6_center, z])
+      hex_x_flat_up(m6_nut_flat, m6_center - m6_seat);
   }
 
   difference() {

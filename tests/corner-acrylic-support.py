@@ -40,6 +40,13 @@ def check_support(source, height, m6_levels):
         assert all(abs(math.hypot(x - 15, y - 15) - 5) < 0.03 for x, y in arc)
         assert inside(loops, (11, 11)) and not inside(loops, (12, 12))
 
+        # M6ナットの切削を直交穴の中心で止め、向こう側の壁を残す。
+        for z in m6_levels:
+            loops = section(stl, work, "z", z + 0.1)
+            for entry, beyond in [((15.6, 9.8), (22, 9.8)), ((9.8, 15.6), (9.8, 22))]:
+                assert not inside(loops, entry)
+                assert inside(loops, beyond), "M6 nut corridor cuts the opposite wall"
+
         # X/Y両面を同じ測り方で検証。実STLを鏡映し、片側の穴欠落も検出する。
         reflected = work / "reflected.scad"
         reflected.write_text(f'mirror([1,-1,0]) import("{stl}");\n')
@@ -54,7 +61,7 @@ def check_support(source, height, m6_levels):
             loops = section(part, work, "y", 15.7)
             for z in m6_levels:
                 empty_rect(loops, (-1, 4.59, z - 3.19, z + 3.19))
-                empty_rect(loops, (4.61, 28, z - 5.19, z + 5.19))
+                empty_rect(loops, (4.61, 15.69, z - 5.19, z + 5.19))
             # 底板と壁のR5。ナット経路が切り欠く範囲を除いて実曲面を測る。
             loops = section(part, work, "y", 24)
             arc = [(x, z) for loop in loops for x, z in loop if 10 < x < 12 and 11.5 < z < 14.5]
@@ -76,11 +83,22 @@ def check_support(source, height, m6_levels):
                 a = f'translate([7.1,{15.7-shift},{z}]) hex_x_flat_up(10,5);'
                 b = f'translate([{15.7-shift},7.1,{z}]) hex_y_flat_up(10,5);'
                 no_collision(f'intersection() {{ {a} {b} }}')
-                # 挿入方向への掃引体全体で、途中にあるフィレットとの衝突も検出する。
+                # 着座時の嵌合。挿入は下の有限経路で別途検査する。
                 for nut, vector in [(a, [30, 0, 0]), (b, [0, 30, 0])]:
                     # 座面・限界位置の側面接触から5µm離し、STL丸めによるゼロ厚面を除く。
                     clearance = [0.005, 0.005, 0] if shift else [0.005 if value else 0 for value in vector]
-                    no_collision(f'intersection() {{ import("{stl}"); translate({clearance}) hull() {{ {nut} translate({vector}) {{ {nut} }} }} }}')
+                    no_collision(f'intersection() {{ import("{stl}"); translate({clearance}) {{ {nut} }} }}')
+            # 内側から斜めに入れ、横へ0.15・上へ0.1逃がした姿勢で座面へ寄せる。
+            waypoints = [(32, 32, z + 0.1), (16.1, 17, z + 0.1), (16.1, 15.85, z + 0.1), (7.105, 15.85, z + 0.1), (7.105, 15.7, z)]
+            path_x = 'union() {' + ''.join(
+                f'hull() {{ translate({list(a)}) hex_x_flat_up(10,5); translate({list(b)}) hex_x_flat_up(10,5); }}'
+                for a, b in zip(waypoints, waypoints[1:])
+            ) + '}'
+            path_y = f'mirror([1,-1,0]) {{ {path_x} }}'
+            for path in [path_x, path_y]:
+                no_collision(f'intersection() {{ import("{stl}"); {path} }}')
+            seated_x = f'translate([7.1,15.7,{z}]) hex_x_flat_up(10,5);'
+            no_collision(f'intersection() {{ {path_y} {seated_x} }}')
         m4 = 'translate([17,17,6.605]) nut_trap(d=7,h=3.2,center=false);'
         no_collision(f'intersection() {{ import("{stl}"); hull() {{ {m4} translate([0,0,{height}]) {{ {m4} }} }} }}')
         # 板厚2にM6×12、アクリル厚5にM4×16を通したときの軸部分の経路。
