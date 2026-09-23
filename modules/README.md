@@ -104,3 +104,11 @@ units={4,9}から両軸端数を除く66種。端数の足はX左端・Y手前�
 `assets/letter-case/temna-roomcase-puchi/` の前後片が include する天馬専用の実測値・調整値。
 形状は `roomcase_puchi_plate(part_rows, rear)` で生成する。横幅の端数は左端セル、
 奥行きの端数はX筋交い付きの縁にし、奥の左右角をR4にする。
+
+## gridfinity_cable_holder.scad
+
+天馬用ケーブルホルダーの本体 `gfc_holder(rows)` と平置きの仕切り板 `gfc_divider(rows)`。
+奥行きは3または4マス、横幅5.5マス・高さ9U。
+22組の溝を10mmピッチで配置し、板厚2mmに対する溝幅は2.4mm。
+前後壁の外皮1.2mmを残し、溝を上端まで開く。
+印刷方向と調整値は[製品README](../assets/gridfinity-bin/goods/cable-holder/README.md)を参照する。

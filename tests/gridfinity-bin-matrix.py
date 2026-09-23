@@ -79,7 +79,11 @@ def check_rotated(output, work):
 
 def main(output):
     sources = ROOT / "assets/gridfinity-bin"
-    expected = {f"{u}u/{c}x{r}.scad" for c, r, u in SIZES} | {"goods/card_case_2x3x4u.scad"}
+    expected = {f"{u}u/{c}x{r}.scad" for c, r, u in SIZES} | {
+        "goods/card_case_2x3x4u.scad",
+        "goods/cable-holder/3x5.5x9u.scad", "goods/cable-holder/4x5.5x9u.scad",
+        "goods/cable-holder/divider_3.scad", "goods/cable-holder/divider_4.scad",
+    }
     actual = {str(p.relative_to(sources)) for p in sources.rglob("*.scad")}
     assert actual == expected, ("asset matrix", sorted(expected - actual), sorted(actual - expected))
 
