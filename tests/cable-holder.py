@@ -59,14 +59,47 @@ def main(output, sources=SOURCES):
             plate_bounds = bounds(closed_mesh(plate))
             near(plate_bounds, (-length / 2, length / 2, 0, 57.05, 0, 2))
             profile = section(plate, work, "z", 1)
-            assert len(profile) == 1, "divider must be one U-shaped plate"
-            empty_rect(profile, (-length / 2 + 22, length / 2 - 22, 18, 58))
-            assert inside(profile, (0, 17.95)) and not inside(profile, (0, 18.05)), "U bottom"
+            assert len(profile) == 3, "divider needs two enclosed through-windows"
+            outer = loop_at(profile, (-length / 2, length / 2, 0, 57.05))
+            assert inside(profile, (0, 39.90)) and not inside(profile, (0, 39.97)), "70% center height"
+            # 中央から端へ緩やかに上がり、上端の平坦部へ水平につながる。
+            for fraction, height in ((0, 39.935), (0.5, 48.4925), (1, 57.05)):
+                x = (length / 2 - 10) * fraction
+                assert inside(profile, (x, height - 0.04)) and not inside(profile, (x, height + 0.04)), "shallow U curve"
+            empty_rect(profile, (-length / 2 + 15, -10, 10, 29))
+            empty_rect(profile, (10, length / 2 - 15, 10, 29))
+            for y in (16, 20, 24):
+                assert inside(profile, (0, y)) and inside(profile, (4.99, y)), "10mm center rib"
+                assert not inside(profile, (5.01, y)), "window beside rib"
             for sign in (-1, 1):
                 assert inside(profile, (sign * (length / 2 - 5), 56.5)), "U leg"
-                center = (sign * (length / 2 - 22), 30)
-                arc = [p for p in profile[0] if 0.05 < sign * (p[0] - center[0]) < 11.95 and 18.05 < p[1] < 29.95]
-                assert len(arc) >= 5 and all(abs(math.dist(p, center) - 12) < 0.03 for p in arc), "U corner R12"
+                center = (sign * (length / 2 - 4), 53.05)
+                arc = [p for p in outer if p[1] > 53.1 and sign * (p[0] - center[0]) > 0.05]
+                assert len(arc) >= 5 and all(abs(math.dist(p, center) - 4) < 0.03 for p in arc), "tip R4"
+                assert inside(profile, (sign * (length / 2 - 5), 25)), "solid insertion end"
+            # 貫通窓の底は10mm、角はR5。上縁・底・中央柱に10mm残す。
+            holes = [loop for loop in profile if loop is not outer]
+            for hole in holes:
+                x0, x1, y0, y1 = bounds(hole)
+                near((y0,), (10,))
+                center = (x0 + 5, 15)
+                arc = [p for p in hole if p[0] < center[0] - 0.05 and p[1] < 14.95]
+                assert len(arc) >= 5 and all(abs(math.dist(p, center) - 5) < 0.03 for p in arc), "window R5"
+                assert inside(profile, ((x0 + x1) / 2, 9.99)), "10mm bottom rail"
+                for point in hole:
+                    distances = []
+                    for a, b in zip(outer, outer[1:] + outer[:1]):
+                        dx, dy = b[0] - a[0], b[1] - a[1]
+                        t = max(0, min(1, ((point[0] - a[0]) * dx + (point[1] - a[1]) * dy) / (dx * dx + dy * dy)))
+                        distances.append(math.dist(point, (a[0] + t * dx, a[1] + t * dy)))
+                    assert min(distances) >= 9.97, "10mm outer frame"
+            areas = [abs(sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(loop, loop[1:] + loop[:1]))) / 2 for loop in [outer, *holes]]
+            assert sum(areas[1:]) > areas[0] * 0.25, "windows must remove meaningful material"
+            for z in (0.1, 1.9):
+                face = section(plate, work, "z", z)
+                assert len(face) == 3, "windows must go through both faces"
+                for x in (-length / 4, length / 4):
+                    empty_rect(face, (x - 5, x + 5, 15, 25))
 
             # 実測した板の幅・厚さで22位置の挿入経路を掃引し、本体と交差しないこと。
             # 床に接する面だけは0.01mm浮かせて、接触を体積干渉と区別する。
