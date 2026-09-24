@@ -6,13 +6,13 @@
 
 ## モデルを選ぶ
 
-| 用途 | モデル |
-|---|---|
-| 引き出し収納 | [レターケース用ベースプレート](assets/letter-case/README.md)、[Gridfinity bin](assets/gridfinity-bin/README.md) |
-| ラック・机まわり | [500×400mmスチールラック](assets/steel-rack/500x400/README.md)、[マグカップホルダー](assets/clamp/mug-holder/README.md) |
-| モニターアーム | [エルゴトロン取付用ホルダー](assets/ergotron/README.md) |
-| ゲームコントローラー | [レバーレス筐体・ボタン収納](assets/leverless/README.md) |
-| 室内の取付・補修 | [ライトスタンド](assets/work-room/README.md)、[ドア用治具](assets/work-room/door/README.md)、[排水ホース接続](assets/laundry/README.md) |
+| 用途                 | モデル                                                                                                                                  |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 引き出し収納         | [レターケース用ベースプレート](assets/letter-case/README.md)、[Gridfinity bin](assets/gridfinity-bin/README.md)                         |
+| ラック・机まわり     | [500×400mmスチールラック](assets/steel-rack/500x400/README.md)、[マグカップホルダー](assets/clamp/mug-holder/README.md)                 |
+| モニターアーム       | [エルゴトロン取付用ホルダー](assets/ergotron/README.md)                                                                                 |
+| ゲームコントローラー | [レバーレス筐体・ボタン収納](assets/leverless/README.md)                                                                                |
+| 室内の取付・補修     | [ライトスタンド](assets/work-room/README.md)、[ドア用治具](assets/work-room/door/README.md)、[排水ホース接続](assets/laundry/README.md) |
 
 ## STLを作る
 
@@ -45,6 +45,10 @@ OpenSCADの画面で編集する場合も、`assets/`のSCADを開きます。
 対応する設計や印刷条件は[台帳](ledger/index.md)から辿れます。
 
 ## 編集とプレビュー
+
+3MF対応に向けた[多色プリントの共通規約](docs/multi-material.md)を公開しています。
+SCAD・scad-live・orca-server間の`primary`・`secondary`の指定方法を定めた仕様書です。
+現在のSTLによる利用手順は以下のとおりです。
 
 ブラウザでプレビューする場合は、別途[scad-live](https://github.com/miyabi-sunny-side/scad-live)を
 導入し、このリポジトリのルートで`scad-live`を実行します。
