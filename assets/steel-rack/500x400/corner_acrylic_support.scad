@@ -9,8 +9,8 @@ use <../../../modules/slide_rail_outer_bracket.scad>
 // M6は柱の外から。ナットは内側へ斜めから差し込み、座面へ寄せて穴中心へ合わせる。
 // アクリル受けはM6ナットを先に入れ、その後M4でアクリルを締結する。
 // 寸法・挿入経路はSTL検証対象。荷重試験と実物の嵌合は未実施。
-// 最上部用は追加のM6中心を渡す。Zは座面から柱に沿って下向きの距離。
-module corner_acrylic_support(extra_m6_z = undef, m8_foot = false) {
+// 最上部用はM6中心高さの配列を渡す。Zは座面から柱に沿って下向きの距離。
+module corner_acrylic_support(m6_levels = undef, m8_foot = false) {
   arm = 27;
   wall = 10;
   base = m8_foot ? 14 : 10; // ゴム足用は底面側へ4mm増厚。印刷底面はZ=0。
@@ -22,15 +22,16 @@ module corner_acrylic_support(extra_m6_z = undef, m8_foot = false) {
   m6_nut_flat = 10.4;
   m6_nut_depth = m8_foot ? 5.6 : 5.4; // 脚用はさらに0.2柱側へ寄せ、M8の遊びも逃がす。
   m6_center = 29.2 - 2 - 8 - 7 / 2; // 自由端→穴縁8、穴幅7: 内側基準15.7。
-  m6_z = base + m6_nut_flat / 2; // 底板を削らない中心。通常15.2、ゴム足用19.2。
-  m6_levels = is_undef(extra_m6_z) ? [m6_z] : [m6_z, extra_m6_z];
-  height = max(m6_levels) + m6_pass_flat / 2 + 7.5; // 自由端側の余肉を維持。
+  m6_z = base + m6_nut_flat / 2; // 底板を削らない最小中心。通常15.2、ゴム足用19.2。
+  levels = is_undef(m6_levels) ? [m6_z] : m6_levels;
+  height = max(levels) + m6_pass_flat / 2 + 7.5; // 自由端側の余肉を維持。
   m6_seat = wall - m6_nut_depth;
   m4_center = 17;
   m4_nut_flat = 7.4;
   m4_nut_depth = 3.4;
 
-  assert(is_undef(extra_m6_z) || extra_m6_z > m6_z + m6_nut_flat);
+  assert(min(levels) >= m6_z);
+  assert(len(levels) == 1 || (len(levels) == 2 && levels[1] > levels[0] + m6_nut_flat));
   assert(base > m4_nut_depth && m6_seat > 0);
   // AF10×厚5のM6ナットが窪み内で角側へ寄っても、座った状態で交差しない。
   assert(m6_center - m6_nut_flat / sqrt(3) > m6_seat + 5);
@@ -59,7 +60,7 @@ module corner_acrylic_support(extra_m6_z = undef, m8_foot = false) {
     translate([arm - tip_r, arm - tip_r, height / 2])
       fillet_profile(tip_r, height + 0.2);
 
-    for (z = m6_levels) {
+    for (z = levels) {
       m6_cut(z);
       mirror([1, -1, 0]) m6_cut(z);
     }

@@ -56,6 +56,7 @@ def check_support(source, height, m6_levels):
             for y, flat in [(0.1, 6.4), (4.59, 6.4), (4.61, 10.4), (7, 10.4)]:
                 r = flat / math.sqrt(3)
                 loops = section(part, work, "y", y)
+                assert len(loops) == 1 + len(m6_levels), "unexpected M6 hole remains"
                 for z in m6_levels:
                     loop_at(loops, (15.7 - r, 15.7 + r, z - flat / 2, z + flat / 2))
             loops = section(part, work, "y", 15.7)
@@ -114,9 +115,9 @@ def check_support(source, height, m6_levels):
 
 for index, (name, height, levels) in enumerate([
     ("corner_acrylic_support", 25.9, [15.2]),
-    # 柱上端=座面。底板10+ナット半幅5.2が最高位置。
-    # 長穴8.5〜38.5の下端に実M6軸を寄せる中心は35.5。
-    ("corner_acrylic_support_top", 46.2, [15.2, 35.5]),
+    # 柱上端=座面。長穴8.5〜38.5と58.5〜88.5の間の金属20mmを挟む。
+    # φ6の軸外縁をそれぞれ38.5と58.5へ当てる中心は35.5、61.5。
+    ("corner_acrylic_support_top", 72.2, [35.5, 61.5]),
 ], 1):
     source = Path(sys.argv[index]).resolve() if len(sys.argv) > index else ROOT / f"assets/steel-rack/500x400/{name}.scad"
     check_support(source, height, levels)
