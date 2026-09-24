@@ -46,9 +46,10 @@ OpenSCADの画面で編集する場合も、`assets/`のSCADを開きます。
 
 ## 編集とプレビュー
 
-3MF対応に向けた[多色プリントの共通規約](docs/multi-material.md)を公開しています。
-SCAD・scad-live・orca-server間の`primary`・`secondary`の指定方法を定めた仕様書です。
-現在のSTLによる利用手順は以下のとおりです。
+材料を分ける場合は[多色プリントの共通規約](docs/multi-material.md)に沿って
+`primary`・`secondary`を指定します。scad-live v0.2.8以降は、役割と部品の位置関係を
+保持した3MFを生成します。OrcaServerへ渡す場合は、先にOrcaServer v0.1.50以降へ
+更新してください。上記のOpenSCAD単体によるSTL出力も引き続き利用できます。
 
 ブラウザでプレビューする場合は、別途[scad-live](https://github.com/miyabi-sunny-side/scad-live)を
 導入し、このリポジトリのルートで`scad-live`を実行します。
@@ -56,14 +57,14 @@ SCAD・scad-live・orca-server間の`primary`・`secondary`の指定方法を定
 
 - `assets/`: 用途別のSCADと使い方
 - `modules/`: [共有モジュール](modules/README.md)
-- `dist/`: 生成したSTL（Git管理外）
+- `dist/`: 生成した3MFまたはSTL（Git管理外）
 - `print/`: BambuStudioのプロジェクト（`.3mf`）
 - `ledger/`: 設計の根拠・変更履歴・印刷条件
 
 全モデルをまとめて変換する`./bin/render`は、先に`dist/`を消去します。
 部品選択や出力形式は指定しないため、個別のREADMEに生成手順があるモデルはそちらを使ってください。
 
-`.3mf`を更新するときは、対応する台帳の条件とSHA-256も更新します。
+`print/`の保存済み`.3mf`を更新するときは、対応する台帳の条件とSHA-256も更新します。
 `./bin/check`でファイルと台帳の対応・ハッシュを検査できます。
 これらのスクリプトにはBashが必要です。SCADのインデントは2スペースです。
 Node.jsとnpmがあれば、開発用依存を`npm ci`で導入できます。導入後は、

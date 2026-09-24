@@ -2,9 +2,10 @@
 
 SCADの作者と、scad-live・orca-serverの実装者が共有する材料の受け渡し規約です。
 自作モデルの材料を`primary`・`secondary`で識別し、公開ファイルは3MFにします。
-これは3MF対応の実装前に定めた共通仕様です。
-文書の追加だけでは、現在のSTL中心の公開・印刷経路は変更されません。
-対応版の起動方法は各ツールのドキュメントで確認してください。
+対応版は[scad-live v0.2.8以降](https://github.com/miyabi-sunny-side/scad-live/releases)と
+[OrcaServer v0.1.50以降](https://github.com/miyabi-sunny-side/orca-server/releases)です。
+既存環境ではOrcaServerを先に更新し、その後scad-liveを更新してください。
+OpenSCAD 2021.01で利用でき、nightlyへの変更は不要です。
 
 ## 材料の役割と所有先
 
@@ -102,7 +103,30 @@ OpenSCAD単体の色付き3MF出力や、表示色からの自動材料判定に
 サポート接触面の材料設定は独立して保持し、`secondary`をサポート専用にはしません。
 
 既存の単色プレートは、使用中のフィラメントを`primary`へ引き継ぎます。
-旧STL参照も対応する3MFへ移行できるようにし、モデル名・数量・他の印刷条件を失わないようにします。
+旧プレートの`<path>.stl`参照は、同じ相対パスの`<path>.3mf`がある場合にそちらへ解決します。
+モデル名・数量・他の印刷条件は保持します。3MFがなければ従来のSTLを利用します。
+scad-liveは以前のSTLファイルを削除しませんが、一覧・配信の対象は3MFだけです。
+ブラウザの旧`/<path>.stl`は`/<path>.3mf`へ置き換わります。
+外部クライアントの直接ダウンロードURLは`/models/<path>.3mf`へ変更してください。
+旧版のOrcaServerはこの役割規約に対応しないため、scad-liveだけを先に更新しないでください。
+
+モデルの役割構成を変更した場合は、OrcaServerでプレートを開いて保存し直します。
+追加した役割へ材料を割り当ててからキューへ追加してください。
+SCAD参照の形状は試算・印刷準備時に再取得します。
+準備を終えた試行の再試行には、その時点で固定した形状・材料条件を使います。
 
 この規約は自作SCADからの出力を対象にします。外部配布3MFの材料番号やペイント情報を、
 この規約の役割名へ推測で変換しません。外部ファイルの原本・多色情報は保持します。
+
+## モデル例と確認方法
+
+[隣接立方体のSCAD](https://github.com/miyabi-sunny-side/scad-live/blob/main/tests/fixtures/material-roles.scad)と
+[生成済み3MF](https://github.com/miyabi-sunny-side/scad-live/blob/main/tests/fixtures/material-roles.3mf)を公開しています。
+primaryはX=0〜10、secondaryはX=10〜20、両方ともY=0〜10・Z=0〜2 mmです。
+全体は20×10×2 mmで、色ごとに原点を揃え直してはいけません。
+
+SCADをベースキャンプの`assets/`へ置き、scad-liveを起動すると、
+同じ相対パスの`dist/*.3mf`を生成します。生成に失敗した場合は端末に理由を表示し、
+直前の正常な3MFを保持します。失敗した生成を成功としてブラウザへ通知しません。
+具体的な起動・生成手順は[scad-liveの案内](https://github.com/miyabi-sunny-side/scad-live#材料を分ける)、
+プレートの保存・材料設定は[OrcaServerの案内](https://github.com/miyabi-sunny-side/orca-server/blob/main/docs/plates.md)を参照してください。
