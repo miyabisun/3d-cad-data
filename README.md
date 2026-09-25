@@ -6,13 +6,13 @@
 
 ## モデルを選ぶ
 
-| 用途                 | モデル                                                                                                                                  |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| 引き出し収納         | [レターケース用ベースプレート](assets/letter-case/README.md)、[Gridfinity bin](assets/gridfinity-bin/README.md)                         |
-| ラック・机まわり     | [500×400mmスチールラック](assets/steel-rack/500x400/README.md)、[マグカップホルダー](assets/clamp/mug-holder/README.md)                 |
-| モニターアーム       | [エルゴトロン取付用ホルダー](assets/ergotron/README.md)                                                                                 |
-| ゲームコントローラー | [レバーレス筐体・ボタン収納](assets/leverless/README.md)                                                                                |
-| 室内の取付・補修     | [ライトスタンド](assets/work-room/README.md)、[ドア用治具](assets/work-room/door/README.md)、[排水ホース接続](assets/laundry/README.md) |
+| 用途                 | モデル                                                                                                                                                                      |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 引き出し収納         | [レターケース用ベースプレート](assets/letter-case/README.md)、[Gridfinity bin](assets/gridfinity-bin/README.md)                                                             |
+| ラック・机まわり     | [500×400mmスチールラック](assets/steel-rack/500x400/README.md)、[マグカップホルダー](assets/clamp/mug-holder/README.md)、[NFCタグ台](assets/clamp/nfc-tag-holder/README.md) |
+| モニターアーム       | [エルゴトロン取付用ホルダー](assets/ergotron/README.md)                                                                                                                     |
+| ゲームコントローラー | [レバーレス筐体・ボタン収納](assets/leverless/README.md)                                                                                                                    |
+| 室内の取付・補修     | [ライトスタンド](assets/work-room/README.md)、[ドア用治具](assets/work-room/door/README.md)、[排水ホース接続](assets/laundry/README.md)                                     |
 
 ## STLを作る
 

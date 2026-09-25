@@ -72,6 +72,7 @@ Designの本文はuserの当該発言を`## user 原文 (verbatim)`見出しの�
 
 ## Design
 
+- [クランプ天板のNFCタグ台](designs/nfc-tag-holder.md) - クランプ天板へM8ボルトで留め、沈めた頭ごと天面へΦ25のNFCタグを貼るΦ28×7mmの円柱
 - [マグカップホルダー](designs/mug-holder.md) - 内径84.6mm・内高さ32.6mm、ハニカム排水底とクランプ板の回転止め
 
 - [天馬ルームケースプチのGridfinityベースプレート](designs/temna-roomcase-puchi-gridfinity.md) - 浅型引き出しの実測に合わせ、左端数列と奥側R4を持つ前後2枚

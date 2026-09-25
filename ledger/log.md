@@ -1,5 +1,10 @@
 # 3D CAD ledger Update Log
 
+## 2026-09-25
+
+- [クランプ天板のNFCタグ台](designs/nfc-tag-holder.md)を追加した。Φ28×7mmの円柱で、
+  上下C1、M8通し穴Φ8.4とトラス頭の座ぐりΦ14.2×3を持ち、天面へΦ25のタグを貼る。
+
 ## 2026-09-23
 
 - [ケーブルホルダーの仕切り板](designs/gridfinity-cable-holder.md)の2つの大窓を
