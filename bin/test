@@ -5,15 +5,20 @@
 (前方一致) と、そこから SCAD の use/include/import を辿った先、テストが import する
 tests/ の共通処理、テスト自身から求める。bin/check (台帳の整合検査) は毎回実行する。
 
-  bin/test [--list] [--all] [root]
+  bin/test [--list] [--all] [-j N] [root]
     --list  実行せずに選んだコマンドを表示する
     --all   変更に関係なく全テストを実行する
+    -j N    同時に実行するテストの数 (既定は CPU 数)。出力はテストごとに終わった順で表示する
 """
 
+import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import os
 from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 
 REF = re.compile(r"((?:assets|modules|bin|ledger|print)/[\w./-]*)")
 SCAD_DEP = re.compile(r'(?:use|include)\s*<([^>]+)>|import\s*\(\s*"([^"]+)"')
@@ -74,19 +79,31 @@ def select(root, run_all):
                             if run_all or any(c.startswith(d) for d in dependencies(root, t) for c in changed)]
 
 
+def run(root, cmd):
+    start = time.monotonic()
+    result = subprocess.run(cmd.split(), cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    return cmd, result.returncode, result.stdout, time.monotonic() - start
+
+
 def main(args):
-    listing, run_all = "--list" in args, "--all" in args
-    rest = [a for a in args if a not in ("--list", "--all")]
-    root = Path(rest[0] if rest else Path(__file__).resolve().parents[1]).resolve()
-    commands = select(root, run_all)
-    if listing:
+    parser = argparse.ArgumentParser(prog="bin/test")
+    parser.add_argument("--list", action="store_true")
+    parser.add_argument("--all", action="store_true")
+    parser.add_argument("-j", type=int, default=os.cpu_count())
+    parser.add_argument("root", nargs="?", default=Path(__file__).resolve().parents[1])
+    opts = parser.parse_args(args)
+    root = Path(opts.root).resolve()
+    commands = select(root, opts.all)
+    if opts.list:
         print("\n".join(commands))
         return 0
     failed = []
-    for cmd in commands:
-        print(f"==> {cmd}", flush=True)
-        if subprocess.run(cmd.split(), cwd=root).returncode != 0:
-            failed.append(cmd)
+    with ThreadPoolExecutor(max_workers=max(1, opts.j)) as pool:
+        for future in as_completed([pool.submit(run, root, cmd) for cmd in commands]):
+            cmd, code, output, seconds = future.result()
+            print(f"==> {cmd} ({seconds:.1f}s){'' if code == 0 else ' FAILED'}\n{output}", end="", flush=True)
+            if code != 0:
+                failed.append(cmd)
     if failed:
         print("FAILED: " + ", ".join(failed), file=sys.stderr)
         return 1

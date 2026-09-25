@@ -4,6 +4,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from itertools import product
 import math
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -97,7 +98,7 @@ def main(output):
             check_bin(stl, c, r, u, Path(temp))
         print(f"gridfinity-bin: {relative} bounds, closed mesh, feet, walls, floor, lip and label passed", flush=True)
 
-    with ThreadPoolExecutor(max_workers=4) as pool:
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as pool:
         list(pool.map(check, SIZES))
     with tempfile.TemporaryDirectory(prefix="bin-mating-") as temp:
         check_rotated(output, Path(temp))

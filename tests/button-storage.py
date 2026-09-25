@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 import tempfile
 
-from stl_geometry import bounds, closed_mesh, inside, near, render, section
+from stl_geometry import bounds, closed_mesh, inside, near, render, render_many, section
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "assets/leverless/button-storage/button_storage.scad"
@@ -16,8 +16,7 @@ with tempfile.TemporaryDirectory(prefix="button-storage-") as temp:
     work = Path(temp)
     assert SOURCE.is_file(), "button_storage.scad is missing"
     upper, lower = work / "upper.stl", work / "lower.stl"
-    render(SOURCE, upper, ('part="upper"',), binary=True)
-    render(SOURCE, lower, ('part="lower"',), binary=True)
+    render_many([(SOURCE, stl, (f'part="{stl.stem}"',)) for stl in (upper, lower)])
     near(bounds(closed_mesh(upper)), (-73.25, 73.25, 0, 209.5, 0, 11.4))
     near(bounds(closed_mesh(lower)), (-73.25, 73.25, 0, 209.5, 0, 25.4))
 

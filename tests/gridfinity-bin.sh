@@ -70,10 +70,7 @@ expect_echo() {
 # この部品は全周が曲面 (楕円・円・六角) なので、外形は bbox と点の内外で測る
 check_plan() {
   stl=$1 name=$2 cut_z=$3 spec=$4
-  cat > "$WORK/plan_$name.scad" <<EOF
-projection(cut = true) translate([ 0, 0, -$cut_z ]) import("$WORK/$stl.stl");
-EOF
-  if ! openscad -o "$WORK/plan_$name.svg" "$WORK/plan_$name.scad" > /dev/null 2>&1; then
+  if ! python3 "$SCRIPT_DIR/stl_geometry.py" svg "$WORK/$stl.stl" z "$cut_z" "$WORK/plan_$name.svg" > /dev/null 2>&1; then
     err "plan $name: failed to render"
     return
   fi
@@ -202,11 +199,7 @@ PYEOF
 # 穴の連続性はこの交差判定で測る
 check_section() {
   stl=$1 name=$2 cut_y=$3 spec=$4
-  cat > "$WORK/sec_$name.scad" <<EOF
-projection(cut = true) rotate([ 90, 0, 0 ]) translate([ 0, -($cut_y), 0 ])
-  import("$WORK/$stl.stl");
-EOF
-  if ! openscad -o "$WORK/sec_$name.svg" "$WORK/sec_$name.scad" > /dev/null 2>&1; then
+  if ! python3 "$SCRIPT_DIR/stl_geometry.py" svg "$WORK/$stl.stl" y "$cut_y" "$WORK/sec_$name.svg" > /dev/null 2>&1; then
     err "section $name: failed to render"
     return
   fi

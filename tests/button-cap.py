@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """薄型キャップのproduction STLで寸法・右ねじ・締結経路を測る。"""
 
-from pathlib import Path
 import math
+from pathlib import Path
 import sys
 import tempfile
 
-from stl_geometry import bounds, closed_mesh, empty_rect, inside, near, render, section
+from stl_geometry import bounds, closed_mesh, empty_rect, inside, near, render_many, section
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "assets/leverless/pws-blaze/button_cap.scad"
@@ -14,11 +14,8 @@ SOURCE = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "assets/le
 with tempfile.TemporaryDirectory(prefix="button-cap-test-") as temp:
     work = Path(temp)
     assert SOURCE.is_file(), "button_cap.scad is missing"
-    for name in ["body", "nut"]:
-        target = work / f"{name}.stl"
-        render(SOURCE, target, (f'part="{name}"',), binary=True)
-
     body, nut = work / "body.stl", work / "nut.stl"
+    render_many([(SOURCE, stl, (f'part="{stl.stem}"',)) for stl in (body, nut)])
     near(bounds(closed_mesh(body)), (-13, 13, -13, 13, 0, 12))
     # 印刷下面はφ24.4、0.8mmかけてφ26へ広がり、残り0.4mmが直壁。
     for z, radius in [(0.1, 12.3), (0.7, 12.9), (0.9, 13), (1.19, 13), (1.21, 12), (2.99, 12)]:
@@ -90,31 +87,37 @@ with tempfile.TemporaryDirectory(prefix="button-cap-test-") as temp:
         assert max(changes) <= 0.215, "thread overhang exceeds 45 degrees at 0.2mm layers"
         assert sum(d > 0.18 for d in changes) >= 4, "45-degree thread flanks missing"
 
-    # 実STLの体積交差を調べる。空のintersectionを既知の小立方体で観測する。
+    # 実STLの体積交差を調べる。
     # 板厚3/5/6mmの着座から、先端へ抜くまで右ねじ方向に回せること。
     # bodyのねじ起点z=4、nut起点z=0なので回転角は絶対高さ差から求める。
-    def collision(extra):
-        source, target = work / "collision.scad", work / "collision.stl"
-        source.write_text(f'translate([40, 0, 0]) cube(1);\n{extra}\n')
-        render(source, target, binary=True)
-        near(bounds(closed_mesh(target)), (40, 41, 0, 1, 0, 1))
+    def empty(extra):
+        # 空のintersectionを既知の小立方体で観測する。
+        return f'translate([40, 0, 0]) cube(1);\n{extra}\n'
 
+    collisions, retentions = [], []
     for z in [4.2, 4.8, 5.4, 6.0, 6.2, 6.6, 6.8, 7.2, 8.4, 9.6, 10.8]:
         placed_nut = f'translate([0,0,{z}]) rotate([0,0,{(z - 4) * 360 / 2.4}]) import("{nut}");'
-        collision(f'intersection() {{ import("{body}"); {placed_nut} }}')
+        collisions.append(empty(f'intersection() {{ import("{body}"); {placed_nut} }}'))
 
     for thickness in [3, 5, 6]:
         z = 1.2 + thickness
         placed_nut = f'translate([0,0,{z}]) rotate([0,0,{(z - 4) * 360 / 2.4}]) import("{nut}");'
         # STLのfloat丸めを避け、板の内部を上下各0.005mmだけ縮めて検査する。
         plate = f'translate([0,0,1.205]) difference() {{ cylinder(d=40,h={thickness - 0.01},$fn=96); translate([0,0,-0.1]) cylinder(d=24.4,h={thickness + 0.2},$fn=96); }}'
-        collision(f'intersection() {{ {plate} union() {{ import("{body}"); {placed_nut} }} }}')
+        collisions.append(empty(f'intersection() {{ {plate} union() {{ import("{body}"); {placed_nut} }} }}'))
         # 位相を保って軸方向へ0.6mmだけ抜くと山が掛かる: 空回りの輪を弾く。
-        source, target = work / "retention.scad", work / "retention.stl"
-        source.write_text(f'intersection() {{ import("{body}"); translate([0,0,0.6]) {{ {placed_nut} }} }}')
-        render(source, target, binary=True)
-        assert target.stat().st_size > 84, "threads cannot retain the cap"
+        retentions.append(f'intersection() {{ import("{body}"); translate([0,0,0.6]) {{ {placed_nut} }} }}')
 
     # 補助ボタン中心間29mm・隣接外装φ29に対し、キャップ/ナットφ26は1.5mm空く。
-    collision(f'intersection() {{ union() {{ import("{body}"); import("{nut}"); }} translate([29,0,0]) cylinder(d=29,h=12,$fn=96); }}')
+    collisions.append(empty(f'intersection() {{ union() {{ import("{body}"); import("{nut}"); }} translate([29,0,0]) cylinder(d=29,h=12,$fn=96); }}'))
+    # 交差は互いに独立な CGAL の render なので、並列に回す。
+    results = []
+    for n, extra in enumerate(collisions + retentions):
+        results.append(work / f"collision{n}.stl")
+        results[-1].with_suffix(".scad").write_text(extra)
+    render_many([(target.with_suffix(".scad"), target, ()) for target in results])
+    for target in results[:len(collisions)]:
+        near(bounds(closed_mesh(target)), (40, 41, 0, 1, 0, 1))
+    for target in results[len(collisions):]:
+        assert target.stat().st_size > 84, "threads cannot retain the cap"
     print("button-cap: closed parts, 3mm cap floor/wall, six 4.8x4mm OSB grip slots, 26x8mm nut, right-hand pitch 2.4, 45-degree flanks, 3/5/6mm plate fit and screw travel passed")

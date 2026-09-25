@@ -85,11 +85,7 @@ check_hex m4_flat_up hex_y_flat_up 4.4 5.08 4.40 "90, 0, 0"
 # (窪みの削除・開口面の反転・ガードの復活など) をここで捉える。
 check_section() {
   stl=$1 name=$2 cut_y=$3 spec=$4
-  cat > "$WORK/sec_$name.scad" <<EOF
-projection(cut = true) rotate([ 90, 0, 0 ]) translate([ 0, -$cut_y, 0 ])
-  import("$WORK/$stl.stl");
-EOF
-  if ! openscad -o "$WORK/sec_$name.svg" "$WORK/sec_$name.scad" > /dev/null 2>&1; then
+  if ! python3 "$SCRIPT_DIR/stl_geometry.py" svg "$WORK/$stl.stl" y "$cut_y" "$WORK/sec_$name.svg" > /dev/null 2>&1; then
     err "section $name: failed to render"
     return
   fi
@@ -145,10 +141,7 @@ check_section rear rear-pass 4 "hex 79.5 22.5 5.08 4.40; hex 176 22.5 5.08 4.40"
 # 回廊を塞ぐ退行では fillet の弧 (y 最大 11.4) が clear 検査に掛かり赤になる
 check_corridor() {
   stl=$1 name=$2 cut_z=$3
-  cat > "$WORK/cor_$name.scad" <<EOF
-projection(cut = true) translate([ 0, 0, -$cut_z ]) import("$WORK/$stl.stl");
-EOF
-  if ! openscad -o "$WORK/cor_$name.svg" "$WORK/cor_$name.scad" > /dev/null 2>&1; then
+  if ! python3 "$SCRIPT_DIR/stl_geometry.py" svg "$WORK/$stl.stl" z "$cut_z" "$WORK/cor_$name.svg" > /dev/null 2>&1; then
     err "corridor $name: failed to render"
     return
   fi

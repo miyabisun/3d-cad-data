@@ -66,7 +66,7 @@ OpenSCADの画面で編集する場合も、`assets/`のSCADを開きます。
 
 `print/`の保存済み`.3mf`を更新するときは、対応する台帳の条件とSHA-256も更新します。
 `./bin/check`でファイルと台帳の対応・ハッシュを検査できます。
-`npm test`は`git status`の変更が依存するテストだけを、`npm run test:all`は全テストを実行します。
+`npm test`は`git status`の変更が依存するテストだけを、`npm run test:all`は全テストを並列に実行します。
 これらのスクリプトにはBashが必要です。SCADのインデントは2スペースです。
 Node.jsとnpmがあれば、開発用依存を`npm ci`で導入できます。導入後は、
 commit時に変更したSCADへ`openscad-format`が適用されます。

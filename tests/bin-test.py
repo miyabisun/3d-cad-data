@@ -76,12 +76,15 @@ with tempfile.TemporaryDirectory(prefix="bin-test-") as temp:
     # 実行時は選んだテストが1本でも失敗すれば非0で終わり、残りも最後まで回す。
     write(root, "bin/check", "#!/bin/bash\n")
     (root / "bin/check").chmod(0o755)
-    write(root, "tests/b.sh", "#!/bin/bash\nexit 1\n")
+    write(root, "tests/b.sh", "#!/bin/bash\necho boom\nexit 1\n")
     (root / "tests/b.sh").chmod(0o755)
     write(root, "tests/c.py", '#!/usr/bin/env python3\nopen("ran", "w")\n')
-    result = subprocess.run([str(RUNNER), str(root)], capture_output=True, text=True, cwd=root)
-    assert result.returncode != 0, result.stdout
-    assert (root / "ran").exists(), "tests after a failure must still run"
-    assert "tests/b.sh" in result.stdout + result.stderr
+    for jobs in (["-j", "1"], []):  # 直列でも、既定の並列でも同じ結果
+        (root / "ran").unlink(missing_ok=True)
+        result = subprocess.run([str(RUNNER), *jobs, str(root)], capture_output=True, text=True, cwd=root)
+        assert result.returncode != 0, result.stdout
+        assert (root / "ran").exists(), "tests after a failure must still run"
+        # 失敗したテストの出力は、並列でも失敗の一覧と一緒に残す。
+        assert "boom" in result.stdout and "FAILED: tests/b.sh" in result.stderr, (result.stdout, result.stderr)
 
 print("bin-test: git status selection, scad use graph, helpers, renames and failure exit passed")
