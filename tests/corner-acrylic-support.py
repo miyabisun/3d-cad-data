@@ -115,9 +115,9 @@ def check_support(source, height, m6_levels):
 
 for index, (name, height, levels) in enumerate([
     ("corner_acrylic_support", 25.9, [15.2]),
-    # 柱上端=座面。長穴8.5〜38.5と58.5〜88.5の間の金属20mmを挟む。
-    # φ6の軸外縁をそれぞれ38.5と58.5へ当てる中心は35.5、61.5。
-    ("corner_acrylic_support_top", 72.2, [35.5, 61.5]),
+    # 厚5のアクリル上面=柱上端。座面は柱上端から5mm下。
+    # φ6軸を長穴端38.5/58.5へ当てるため、座面基準の中心は30.5/56.5。
+    ("corner_acrylic_support_top", 67.2, [30.5, 56.5]),
 ], 1):
     source = Path(sys.argv[index]).resolve() if len(sys.argv) > index else ROOT / f"assets/steel-rack/500x400/{name}.scad"
     check_support(source, height, levels)
