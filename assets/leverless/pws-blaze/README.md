@@ -11,6 +11,11 @@
 
 ## 印刷する部品
 
+`top_left.scad`・`top_right.scad`・`bottom.scad`は、scad-liveで部品ごとの3MFとして公開する。
+`center_nut_plug.scad`・`corner_nut_plug.scad`も同様。
+これらと`controller.scad`は[共有形状](../../../modules/leverless_pws_blaze.scad)を参照し、
+共有形状を変更すると各3MFも再生成される。
+
 | part | 数 | 外寸の基準 (mm) |
 |---|---:|---|
 | `top_left` / `top_right` | 各1 | 200 × 200 × 5 |
@@ -150,7 +155,7 @@ PWS Blaze用の穴はφ24.4、右手小指の大ボタンだけφ30.4。
 左右ともローカル座標は0〜200mm。組立時だけ右天板へX=200mmを加える。
 左への鏡像は`x_left = 200 - x_right`、Yと穴径はそのまま。
 
-穴中心の計算と配列順序の正本は`controller.scad`の`buttons_left/right`。
+穴中心の計算と配列順序の正本は[共有形状](../../../modules/leverless_pws_blaze.scad)の`buttons_left/right`。
 各要素は`[x, y, 穴径]`で、番号は0始まり。右の0〜9が`right_gameplay`、
 末尾2個が補助ボタン。左の主指3個は右の形状を鏡像にしたもので、
 左に対するP/Kの入力割当を意味しない。
