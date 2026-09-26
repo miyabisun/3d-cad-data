@@ -1,5 +1,5 @@
 #!/bin/bash
-# print/ の .3mf と ledger/prints/ の concept の整合検査。
+# ledger/ の形式と ledger/designs/ の Design concept の整合検査。
 # 第1引数で対象 root を差し替えられる (tests/ の fixture 用)。
 set -euo pipefail
 
@@ -19,8 +19,6 @@ err() {
 head -5 "$ROOT/ledger/index.md" | grep -q '^okf_version: "0.2"$' \
   || err "ledger/index.md lacks okf_version \"0.2\" frontmatter"
 [ -f "$ROOT/ledger/log.md" ] || err "ledger/log.md not found"
-[ -d "$ROOT/print" ] || err "print/ not found (SMB 3dp-3mf の共有対象)"
-[ -d "$ROOT/ledger/prints" ] || err "ledger/prints/ not found"
 [ -d "$ROOT/ledger/designs" ] || err "ledger/designs/ not found"
 
 # frontmatter (先頭の --- ... --- 区間) から key の値を取り出す
@@ -29,7 +27,7 @@ fm_get() {
     | sed -n "s/^$2: *//p" | head -1
 }
 
-# Print / Design 共通の concept 検査。検査後の status を CHECK_STATUS に返す
+# concept の共通検査。検査後の status を CHECK_STATUS に返す
 check_common() {
   concept=$1 rel=$2 want_type=$3
   base=$(basename "$concept" .md)
@@ -59,57 +57,6 @@ path_has_traversal() {
   esac
   return 1
 }
-
-declare -A artifact_owner
-
-for concept in "$ROOT"/ledger/prints/*.md; do
-  [ -e "$concept" ] || continue
-  rel_concept=${concept#"$ROOT"/}
-  check_common "$concept" "$rel_concept" Print
-  status=$CHECK_STATUS
-
-  # artifact と content_sha256 は retired を含む全 status で必須 (identity の契約)。
-  # retired が免除されるのは「実体の存在」と「現在実体との hash 一致」だけ
-  artifact=$(fm_get "$concept" artifact)
-  [ -n "$artifact" ] || { err "$rel_concept: missing artifact"; continue; }
-  case "$artifact" in
-    print/*.3mf) ;;
-    *) err "$rel_concept: artifact must be a print/**.3mf path (got '$artifact')"; continue ;;
-  esac
-  if path_has_traversal "$artifact"; then
-    err "$rel_concept: artifact must not contain '..', '.' or empty components (got '$artifact')"
-    continue
-  fi
-  if [ -n "${artifact_owner[$artifact]:-}" ]; then
-    err "$rel_concept: artifact '$artifact' is already owned by ${artifact_owner[$artifact]}"
-  else
-    artifact_owner[$artifact]=$rel_concept
-  fi
-
-  sha=$(fm_get "$concept" content_sha256)
-  if ! printf '%s' "$sha" | grep -Eq '^[0-9a-f]{64}$'; then
-    err "$rel_concept: content_sha256 must be 64 hex chars"
-    continue
-  fi
-
-  # retired は .3mf 亡き後も履歴として残る。実体との突き合わせは現役だけ
-  if [ "$status" != "retired" ]; then
-    if [ ! -f "$ROOT/$artifact" ]; then
-      err "$rel_concept: artifact '$artifact' not found"
-      continue
-    fi
-    actual=$(sha256sum "$ROOT/$artifact" | cut -d' ' -f1)
-    [ "$actual" = "$sha" ] \
-      || err "$rel_concept: content_sha256 mismatch for '$artifact' (台帳が古い)"
-  fi
-done
-
-# 台帳を持たない .3mf (保存直後の未登録状態) を検出する
-while IFS= read -r -d '' f; do
-  rel=${f#"$ROOT"/}
-  [ -n "${artifact_owner[$rel]:-}" ] \
-    || err "$rel: no ledger concept (ledger/prints/ に台帳を作る)"
-done < <(find "$ROOT/print" -name '*.3mf' -print0 2>/dev/null)
 
 declare -A scope_owner
 

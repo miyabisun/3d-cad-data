@@ -1,5 +1,12 @@
 # 3D CAD ledger Update Log
 
+## 2026-09-26
+
+- BambuStudio用の`print/`を廃止した。印刷はscad-live → OrcaServerの経路へ移り、
+  デスクトップのスライサーとWindowsのSMB共有（`3dp-3mf`・`3dp-stl`）は使わない
+  （userの判断、2026-09-25）。[レターケース ベースプレート](prints/letter-case-baseplate.md)を
+  retiredにし、`.3mf`を削除した。Print typeは新規に作らず、`bin/check`の`.3mf`照合も外した。
+
 ## 2026-09-25
 
 - [クランプ天板のNFCタグ台](designs/nfc-tag-holder.md)を追加した。Φ28×7mmの円柱で、

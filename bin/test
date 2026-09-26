@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """git status に出る変更が依存するテストだけを実行する。
 
-テストの依存は、テスト本文に書かれた assets/ modules/ bin/ ledger/ print/ の path
+テストの依存は、テスト本文に書かれた assets/ modules/ bin/ ledger/ の path
 (前方一致) と、そこから SCAD の use/include/import を辿った先、テストが import する
 tests/ の共通処理、テスト自身から求める。bin/check (台帳の整合検査) は毎回実行する。
 
@@ -20,7 +20,7 @@ import subprocess
 import sys
 import time
 
-REF = re.compile(r"((?:assets|modules|bin|ledger|print)/[\w./-]*)")
+REF = re.compile(r"((?:assets|modules|bin|ledger)/[\w./-]*)")
 SCAD_DEP = re.compile(r'(?:use|include)\s*<([^>]+)>|import\s*\(\s*"([^"]+)"')
 PY_IMPORT = re.compile(r"^\s*(?:from|import)\s+(\w+)", re.M)
 

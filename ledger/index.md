@@ -4,16 +4,16 @@ okf_version: "0.2"
 
 # 3D CAD ledger
 
-このrepositoryの「コードから読めない意味」の台帳。2種類のconceptを持つ。
+このrepositoryの「コードから読めない意味」の台帳。conceptは**Design**だけを作る。
 
-- **Print**（`prints/<slug>.md`）: `print/`のBambuStudioプロジェクト（`.3mf`）
-  の台帳。`.3mf`はzipバイナリでGitのdiffが読めないため、意味・状態・経緯は
-  この台帳へ集約する。1つの`.3mf`につき1つのconceptを対応させ、
-  `artifact`（repo rootからの相対path）と`content_sha256`で対象を固定する
 - **Design**（`designs/<slug>.md`）: 構造物の設計思想の台帳。なぜこの構成を
   選び・何を実現し・次にどこへ伸ばすかを、userの発言由来で持つ。形状は
   `.scad`で実装し、部品の機能はassetsのREADMEで説明する。`.scad`のコメントは
   幾何の注記に留める（設計意図をコメント欄に書かない）
+- **Print**（`prints/<slug>.md`、廃止）: かつて`print/`に置いたBambuStudioの
+  プロジェクト（`.3mf`）の台帳。2026-09-26に印刷経路をscad-live → OrcaServerへ
+  移し、`print/`と`.3mf`を削除した。既存のconceptは`retired`の履歴として残し、
+  新しくは作らない。`bin/check`も検査しない
 
 ## まず読む
 
@@ -21,11 +21,8 @@ okf_version: "0.2"
 
 ## 運用
 
-- Windows（BambuStudio）は`\\<サーバー>\3dp-3mf`へ`.3mf`を保存する
-- 保存直後は`bin/check`が「台帳未登録」で赤くなるのが意図した状態。会話で
-  concept作成・`content_sha256`採取・`log.md`追記まで済ませるとgreenになる
 - conceptは削除しない。使わなくなったら`status: retired`にして履歴を残す
-  （retiredは`.3mf`削除後も残ってよい）
+  （retiredは対象の削除後も残ってよい）
 - 状態遷移（draft→active→retired）のgateはuserの発言のみ
 
 ## conceptのfrontmatter
@@ -34,21 +31,14 @@ okf_version: "0.2"
 
 | field | 内容 |
 |---|---|
-| `type` | `Print`または`Design` |
+| `type` | `Design`（廃止した`Print`はretiredの履歴だけ） |
 | `title` | 人間向けの名前 |
 | `description` | 1行説明 |
-| `status` | `draft` / `active` / `retired`（意味はtype別、下記） |
+| `status` | `draft` / `active` / `retired`（意味は下記） |
 | `tags` | 任意の分類 |
 
-Print固有:
-
-| field | 内容 |
-|---|---|
-| `artifact` | 対象`.3mf`のrepo rootからの相対path（例: `print/hinge.3mf`） |
-| `content_sha256` | 台帳更新時点の`.3mf`のsha256（`sha256sum`で採取） |
-
-印刷条件（プリンタ・フィラメント・ノズル等）は`.3mf`自体が保持するため
-frontmatterには持たない。経緯・調整メモ・印刷結果は本文に自由に書く。
+Print固有（廃止。既存のretiredだけが持つ）: `artifact`（対象`.3mf`の
+repo rootからの相対path）、`content_sha256`（台帳更新時点の`.3mf`のsha256）。
 
 Design固有:
 
@@ -56,8 +46,7 @@ Design固有:
 |---|---|
 | `scope` | 対象のassets配下のdirectory（例: `assets/steel-rack/500x400`）。1 design area = 1 scopeで重複させない |
 
-statusの意味: Printは`draft`=調整中 / `active`=現役 / `retired`=引退。
-Designは`draft`=思想・対象が調整中 / `active`=現在有効な設計判断 /
+statusの意味: Designは`draft`=思想・対象が調整中 / `active`=現在有効な設計判断 /
 `retired`=履歴のみ。**将来構想を含んでいてもactiveのままでよい**（activeは
 「完成」ではなく「現在有効な思想」）。
 
@@ -66,9 +55,9 @@ Designの本文はuserの当該発言を`## user 原文 (verbatim)`見出しの�
 書く。参照URLは「userが参照した調達先・候補リンク」として保持し、リンク先の
 可変な商品情報を確定事実にしない。
 
-## Print
+## Print（廃止）
 
-- [レターケース ベースプレート（前片・奥片）](prints/letter-case-baseplate.md) - レターケースの引き出しへ敷くGridfinityベースプレート2枚のBambuStudioプロジェクト。試作の合わせ込み中
+- [レターケース ベースプレート（前片・奥片）](prints/letter-case-baseplate.md) - retired。レターケースの引き出しへ敷くGridfinityベースプレート2枚のBambuStudioプロジェクト
 
 ## Design
 

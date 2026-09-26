@@ -40,9 +40,9 @@ OpenSCADの画面で編集する場合も、`assets/`のSCADを開きます。
 モデルの寸法・印刷方向・材質を確認し、嵌合が未確認の部品は少数で試してください。
 設計値の検査だけでは、実物の強度や収縮後の適合を保証できません。
 
-[BambuStudio](https://github.com/bambulab/BambuStudio/releases/latest)用の保存済みプロジェクトは
-`print/`にあります。使用前に機種・材料・設定と、モデルの版を確認してください。
-対応する設計や印刷条件は[台帳](ledger/index.md)から辿れます。
+作者の環境では、scad-liveが生成した3MFをOrcaServerのプレートへ保存し、
+スライスと印刷まで行います（次節）。スライサーのプロジェクトファイルはこのリポジトリに置きません。
+対応する設計は[台帳](ledger/index.md)から辿れます。
 
 ## 編集とプレビュー
 
@@ -58,14 +58,12 @@ OpenSCADの画面で編集する場合も、`assets/`のSCADを開きます。
 - `assets/`: 用途別のSCADと使い方
 - `modules/`: [共有モジュール](modules/README.md)
 - `dist/`: 生成した3MFまたはSTL（Git管理外）
-- `print/`: BambuStudioのプロジェクト（`.3mf`）
-- `ledger/`: 設計の根拠・変更履歴・印刷条件
+- `ledger/`: 設計の根拠・変更履歴
 
 全モデルをまとめて変換する`./bin/render`は、先に`dist/`を消去します。
 部品選択や出力形式は指定しないため、個別のREADMEに生成手順があるモデルはそちらを使ってください。
 
-`print/`の保存済み`.3mf`を更新するときは、対応する台帳の条件とSHA-256も更新します。
-`./bin/check`でファイルと台帳の対応・ハッシュを検査できます。
+`./bin/check`で台帳の形式と、設計conceptの対象ディレクトリを検査できます。
 `npm test`は`git status`の変更が依存するテストだけを、`npm run test:all`は全テストを並列に実行します。
 これらのスクリプトにはBashが必要です。SCADのインデントは2スペースです。
 Node.jsとnpmがあれば、開発用依存を`npm ci`で導入できます。導入後は、
