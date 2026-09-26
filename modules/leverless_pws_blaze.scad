@@ -206,13 +206,13 @@ module wall(usb = false) {
 module plate_blank(t, right = false) {
   assert(t >= edge_r && edge_r > 0);
   intersection() {
-    translate([edge_r - (right ? half_w : 0), edge_r, -edge_r]) minkowski() {
-      cube([2 * half_w - 2 * edge_r, case_d - 2 * edge_r, t]);
-      // 極をZ=±Rに置き、板上面と皿穴の終端を同じ高さにする。
-      rotate_extrude($fn = arc_fn)
-        polygon([for (a = [-90 : 5 : 90])
-          [abs(a) == 90 ? 0 : edge_r * cos(a), edge_r * sin(a)]]);
-    }
+    translate([edge_r - (right ? half_w : 0), edge_r, -edge_r]) hull()
+      for (x = [0, 2 * half_w - 2 * edge_r], y = [0, case_d - 2 * edge_r], z = [0, t])
+        translate([x, y, z])
+          // 極をZ=±Rに置き、板上面と皿穴の終端を同じ高さにする。
+          rotate_extrude($fn = arc_fn)
+            polygon([for (a = [-90 : 5 : 90])
+              [abs(a) == 90 ? 0 : edge_r * cos(a), edge_r * sin(a)]]);
     cube([half_w, case_d, t]);
   }
 }

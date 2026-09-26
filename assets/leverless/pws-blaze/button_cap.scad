@@ -77,7 +77,7 @@ module cap_nut() {
     translate([0, 0, -0.1]) rotate([0, 0, -360 * 0.1 / thread_pitch])
       thread_form(nut_h + 0.2);
     for (z = [0, nut_h]) translate([0, 0, z])
-      rotate([z == 0 ? 0 : 180, 0, 0])
+      rotate([z == 0 ? 0 : 180, 0, 1])
         cylinder(r1 = thread_d / 2, r2 = thread_d / 2 - lead, h = lead);
     // OSB式の6つの指掛かり。板側4mmの連続リングを下にして印刷する。
     for (a = [30:60:330]) rotate([0, 0, a])

@@ -7,7 +7,7 @@ import subprocess
 import sys
 import tempfile
 
-from stl_geometry import bounds, inside, section
+from stl_geometry import bounds, closed_mesh, inside, section
 
 
 def area(loop):
@@ -61,6 +61,20 @@ with tempfile.TemporaryDirectory(prefix="stl-geometry-") as temp:
     write_stl(ascii_stl, box(0, 20, 0, 10, 0, 6) + box(3, 7, 3, 7, 0, 6, flip=True), ascii=True)
     assert sorted(map(bounds, section(ascii_stl, work, "z", 2.5))) == sorted(map(bounds, plan))
 
+    # Manifold の和が float32 化で潰した面積0の三角形 (一直線・頂点の重複) は無視して、
+    # 閉じ具合を検査する。面を1枚欠いたメッシュは引き続き閉じていないと判定する。
+    sliver = work / "sliver.stl"
+    write_stl(sliver, box(0, 20, 0, 10, 0, 6) + [((0, 0, 0), (10, 0, 0), (20, 0, 0)), ((0, 0, 6), (0, 0, 6), (20, 10, 6))])
+    assert bounds(closed_mesh(sliver)) == (0, 20, 0, 10, 0, 6)
+    holed = work / "holed.stl"
+    write_stl(holed, box(0, 20, 0, 10, 0, 6)[1:])
+    try:
+        closed_mesh(holed)
+    except AssertionError as e:
+        assert str(e) == "STL is not closed", e
+    else:
+        raise AssertionError("open mesh passed closed_mesh")
+
     # シェルのテスト向け CLI は OpenSCAD の SVG と同じ向き (plan は y 反転、y 断面は z がそのまま) で書く。
     svg = work / "plan.svg"
     subprocess.run([sys.executable, Path(__file__).with_name("stl_geometry.py"), "svg", solid, "z", "2.5", svg], check=True)
@@ -69,4 +83,4 @@ with tempfile.TemporaryDirectory(prefix="stl-geometry-") as temp:
     subprocess.run([sys.executable, Path(__file__).with_name("stl_geometry.py"), "svg", solid, "y", "5", svg], check=True)
     assert "20.000000,6.000000" in svg.read_text()
 
-print("stl-geometry: python plane sections (holes, y cuts, vertex planes, ascii, svg cli) passed")
+print("stl-geometry: python plane sections (holes, y cuts, vertex planes, ascii, slivers, svg cli) passed")

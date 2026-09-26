@@ -87,7 +87,10 @@ def closed_mesh(stl):
         triangle = vertices[i:i + 3]
         p, q, r = triangle
         u, v = [b - a for a, b in zip(p, q)], [b - a for a, b in zip(p, r)]
-        assert any(abs(c) > 1e-12 for c in (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])), "degenerate STL triangle"
+        # Manifold は部品の接触面の和に 1e-8 間隔の sliver を作り、float32 の STL では
+        # 面積0に潰れる。閉じ具合は残りの三角形で判定する。
+        if not any(abs(c) > 1e-12 for c in (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])):
+            continue
         for a, b in zip(triangle, triangle[1:] + triangle[:1]):
             assert a != b
             edges[tuple(sorted((a, b)))] += 1
