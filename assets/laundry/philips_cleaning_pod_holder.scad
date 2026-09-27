@@ -8,7 +8,8 @@ pod_clearance = 0.5;
 retaining_height = 20;
 floor_thickness = 8;
 wall_thickness = 3;
-drain_diameter = 8;
+rib_width = 10;
+edge_chamfer = 1;
 
 // X: along the shelf edge; Y: toward the pod; Z: upward in use.
 shelf_thickness = 3;
@@ -33,7 +34,8 @@ assert(slot_depth > 0 && slot_depth <= 45, "slot_depth must be <= 45 mm");
 assert(shelf_thickness > 0 && slot_clearance >= 0);
 assert(wall_thickness > 0 && hook_thickness > wall_thickness);
 assert(floor_thickness > 0 && retaining_height > 0);
-assert(drain_diameter > 0 && drain_diameter < min(inner_width, inner_depth));
+assert(rib_width > 0 && rib_width < min(inner_width, inner_depth));
+assert(edge_chamfer > 0 && 2 * edge_chamfer < min(floor_thickness, wall_thickness, hook_thickness, slot_length));
 
 module pod_profile(extra = 0) {
   radius = pod_corner_radius + pod_clearance + extra;
@@ -48,19 +50,39 @@ module pod_profile(extra = 0) {
     }
 }
 
+// Convex outlines: a 1:1 inset at the top/bottom gives a 45 degree chamfer.
+module chamfered_extrude(height) {
+  hull() {
+    translate([0, 0, edge_chamfer])
+      linear_extrude(height - 2 * edge_chamfer) children();
+    linear_extrude(height) offset(delta = -edge_chamfer) children();
+  }
+}
+
 difference() {
   union() {
-    linear_extrude(tray_height) pod_profile(wall_thickness);
-    // The slot opens downwards and through both X ends.
-    difference() {
-      translate([-slot_length / 2, back_y, 0])
-        cube([slot_length, 2 * hook_thickness + slot_gap, hook_height]);
-      translate([-slot_length / 2 - eps, front_y - slot_gap, -eps])
-        cube([slot_length + 2 * eps, slot_gap, slot_depth + eps]);
-    }
+    // Fill the full hook width into the tray before cutting the pod cavity.
+    chamfered_extrude(tray_height)
+      hull() {
+        pod_profile(wall_thickness);
+        translate([-slot_length / 2, front_y])
+          square([slot_length, hook_thickness]);
+      }
+    chamfered_extrude(hook_height)
+      translate([-slot_length / 2, back_y])
+        square([slot_length, 2 * hook_thickness + slot_gap]);
   }
-  translate([0, 0, floor_thickness])
-    linear_extrude(max(tray_height, hook_height) + eps) pod_profile();
-  translate([0, wall_thickness + inner_depth / 2, -eps])
-    cylinder(d = drain_diameter, h = floor_thickness + 2 * eps);
+  // Keep the slot faces straight; only the exterior outline is chamfered.
+  translate([-slot_length / 2 - eps, front_y - slot_gap, -eps])
+    cube([slot_length + 2 * eps, slot_gap, slot_depth + eps]);
+  difference() {
+    translate([0, 0, -eps])
+      linear_extrude(max(tray_height, hook_height) + 2 * eps) pod_profile();
+    translate([0, 0, -2 * eps])
+      linear_extrude(floor_thickness + 2 * eps)
+        translate([0, wall_thickness + inner_depth / 2])
+          for (angle = [0:45:135])
+            rotate(angle)
+              square([2 * max(inner_width, inner_depth), rib_width], center = true);
+  }
 }
