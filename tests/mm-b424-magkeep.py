@@ -26,27 +26,43 @@ with tempfile.TemporaryDirectory(prefix="mm-b424-") as temp:
             profile = section(stl, work, "z", width)
             assert len(profile) == 1
             empty_rect(profile, (-5, 0, -23, 0))
-            for p in [(-5.1, -11), (0.1, -11), (-2.5, 0.1), (-8.9, -21.9)]:
+            for p in [(-5.1, -11), (0.1, -11), (-2.5, 0.1), (-7, -21.9)]:
                 assert inside(profile, p), (angle, p, "hook wall missing")
             assert not inside(profile, (-2.5, -0.1)), "slot ceiling too low"
 
-        # 法線方向で最前面の頂点を抽出。平面が64×64、法線が上向きであること。
+        # 上下C1の後も64×62の平面が残り、中央Φ61に上下各0.5mmの余白がある。
         front = [p for p in vertices if abs((p[0] - 8) * cos + (p[1] - 4) * sin) < 0.001]
         assert len(front) >= 4, "flat adhesive face is missing or tilted incorrectly"
         face_coords = [(p[2], (p[0] - 8) * sin - (p[1] - 4) * cos) for p in front]
-        near(bounds(face_coords), (0, 64, 0, 64))
+        near(bounds(face_coords), (0, 64, 1, 63))
         assert all((p[0] - 8) * cos + (p[1] - 4) * sin < 0.001 for p in vertices), "hook protrudes in front of phone"
 
-        # 64mm全長の直線エッジと、その内側4mmの肉。中央Φ61を切り欠かない。
+        # 面取り以外の板厚と貼付領域を保持する。
         profile = section(stl, work, "z", 32)
         edges = [(a, b) for loop in profile for a, b in zip(loop, loop[1:] + loop[:1])]
         face_edges = [(a, b) for a, b in edges if all(abs((p[0] - 8) * cos + (p[1] - 4) * sin) < 0.001 for p in (a, b))]
         assert len(face_edges) == 1
         a, b = face_edges[0]
-        assert abs(math.dist(a, b) - 64) < 0.03
-        for length in [0.1, 1.5, 32, 62.5, 63.9]:
+        assert abs(math.dist(a, b) - 62) < 0.03
+        for length in [1.5, 32, 62.5]:
             point = (8 + length * sin - 3.9 * cos, 4 - length * cos - 3.9 * sin)
             assert inside(profile, point), (angle, length, "adhesive plate thinner than 4mm")
+
+        # 面を基準にした座標 (長手方向t、内向き深さd) で上下・下端裏を測る。
+        local = [[((x - 8) * sin - (y - 4) * cos,
+                   -(x - 8) * cos - (y - 4) * sin) for x, y in loop] for loop in profile]
+        for t, d, material in [(0.4, 0.4, False), (0.6, 0.6, True),
+                               (63.6, 0.4, False), (63.4, 0.6, True),
+                               (63.6, 3.6, False), (63.4, 3.4, True)]:
+            assert inside(local, (t, d)) == material, (angle, t, d, "C1 chamfer missing")
+        for a, b in [((1, 0), (0.5, 0.5)), ((63, 0), (63.5, 0.5)), ((64, 3), (63.5, 3.5))]:
+            # 指定した2点を通る辺を探す。傾斜1:1であることを実エッジで保証する。
+            matches = [(p, q) for loop in local for p, q in zip(loop, loop[1:] + loop[:1])
+                       if all(abs((q[0] - p[0]) * (v[1] - p[1]) - (q[1] - p[1]) * (v[0] - p[0])) < 0.001
+                              and min(p[0], q[0]) - 0.001 <= v[0] <= max(p[0], q[0]) + 0.001 for v in (a, b))]
+            assert len(matches) == 1, (angle, a, b, "45 degree edge missing")
+        for p in [(-8.9, -21.9), (-5.1, -21.9), (0.1, -21.9)]:
+            assert not inside(profile, p), (angle, p, "hook tip chamfer missing")
 
     # スリット寸法の調整が形状へ反映されること。
     adjusted = work / "adjusted.stl"
@@ -54,11 +70,11 @@ with tempfile.TemporaryDirectory(prefix="mm-b424-") as temp:
     closed_mesh(adjusted)
     profile = section(adjusted, work, "z", 32)
     empty_rect(profile, (-6, 0, -25, 0))
-    assert inside(profile, (-6.1, -23.9))
+    assert inside(profile, (-8, -23.9))
     assert inside(profile, (-3, 0.1))
 
     # 取付表示: Xが幅、Yが手前、Zが上。下端ほど手前へ出る。
     mounted = work / "mounted.stl"
     render(SOURCE, mounted, ('part="mounted"',), binary=True)
-    near(bounds(closed_mesh(mounted)), (-32, 32, -9, 29.88929, -57.50841, 4))
-    print("mm-b424-magkeep: 64×64 face, Φ61 area, 5×22 open slot, 20/0/30/45° upward tilt, closed connected mesh passed")
+    near(bounds(closed_mesh(mounted)), (-32, 32, -9, 29.54727, -57.16639, 4))
+    print("mm-b424-magkeep: C1/45° upper/lower edges, 64×62 flat face, Φ61 area, 5×22 open slot, 20/0/30/45° upward tilt, closed connected mesh passed")
