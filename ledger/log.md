@@ -1,5 +1,11 @@
 # 3D CAD ledger Update Log
 
+## 2026-09-27
+
+- [MM-B424のMAGKEEPホルダー](designs/mm-b424-magkeep-holder.md)を追加した。
+  掛け溝は内寸5×22mm、貼付面は64mm角。初期20度の上向き傾斜をパラメータで調整できる。
+  側面を下にして印刷する一体形状とし、実物の嵌合と角度の最終判断は試作品で確認する。
+
 ## 2026-09-26
 
 - BambuStudio用の`print/`を廃止した。印刷はscad-live → OrcaServerの経路へ移り、

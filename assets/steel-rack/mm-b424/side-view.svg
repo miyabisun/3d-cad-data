@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="660" viewBox="0 0 1080 660" role="img" aria-labelledby="title desc">
+<title id="title">MM-B424用MAGKEEPホルダー：20度の初期モデル</title>
+<desc id="desc">実STLの中央断面。左が棚、右が人。下向き開口の幅5mm、高さ22mmのフックを棚へ掛ける。貼付面は上端が棚側、下端が手前へ出て、直立から20度上向き。右図は64mm角の貼付面と直径61mmの貼付領域。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#536775"/></marker></defs>
+<rect width="1080" height="660" fill="#f7f9fb"/>
+<g font-family="sans-serif" fill="#183242">
+<text x="44" y="48" font-size="26" font-weight="bold">MM-B424 / MAGKEEP ホルダー</text>
+<text x="44" y="78" font-size="16">初期角度20° ・ 単位 mm ・ 棚やスマホの外形は描いていません</text>
+<text x="44" y="121" font-size="20" font-weight="bold">側面（実STLの中央断面）</text>
+<text x="710" y="121" font-size="20" font-weight="bold">貼付面の正面</text>
+<polygon points="489.336,496.842 466.783,505.050 334.000,292.000 310.000,292.000 310.000,160.000 280.000,160.000 280.000,292.000 256.000,292.000 256.000,136.000 358.000,136.000" fill="#b6d5df" stroke="#235c72" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M 358 136 L 489.336 496.840" stroke="#ed8a36" stroke-width="5"/>
+<path d="M 358 136 V 338" stroke="#8999a4" stroke-dasharray="6 5"/>
+<path d="M 358 226 A 90 90 0 0 0 388.782 220.572" fill="none" stroke="#235c72" stroke-width="2"/>
+<text x="386" y="249" font-size="20" font-weight="bold">20°</text>
+<text x="374" y="278" font-size="14">直立基準</text>
+<path d="M 280 189 H 310" stroke="#536775" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text x="293" y="181" text-anchor="middle" font-size="14">5</text>
+<path d="M 234 160 V 292 M 234 160 H 278 M 234 292 H 278" stroke="#536775" fill="none"/>
+<text x="222" y="232" text-anchor="end" font-size="17">22</text>
+<text x="63" y="348" font-size="17">掛け溝は下向き開口</text>
+<path d="M 245 341 L 295 310" fill="none" stroke="#536775" marker-end="url(#arrow)"/>
+<text x="68" y="410" font-size="18">← 棚側</text>
+<text x="488" y="410" font-size="18">手前・人 →</text>
+<path d="M 440 360 L 558 317" stroke="#ed8a36" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="491" y="302" font-size="15">画面が向く方向</text>
+<text x="346" y="542" font-size="16">下端が手前へ出る</text>
+<rect x="732" y="160" width="256" height="256" fill="#b6d5df" stroke="#ed8a36" stroke-width="3"/>
+<circle cx="860" cy="288" r="122" fill="none" stroke="#235c72" stroke-width="2" stroke-dasharray="7 4"/>
+<text x="860" y="284" text-anchor="middle" font-size="20">MAGKEEP</text>
+<text x="860" y="312" text-anchor="middle" font-size="20">Φ61</text>
+<path d="M 732 443 H 988" stroke="#536775" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text x="860" y="470" text-anchor="middle" font-size="18">64 × 64</text>
+<text x="860" y="503" text-anchor="middle" font-size="16">中央貼付で周囲の余白1.5</text>
+<path d="M 44 576 H 1036" stroke="#cdd8df"/>
+<text x="44" y="609" font-size="17">印刷：この側面をベッドへ置く（出力のZ=0）。フックの横幅も64mm。</text>
+<text x="44" y="636" font-size="15">実物の網目・嵌合・強度は未確認。tilt_deg = 20 を変更して角度を調整できます。</text>
+</g></svg>
