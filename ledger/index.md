@@ -61,7 +61,7 @@ Designの本文はuserの当該発言を`## user 原文 (verbatim)`見出しの�
 
 ## Design
 
-- [30Lゴミ袋用の角形ゴミ箱](designs/trash-can.md) - 内寸240角・高さ620、床4mmの箱を3段のスナップ連結で組み、最下段の前後に袋パック用ポケットと穴あき蓋を持つ
+- [30Lゴミ袋用の角形ゴミ箱](designs/trash-can.md) - 内寸240角・高さ480、床4mmの箱を上下2段のスナップ連結で組み、最下段の前後に袋パック用ポケットと穴あき蓋を持つ
 - [MM-B424のMAGKEEPスマホホルダー](designs/mm-b424-magkeep-holder.md) - 内寸5×22mmの掛け溝と64mm角の貼付面、初期20度の上向き傾斜
 - [クランプ天板のNFCタグ台](designs/nfc-tag-holder.md) - クランプ天板へM8ボルトで留め、沈めた頭ごと天面へΦ25のNFCタグを貼るΦ28×7mmの円柱
 - [マグカップホルダー](designs/mug-holder.md) - 内径84.6mm・内高さ32.6mm、ハニカム排水底とクランプ板の回転止め

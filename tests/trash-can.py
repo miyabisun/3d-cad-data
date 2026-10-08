@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""30Lゴミ袋用ゴミ箱: 床4mmの3段・スナップロック・ポケット・蓋をproduction STLで実測する。"""
+"""30Lゴミ袋用ゴミ箱: 床4mmの2段・スナップロック・ポケット・蓋をproduction STLで実測する。"""
 
 import math
 from pathlib import Path
@@ -88,32 +88,28 @@ def check_skirt(stl, work):
 
 with tempfile.TemporaryDirectory(prefix="trash-can-test-") as temp:
     work = Path(temp)
-    parts = ["bottom_ring", "middle_ring", "top_ring", "lid"]
+    parts = ["bottom_ring", "top_ring", "lid"]
     for name in parts:
         assert (DIR / f"{name}.scad").is_file(), f"{name}.scad is missing"
     jobs = [(DIR / f"{name}.scad", work / f"{name}.stl", ()) for name in parts]
     jobs += [(MAIN, work / "assembly.stl", ()),
-             (MAIN, work / "short_middle.stl", ('part="middle_ring"', "bag_length=650")),
-             (MAIN, work / "short_top.stl", ('part="top_ring"', "bag_length=650"))]
+             (MAIN, work / "short_top.stl", ('part="top_ring"', "inner_height=400"))]
     render_many(jobs)
     stl = {name: work / f"{name}.stl" for name in parts}
 
-    # 内高さは袋長700−折返し70−縁3=627 → 620mm、床4を足して624。底段250 (接合面238)、上2段は各199。
+    # 内高さ480、床4を足して484。底段250 (接合面238)、上段246で、ともにP1Sの256以下。
+    assert not (DIR / "middle_ring.scad").exists(), "two rings only"
     near(bounds(closed_mesh(stl["bottom_ring"])), (-123, 123, -123, 123, 0, 250))
-    near(bounds(closed_mesh(stl["middle_ring"])), (-123, 123, -123, 123, 0, 199))
-    near(bounds(closed_mesh(stl["top_ring"])), (-123, 123, -123, 123, 0, 199))
+    near(bounds(closed_mesh(stl["top_ring"])), (-123, 123, -123, 123, 0, 246))
     near(bounds(closed_mesh(stl["lid"])), (-126.5, 126.5, -126.5, 126.5, 0, 78))
-    near(bounds(closed_mesh(work / "short_middle.stl"))[4:], (0, 174))
-    near(bounds(closed_mesh(work / "short_top.stl"))[4:], (0, 174))
-    near(bounds(read_vertices(work / "assembly.stl"))[4:], (0, 627))
+    near(bounds(closed_mesh(work / "short_top.stl"))[4:], (0, 166))
+    near(bounds(read_vertices(work / "assembly.stl"))[4:], (0, 487))
 
-    for name in ["middle_ring", "top_ring"]:
-        check_walls(stl[name], work, 100, (-120, 120, -120, 120))
-        check_skirt(stl[name], work)
+    check_walls(stl["top_ring"], work, 100, (-120, 120, -120, 120))
+    check_skirt(stl["top_ring"], work)
     check_walls(stl["bottom_ring"], work, 100, None)
     check_tongue(stl["bottom_ring"], work, 238)
-    check_tongue(stl["middle_ring"], work, 187)
-    material(section(stl["top_ring"], work, "z", 198.9), 50, 0.1, True)
+    material(section(stl["top_ring"], work, "z", 245.9), 50, 0.1, True)
 
     # 床: 厚4mmの一枚板が外周まで塞ぎ、その上は空く。
     bottom = stl["bottom_ring"]
@@ -160,9 +156,9 @@ with tempfile.TemporaryDirectory(prefix="trash-can-test-") as temp:
     for d, solid in [(13.4, False), (13.6, True), (16.4, True), (16.6, False)]:
         assert inside(plan, (-110 - d / math.sqrt(2), -110 - d / math.sqrt(2))) == solid, (d, solid)
 
-    for define in ["bottom_ring_height=257", "pocket_height=247", "pocket_width=221", "bag_length=900", "pocket_u_depth=69"]:
+    for define in ["bottom_ring_height=257", "pocket_height=247", "pocket_width=221", "inner_height=500", "bag_length=550", "pocket_u_depth=69"]:
         result = subprocess.run(["openscad", "-o", str(work / "invalid.stl"), "-D", 'part="bottom_ring"', "-D", define, str(MAIN)],
                                 capture_output=True, text=True)
         assert "ERROR: Assertion" in result.stderr, (define, result.stderr)
 
-print("Trash can: 4 mm floor, 620 mm inside in three rings, snap lap joints, 240 mm pockets with U cut and lid OK")
+print("Trash can: 4 mm floor, 480 mm inside in two rings, snap lap joints, 240 mm pockets with U cut and lid OK")

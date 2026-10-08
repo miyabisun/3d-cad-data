@@ -1,6 +1,6 @@
 $fn = 96;
 
-part = "assembly"; // [assembly, bottom_ring, middle_ring, top_ring, lid]
+part = "assembly"; // [assembly, bottom_ring, top_ring, lid]
 
 // nocoo sanipac 30L: flat 550 x 700. The bag folds 70 mm over the rim.
 bag_length = 700;
@@ -11,8 +11,8 @@ inner_radius = 10;
 wall = 3;
 printer_size = 256; // Bambu Lab P1S build volume per axis.
 
-// Inner height where the bag bottom reaches the floor, rounded down to cm.
-inner_height = floor((bag_length - bag_overhang - wall) / 10) * 10;
+// Largest cm value that keeps both rings within the printer height.
+inner_height = 480;
 floor_thickness = 4;
 height = floor_thickness + inner_height;
 
@@ -41,12 +41,12 @@ hole_radius = 20;
 half = inner_size / 2;
 skirt_void = tongue + lap_gap;
 joint1 = bottom_ring_height - lap;
-upper_ring_height = (height - joint1 + lap) / 2;
-joint2 = joint1 + upper_ring_height - lap;
+top_ring_height = height - joint1;
 lid_inner = wall + lid_clearance;
 eps = 0.01;
 
-assert(bottom_ring_height <= printer_size && upper_ring_height <= printer_size, "ring exceeds printer height");
+assert(bottom_ring_height <= printer_size && top_ring_height <= printer_size, "ring exceeds printer height");
+assert(bag_length - bag_overhang - wall >= inner_height, "bag must reach the floor");
 assert(inner_size + 2 * (lid_inner + wall) <= printer_size, "lid exceeds printer bed");
 assert(pocket_width <= inner_size - 2 * inner_radius, "pocket must fit the flat wall");
 assert(floor_thickness + pocket_height <= bottom_ring_height, "pocket must fit the bottom ring");
@@ -123,15 +123,8 @@ module bottom_ring() {
   pockets();
 }
 
-module middle_ring() {
-  translate([0, 0, -joint1]) {
-    walls(joint1, joint2, true);
-    tongue(joint2);
-  }
-}
-
 module top_ring() {
-  translate([0, 0, -joint2]) walls(joint2, height, true);
+  translate([0, 0, -joint1]) walls(joint1, height, true);
 }
 
 // Print orientation: top plate on the bed.
@@ -145,13 +138,11 @@ module lid() {
 
 module trash_can_part(name) {
   if (name == "bottom_ring") bottom_ring();
-  else if (name == "middle_ring") middle_ring();
   else if (name == "top_ring") top_ring();
   else if (name == "lid") lid();
   else if (name == "assembly") {
     bottom_ring();
-    translate([0, 0, joint1]) middle_ring();
-    translate([0, 0, joint2]) top_ring();
+    translate([0, 0, joint1]) top_ring();
     translate([0, 0, height + wall]) mirror([0, 0, 1]) lid();
   }
   else assert(false, str("unknown part: ", name));
