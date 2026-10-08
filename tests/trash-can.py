@@ -61,16 +61,17 @@ def check_tongue(stl, work, joint, angles=(0, 90, 180, 270)):
         material(plan, 50, 0.1, True, angles)
         material(plan, 50, 2.0, True, angles)
         material(plan, 50, 2.1, False, angles)
-    # 爪: 幅20、下面は接合面+4で外へ1.2mm、上へ6mmで舌へ戻る斜面。
-    material(section(stl, work, "z", joint + 3.9), 0, 2.15, False, angles)
-    plan = section(stl, work, "z", joint + 4.1)
+    # 爪: 幅20。接合面+4から45度で外へ1.2mm張り出し、上へ6mmで舌へ戻る。下面は空中へ水平に出ない。
+    material(section(stl, work, "z", joint + 3.9), 0, 2.1, False, angles)
+    for z in [joint + 4.6, joint + 8.2]:
+        plan = section(stl, work, "z", z)
+        material(plan, 0, 2.6, True, angles)
+        material(plan, 0, 2.7, False, angles)
+    plan = section(stl, work, "z", joint + 5.3)
     material(plan, 0, 3.15, True, angles)
     material(plan, 9.9, 3.15, True, angles)
     material(plan, 10.1, 3.15, False, angles)
     material(plan, 0, 3.35, False, angles)
-    plan = section(stl, work, "z", joint + 7)
-    material(plan, 0, 2.6, True, angles)
-    material(plan, 0, 2.7, False, angles)
 
 
 def check_skirt(stl, work, height):
@@ -84,18 +85,31 @@ def check_skirt(stl, work, height):
         material(p, 50, 4.3, False)
         material(p, 50, 2.1, False)
         material(p, 50, 0.1, False)
-    # 窓は爪の受け面 (z=4) の0.4mm下から斜面の上まで。上下逆の印刷でブリッジがたるんでも爪がはまる。
-    for z in [3.65, 10.2]:
+    # 窓は爪の斜面と0.4mm離れた高さから、爪の上端の0.4mm上まで。上下逆の印刷でブリッジがたるんでも爪がはまる。
+    for z in [3.75, 11.5]:
         p = plan(z)
         material(p, 0, 3.2, False)
         material(p, 10.4, 3.2, False)
         material(p, 10.6, 3.2, True)
-    for z in [3.55, 10.5]:
+    for z in [3.65, 11.7]:
         material(plan(z), 0, 3.2, True)
     # 舌の上端12mmの上に0.1mmの隙間。その上は肩なしで全厚。
     material(plan(12.05), 50, 1, False)
     material(plan(12.15), 50, 0.1, True)
     outer_slope(lambda t: plan(12.1 + t))
+
+
+def overhangs(stl):
+    """印刷の向きで下を向き、鉛直から45度より寝た面の高さ。ベッド (z=0) は除く。"""
+    vertices, levels = read_vertices(stl), set()
+    for i in range(0, len(vertices), 3):
+        p, q, r = vertices[i:i + 3]
+        u, v = [b - a for a, b in zip(p, q)], [b - a for a, b in zip(p, r)]
+        n = (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
+        length = math.hypot(*n)
+        if length > 1e-6 and n[2] / length < -0.75 and max(p[2], q[2], r[2]) > 0.01:
+            levels.add(round(max(p[2], q[2], r[2]), 1))
+    return levels
 
 
 with tempfile.TemporaryDirectory(prefix="trash-can-test-") as temp:
@@ -104,7 +118,12 @@ with tempfile.TemporaryDirectory(prefix="trash-can-test-") as temp:
     for name in parts:
         assert (DIR / f"{name}.scad").is_file(), f"{name}.scad is missing"
     jobs = [(DIR / f"{name}.scad", work / f"{name}.stl", ()) for name in parts]
-    jobs += [(DIR / "trash_can.scad", work / "assembly.stl", ()),
+    # 組み立てた状態の上下段の重なり。空なら離れた1mm立方体だけが残る。接触面の0.01mm上へ浮かせる。
+    clash = work / "clash.scad"
+    clash.write_text(f'include <{ROOT / "modules/trash_can.scad"}>\ntranslate([300, 0, 0]) cube(1);\n'
+                     "intersection() { bottom_ring(); translate([0, 0, height + 0.01]) mirror([0, 0, 1]) top_ring(); }\n")
+    jobs += [(clash, work / "clash.stl", ()),
+             (DIR / "trash_can.scad", work / "assembly.stl", ()),
              (DIR / "top_ring.scad", work / "short_top.stl", ("inner_height=400",))]
     render_many(jobs)
     stl = {name: work / f"{name}.stl" for name in parts}
@@ -116,6 +135,12 @@ with tempfile.TemporaryDirectory(prefix="trash-can-test-") as temp:
     near(bounds(closed_mesh(stl["lid"])), (-126.5, 126.5, -126.5, 126.5, 0, 78))
     near(bounds(closed_mesh(work / "short_top.stl"))[4:], (0, 166))
     near(bounds(read_vertices(work / "assembly.stl"))[4:], (0, 487))
+
+    near(bounds(read_vertices(work / "clash.stl")), (300, 301, 0, 1, 0, 1))
+    # 空中へ出る面は無い。上段の窓の爪側の辺 (使用時の接合面+3.7) だけが幅21mmのブリッジ。
+    assert overhangs(stl["bottom_ring"]) == set(), overhangs(stl["bottom_ring"])
+    assert overhangs(stl["top_ring"]) == {242.3}, overhangs(stl["top_ring"])
+    assert overhangs(stl["lid"]) == set(), overhangs(stl["lid"])
 
     check_walls(stl["top_ring"], work, 100, (-120, 120, -120, 120))
     check_skirt(stl["top_ring"], work, 246)
@@ -172,7 +197,7 @@ with tempfile.TemporaryDirectory(prefix="trash-can-test-") as temp:
         assert inside(plan, (-110 - d / math.sqrt(2), -110 - d / math.sqrt(2))) == solid, (d, solid)
 
     for define in ["bottom_ring_height=257", "pocket_height=247", "pocket_width=221", "inner_height=500", "bag_length=550", "pocket_u_depth=69",
-                   "joint_wall=2.9", "snap_depth=2.2"]:
+                   "joint_wall=2.9", "snap_depth=2.2", "snap_catch=60"]:
         result = subprocess.run(["openscad", "-o", str(work / "invalid.stl"), "-D", define, str(DIR / "bottom_ring.scad")],
                                 capture_output=True, text=True)
         assert "ERROR: Assertion" in result.stderr, (define, result.stderr)
