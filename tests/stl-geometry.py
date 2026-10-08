@@ -52,6 +52,11 @@ with tempfile.TemporaryDirectory(prefix="stl-geometry-") as temp:
     assert sorted(bounds(l) for l in side) == [(0, 20, 0, 6), (3, 7, 0, 6)], side
     assert not inside(side, (5, 3)) and inside(side, (10, 3))
 
+    # x 断面は (y, z) の座標で返す。
+    front = section(solid, work, "x", 5)
+    assert sorted(bounds(l) for l in front) == [(0, 10, 0, 6), (3, 7, 0, 6)], front
+    assert not inside(front, (5, 3)) and inside(front, (1, 3))
+
     # 頂点を通る平面 (x=3 の穴壁上の y=3 など) でも閉じた輪郭になる。
     edge = section(solid, work, "y", 3)
     assert all(len(l) >= 3 for l in edge) and sum(area(l) for l in edge) > 0, edge
@@ -83,4 +88,4 @@ with tempfile.TemporaryDirectory(prefix="stl-geometry-") as temp:
     subprocess.run([sys.executable, Path(__file__).with_name("stl_geometry.py"), "svg", solid, "y", "5", svg], check=True)
     assert "20.000000,6.000000" in svg.read_text()
 
-print("stl-geometry: python plane sections (holes, y cuts, vertex planes, ascii, slivers, svg cli) passed")
+print("stl-geometry: python plane sections (holes, y/x cuts, vertex planes, ascii, slivers, svg cli) passed")

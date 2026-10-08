@@ -143,12 +143,12 @@ def _simplify(loop):
 
 
 def section(stl, work, axis, position):
-    """STL を平面 axis=position で切った輪郭。z 断面は (x, y)、y 断面は (x, z) の点列を返す。
+    """STL を平面 axis=position で切った輪郭。z 断面は (x, y)、y 断面は (x, z)、x 断面は (y, z) の点列を返す。
 
     平面上の頂点は上側として扱うので、平面に載った面でも輪郭は閉じる。輪郭は偶奇規則で
     数える前提で、OpenSCAD の projection(cut = true) と同じ形を返す。work は互換のため受け取る。
     """
-    k, u = {"z": (2, 1), "y": (1, 2)}[axis]
+    k, (a, b) = {"z": (2, (0, 1)), "y": (1, (0, 2)), "x": (0, (1, 2))}[axis]
     stat = Path(stl).stat()
     tris, lows = _triangles(str(stl), (stat.st_mtime_ns, stat.st_size, stat.st_ino), k)
     segments = []
@@ -158,7 +158,7 @@ def section(stl, work, axis, position):
         if not any(up):
             continue
         ends = [_crossing(tri[i], tri[i - 2], d[i], d[i - 2]) for i in range(3) if up[i] != up[i - 2]]
-        ends = [(p[0], p[u]) for p in ends]
+        ends = [(p[a], p[b]) for p in ends]
         if ends[0] != ends[1]:
             segments.append(ends)
     graph = collections.defaultdict(list)
