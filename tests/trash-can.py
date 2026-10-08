@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""30Lゴミ袋用ゴミ箱: 3段の筒・スナップロック・ポケット・蓋をproduction STLで実測する。"""
+"""30Lゴミ袋用ゴミ箱: 床4mmの3段・スナップロック・ポケット・蓋をproduction STLで実測する。"""
 
 import math
 from pathlib import Path
@@ -98,52 +98,55 @@ with tempfile.TemporaryDirectory(prefix="trash-can-test-") as temp:
     render_many(jobs)
     stl = {name: work / f"{name}.stl" for name in parts}
 
-    # 袋長700−折返し70−縁3=627 → 620mm。底段250 (接合面238)、上2段は各197。
+    # 内高さは袋長700−折返し70−縁3=627 → 620mm、床4を足して624。底段250 (接合面238)、上2段は各199。
     near(bounds(closed_mesh(stl["bottom_ring"])), (-123, 123, -123, 123, 0, 250))
-    near(bounds(closed_mesh(stl["middle_ring"])), (-123, 123, -123, 123, 0, 197))
-    near(bounds(closed_mesh(stl["top_ring"])), (-123, 123, -123, 123, 0, 197))
+    near(bounds(closed_mesh(stl["middle_ring"])), (-123, 123, -123, 123, 0, 199))
+    near(bounds(closed_mesh(stl["top_ring"])), (-123, 123, -123, 123, 0, 199))
     near(bounds(closed_mesh(stl["lid"])), (-126.5, 126.5, -126.5, 126.5, 0, 78))
-    near(bounds(closed_mesh(work / "short_middle.stl"))[4:], (0, 172))
-    near(bounds(closed_mesh(work / "short_top.stl"))[4:], (0, 172))
-    near(bounds(read_vertices(work / "assembly.stl"))[4:], (0, 623))
+    near(bounds(closed_mesh(work / "short_middle.stl"))[4:], (0, 174))
+    near(bounds(closed_mesh(work / "short_top.stl"))[4:], (0, 174))
+    near(bounds(read_vertices(work / "assembly.stl"))[4:], (0, 627))
 
     for name in ["middle_ring", "top_ring"]:
         check_walls(stl[name], work, 100, (-120, 120, -120, 120))
         check_skirt(stl[name], work)
     check_walls(stl["bottom_ring"], work, 100, None)
     check_tongue(stl["bottom_ring"], work, 238)
-    check_tongue(stl["middle_ring"], work, 185)
-    material(section(stl["top_ring"], work, "z", 196.9), 50, 0.1, True)
+    check_tongue(stl["middle_ring"], work, 187)
+    material(section(stl["top_ring"], work, "z", 198.9), 50, 0.1, True)
 
-    # ポケット: 前後の内面に幅220・厚6・高さ240の空間、底3mm、前板3mm、上からU字。
+    # 床: 厚4mmの一枚板が外周まで塞ぎ、その上は空く。
     bottom = stl["bottom_ring"]
+    for z in [0.1, 3.9]:
+        plan = section(bottom, work, "z", z)
+        assert len(plan) == 1, [bounds(p) for p in plan]
+        loop_at(plan, (-123, 123, -123, 123))
+    assert not inside(section(bottom, work, "z", 4.1), (0, 0)), "floor thicker than 4 mm"
+
+    # ポケット: 前後の内面に幅220・厚6・高さ240の空間、床の上から。前板3mm、上からU字。
     for angle in [0, 180]:
-        floor = section(bottom, work, "z", 1.5)
-        material(floor, 0, -3, True, [angle])
-        material(floor, 0, -7.5, True, [angle])
-        material(floor, 0, -10, False, [angle])
-        for z in [3.1, 100, 242.9]:
+        for z in [4.1, 100, 243.9]:
             plan = section(bottom, work, "z", z)
             side = -1 if angle == 0 else 1
             empty_rect(plan, (-110, 110, *sorted((side * 120, side * 114))))
             material(plan, 111.5, -3, True, [angle])
             material(plan, -111.5, -3, True, [angle])
             material(plan, 0, -9.5, False, [angle])
-        material(section(bottom, work, "z", 142), 0, -7.5, True, [angle])
-        material(section(bottom, work, "z", 144), 0, -7.5, False, [angle])
-        plan = section(bottom, work, "z", 213)
+        material(section(bottom, work, "z", 143), 0, -7.5, True, [angle])
+        material(section(bottom, work, "z", 145), 0, -7.5, False, [angle])
+        plan = section(bottom, work, "z", 214)
         material(plan, 69, -7.5, False, [angle])
         material(plan, 71, -7.5, True, [angle])
         material(section(bottom, work, "z", 160), 60, -7.5, True, [angle])
-        material(section(bottom, work, "z", 242.9), 100, -7.5, True, [angle])
-        plan = section(bottom, work, "z", 243.1)
+        material(section(bottom, work, "z", 243.9), 100, -7.5, True, [angle])
+        plan = section(bottom, work, "z", 244.1)
         material(plan, 100, -7.5, False, [angle])
         material(plan, 0, -3, False, [angle])
     # 袋のパックを差す空間に膜がなく、上は接合部の舌の上端まで開いている。
     for y in [-117, 117]:
         profile = section(bottom, work, "y", y)
-        empty_rect(profile, (-110, 110, 3, 250))
-        assert inside(profile, (0, 1.5)), "pocket floor missing"
+        empty_rect(profile, (-110, 110, 4, 250))
+        assert inside(profile, (0, 2)), "pocket floor missing"
 
     # 蓋: 印刷向きで天板が下。中央に200角R20の穴、縁3mm内側を75mm覆う。
     lid = stl["lid"]
@@ -157,9 +160,9 @@ with tempfile.TemporaryDirectory(prefix="trash-can-test-") as temp:
     for d, solid in [(13.4, False), (13.6, True), (16.4, True), (16.6, False)]:
         assert inside(plan, (-110 - d / math.sqrt(2), -110 - d / math.sqrt(2))) == solid, (d, solid)
 
-    for define in ["bottom_ring_height=257", "pocket_height=248", "pocket_width=221", "bag_length=900", "pocket_u_depth=69"]:
+    for define in ["bottom_ring_height=257", "pocket_height=247", "pocket_width=221", "bag_length=900", "pocket_u_depth=69"]:
         result = subprocess.run(["openscad", "-o", str(work / "invalid.stl"), "-D", 'part="bottom_ring"', "-D", define, str(MAIN)],
                                 capture_output=True, text=True)
         assert "ERROR: Assertion" in result.stderr, (define, result.stderr)
 
-print("Trash can: 620 mm in three rings, snap lap joints, 240 mm pockets with U cut and lid OK")
+print("Trash can: 4 mm floor, 620 mm inside in three rings, snap lap joints, 240 mm pockets with U cut and lid OK")

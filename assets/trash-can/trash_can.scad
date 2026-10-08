@@ -11,8 +11,10 @@ inner_radius = 10;
 wall = 3;
 printer_size = 256; // Bambu Lab P1S build volume per axis.
 
-// Bottomless tube; the bag bottom reaches the floor. Rounded down to cm.
-height = floor((bag_length - bag_overhang - wall) / 10) * 10;
+// Inner height where the bag bottom reaches the floor, rounded down to cm.
+inner_height = floor((bag_length - bag_overhang - wall) / 10) * 10;
+floor_thickness = 4;
+height = floor_thickness + inner_height;
 
 // Lap joint: the lower ring's inner tongue enters the upper ring's outer skirt.
 bottom_ring_height = 250; // Including the tongue.
@@ -47,7 +49,7 @@ eps = 0.01;
 assert(bottom_ring_height <= printer_size && upper_ring_height <= printer_size, "ring exceeds printer height");
 assert(inner_size + 2 * (lid_inner + wall) <= printer_size, "lid exceeds printer bed");
 assert(pocket_width <= inner_size - 2 * inner_radius, "pocket must fit the flat wall");
-assert(wall + pocket_height <= bottom_ring_height, "pocket must fit the bottom ring");
+assert(floor_thickness + pocket_height <= bottom_ring_height, "pocket must fit the bottom ring");
 assert(pocket_u_width / 2 <= pocket_u_depth && pocket_u_depth < pocket_height);
 assert(tongue + lap_gap < wall && snap_depth < wall - tongue);
 assert(snap_bottom + snap_ramp + 0.4 < lap && snap_width + 1 < pocket_width);
@@ -100,12 +102,12 @@ module tongue(z) {
 }
 
 module pockets() {
-  top = wall + pocket_height;
+  top = floor_thickness + pocket_height;
   side = pocket_width / 2 + wall;
   for (a = [0, 180])
     rotate(a) difference() {
       translate([-side, -half, 0]) cube([2 * side, pocket_gap + wall, top]);
-      translate([-pocket_width / 2, -half - eps, wall]) cube([pocket_width, pocket_gap + eps, top]);
+      translate([-pocket_width / 2, -half - eps, floor_thickness]) cube([pocket_width, pocket_gap + eps, top]);
       translate([0, -half + pocket_gap - eps, top - pocket_u_depth + pocket_u_width / 2])
         rotate([-90, 0, 0]) linear_extrude(wall + 2 * eps) {
           circle(d = pocket_u_width);
@@ -116,6 +118,7 @@ module pockets() {
 
 module bottom_ring() {
   walls(0, joint1, false);
+  linear_extrude(floor_thickness) outline(wall);
   tongue(joint1);
   pockets();
 }
