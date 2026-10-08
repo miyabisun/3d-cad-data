@@ -3,7 +3,6 @@
 
 import math
 from pathlib import Path
-import re
 import subprocess
 import tempfile
 
@@ -91,10 +90,6 @@ with tempfile.TemporaryDirectory(prefix="trash-can-test-") as temp:
     parts = ["bottom_ring", "top_ring", "lid"]
     for name in parts:
         assert (DIR / f"{name}.scad").is_file(), f"{name}.scad is missing"
-    # scad-live は modules/ の変更でだけ全 assets を作り直す。assets 同士の参照は部品の3MFを古いまま残す。
-    for scad in DIR.glob("*.scad"):
-        for ref in re.findall(r"(?:use|include)\s*<([^>]+)>", scad.read_text()):
-            assert ref.startswith("../../modules/"), (scad.name, ref)
     jobs = [(DIR / f"{name}.scad", work / f"{name}.stl", ()) for name in parts]
     jobs += [(DIR / "trash_can.scad", work / "assembly.stl", ()),
              (DIR / "top_ring.scad", work / "short_top.stl", ("inner_height=400",))]

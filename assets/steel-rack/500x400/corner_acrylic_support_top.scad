@@ -1,4 +1,4 @@
-use <corner_acrylic_support.scad>
+use <../../../modules/corner_acrylic_support.scad>
 
 // 最上部用。アクリル上面を柱の最上端と揃え、使用時は印刷姿勢から反転。
 // 隣り合う7×30長穴の間の金属をM6で挟む。各面2本、直交する両面で計4本。

@@ -2,6 +2,9 @@
 
 ## 2026-10-08
 
+- 全モデルの共有形状を`modules/`だけから参照する規則を`tests/scad-refs.py`で検査するようにした。
+  違反していたスチールラックのアクリル受け本体を`modules/corner_acrylic_support.scad`へ移した。形状は不変。
+
 - [30Lゴミ袋用の角形ゴミ箱](designs/trash-can.md)の共有形状を`modules/trash_can.scad`へ移した。
   scad-liveは`assets/`同士の参照を辿らず、部品の3MFが床なしの旧版のまま残ったため。
 

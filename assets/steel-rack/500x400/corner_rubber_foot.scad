@@ -1,4 +1,4 @@
-use <corner_acrylic_support.scad>
+use <../../../modules/corner_acrylic_support.scad>
 
 // M8おねじ付きゴム足用。底面側へ4mm増厚し、外形27×27×29.9。
 // 平面を下に印刷し、その向きのまま使用。M6は直交する両面から各1本。

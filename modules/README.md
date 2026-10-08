@@ -2,6 +2,10 @@
 
 OpenSCADモデルが参照するモジュール。
 
+`assets/` の部品が共有する形状・値はここへ置き、`assets/` 同士で use/include しない。
+scad-liveは `modules/` の変更でだけ全モデルを作り直すため、`assets/` 同士の参照は参照元の3MFを古いまま残す。
+`tests/scad-refs.py` がこの規則を検査する。
+
 ## bolts.scad
 
 ボルト穴・ナットトラップ・六角穴の汎用モジュール。
@@ -118,3 +122,8 @@ units={4,9}から両軸端数を除く66種。端数の足はX左端・Y手前�
 `assets/trash-can/` の各部品と組立表示が include する30Lゴミ袋用ゴミ箱。単体では何も描かない。
 `bottom_ring()`・`top_ring()`・`lid()` が部品を生成し、寸法と調整値は冒頭に置く。
 説明は[製品README](../assets/trash-can/README.md)を参照する。
+
+## corner_acrylic_support.scad
+
+`assets/steel-rack/500x400/` のアクリル受け3種が use する本体 `corner_acrylic_support(m6_levels, m8_foot)`。
+既定はM6を1段だけ持つ。`m6_levels` に座面からのM6中心高さを渡すと最上部用、`m8_foot = true` でゴム足用になる。
