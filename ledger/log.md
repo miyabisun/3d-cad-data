@@ -2,6 +2,9 @@
 
 ## 2026-10-08
 
+- [30Lゴミ袋用の角形ゴミ箱](designs/trash-can.md)の共有形状を`modules/trash_can.scad`へ移した。
+  scad-liveは`assets/`同士の参照を辿らず、部品の3MFが床なしの旧版のまま残ったため。
+
 - [30Lゴミ袋用の角形ゴミ箱](designs/trash-can.md)を上下2段・内高さ480mmにした。60cmは高いというuserの判断。
   最下段250mm・上段246mmで、ともにP1Sの256mmに収まる。中段を削除した。
 

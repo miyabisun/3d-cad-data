@@ -1,3 +1,3 @@
-use <trash_can.scad>
+include <../../modules/trash_can.scad>
 
-trash_can_part("bottom_ring");
+bottom_ring();

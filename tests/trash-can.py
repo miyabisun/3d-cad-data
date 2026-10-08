@@ -3,6 +3,7 @@
 
 import math
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 
@@ -10,7 +11,6 @@ from stl_geometry import bounds, closed_mesh, empty_rect, inside, loop_at, near,
 
 ROOT = Path(__file__).resolve().parents[1]
 DIR = ROOT / "assets/trash-can"
-MAIN = DIR / "trash_can.scad"
 
 
 def at(x, r, angle):
@@ -91,9 +91,13 @@ with tempfile.TemporaryDirectory(prefix="trash-can-test-") as temp:
     parts = ["bottom_ring", "top_ring", "lid"]
     for name in parts:
         assert (DIR / f"{name}.scad").is_file(), f"{name}.scad is missing"
+    # scad-live は modules/ の変更でだけ全 assets を作り直す。assets 同士の参照は部品の3MFを古いまま残す。
+    for scad in DIR.glob("*.scad"):
+        for ref in re.findall(r"(?:use|include)\s*<([^>]+)>", scad.read_text()):
+            assert ref.startswith("../../modules/"), (scad.name, ref)
     jobs = [(DIR / f"{name}.scad", work / f"{name}.stl", ()) for name in parts]
-    jobs += [(MAIN, work / "assembly.stl", ()),
-             (MAIN, work / "short_top.stl", ('part="top_ring"', "inner_height=400"))]
+    jobs += [(DIR / "trash_can.scad", work / "assembly.stl", ()),
+             (DIR / "top_ring.scad", work / "short_top.stl", ("inner_height=400",))]
     render_many(jobs)
     stl = {name: work / f"{name}.stl" for name in parts}
 
@@ -157,7 +161,7 @@ with tempfile.TemporaryDirectory(prefix="trash-can-test-") as temp:
         assert inside(plan, (-110 - d / math.sqrt(2), -110 - d / math.sqrt(2))) == solid, (d, solid)
 
     for define in ["bottom_ring_height=257", "pocket_height=247", "pocket_width=221", "inner_height=500", "bag_length=550", "pocket_u_depth=69"]:
-        result = subprocess.run(["openscad", "-o", str(work / "invalid.stl"), "-D", 'part="bottom_ring"', "-D", define, str(MAIN)],
+        result = subprocess.run(["openscad", "-o", str(work / "invalid.stl"), "-D", define, str(DIR / "bottom_ring.scad")],
                                 capture_output=True, text=True)
         assert "ERROR: Assertion" in result.stderr, (define, result.stderr)
 

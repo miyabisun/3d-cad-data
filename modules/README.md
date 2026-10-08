@@ -112,3 +112,9 @@ units={4,9}から両軸端数を除く66種。端数の足はX左端・Y手前�
 22組の溝を10mmピッチで配置し、板厚2mmに対する溝幅は2.4mm。
 前後壁の外皮1.2mmを残し、溝を上端まで開く。
 印刷方向と調整値は[製品README](../assets/gridfinity-bin/goods/cable-holder/README.md)を参照する。
+
+## trash_can.scad
+
+`assets/trash-can/` の各部品と組立表示が include する30Lゴミ袋用ゴミ箱。単体では何も描かない。
+`bottom_ring()`・`top_ring()`・`lid()` が部品を生成し、寸法と調整値は冒頭に置く。
+説明は[製品README](../assets/trash-can/README.md)を参照する。

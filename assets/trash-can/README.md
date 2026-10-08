@@ -16,7 +16,7 @@ nocoo sanipac 30L（平置き幅550×長さ700mm）を掛ける、内寸240×240
 | `top_ring.scad`    | 246 × 246 × 246 | 使用時の向き。下端は連結用のスカート      |
 | `lid.scad`         | 253 × 253 × 78  | 天板を下にする                            |
 
-`trash_can.scad`は組立表示で、印刷しません。全部品がP1Sの256mm角に収まり、サポートは不要です。
+`trash_can.scad`は組立表示で、印刷しません。形状と寸法は各部品が共有する[`modules/trash_can.scad`](../../modules/trash_can.scad)にあります。全部品がP1Sの256mm角に収まり、サポートは不要です。
 
 ```sh
 mkdir -p dist/trash-can
@@ -49,7 +49,7 @@ python3 tests/trash-can.py
 
 ## 調整
 
-`trash_can.scad`の冒頭で調整します。最下段を`bottom_ring_height`（初期250）とし、
+`modules/trash_can.scad`の冒頭で調整します。最下段を`bottom_ring_height`（初期250）とし、
 `inner_height`（初期480）の残りが上段になります。
 各段・蓋がP1Sの256mmを超える値、袋（`bag_length`から折返しと縁を引いた627mm）が床へ届かない値、
 ポケットが最下段や平らな壁に収まらない値はエラーになります。
