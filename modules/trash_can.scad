@@ -26,6 +26,7 @@ snap_width = 20;
 snap_depth = 1.2;
 snap_bottom = 4; // Above the joint plane.
 snap_ramp = 6;
+snap_clearance = 0.4; // Window edge below the catch, absorbs bridge sag on the inverted top ring.
 
 // Bag pack pockets on the front and back inner walls.
 pocket_width = 220;
@@ -56,7 +57,7 @@ assert(pocket_width <= inner_size - 2 * inner_radius, "pocket must fit the flat 
 assert(floor_thickness + pocket_height <= bottom_ring_height, "pocket must fit the bottom ring");
 assert(pocket_u_width / 2 <= pocket_u_depth && pocket_u_depth < pocket_height);
 assert(joint_wall >= wall && lap_gap < snap_depth && tongue + snap_depth < joint_wall);
-assert(snap_bottom + snap_ramp + 0.4 < lap && snap_width + 1 < pocket_width);
+assert(snap_clearance < snap_bottom && snap_bottom + snap_ramp + 0.4 < lap && snap_width + 1 < pocket_width);
 
 // Offset d from the inner wall face.
 module outline(d) {
@@ -131,8 +132,8 @@ module top_ring() {
     translate([0, 0, -eps]) linear_extrude(skirt + eps) outline(skirt_void);
     for (a = [0:90:270])
       rotate(a)
-        translate([-snap_width / 2 - 0.5, -half - joint_wall - eps, snap_bottom - 0.2])
-          cube([snap_width + 1, joint_wall - skirt_void + 2 * eps, snap_ramp + 0.6]);
+        translate([-snap_width / 2 - 0.5, -half - joint_wall - eps, snap_bottom - snap_clearance])
+          cube([snap_width + 1, joint_wall - skirt_void + 2 * eps, snap_clearance + snap_ramp + 0.4]);
   }
 }
 

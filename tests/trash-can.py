@@ -84,12 +84,13 @@ def check_skirt(stl, work, height):
         material(p, 50, 4.3, False)
         material(p, 50, 2.1, False)
         material(p, 50, 0.1, False)
-    for z in [4, 10.2]:
+    # 窓は爪の受け面 (z=4) の0.4mm下から斜面の上まで。上下逆の印刷でブリッジがたるんでも爪がはまる。
+    for z in [3.65, 10.2]:
         p = plan(z)
         material(p, 0, 3.2, False)
         material(p, 10.4, 3.2, False)
         material(p, 10.6, 3.2, True)
-    for z in [3.7, 10.5]:
+    for z in [3.55, 10.5]:
         material(plan(z), 0, 3.2, True)
     # 舌の上端12mmの上に0.1mmの隙間。その上は肩なしで全厚。
     material(plan(12.05), 50, 1, False)
