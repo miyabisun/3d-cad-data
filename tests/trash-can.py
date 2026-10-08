@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""30Lゴミ袋用ゴミ箱: 床4mmの2段・スナップロック・ポケット・蓋をproduction STLで実測する。"""
+"""30Lゴミ袋用ゴミ箱: 床4mmの2段・4.2mmへ張り出すスナップ継手・ポケット・蓋をproduction STLで実測する。"""
 
 import math
 from pathlib import Path
@@ -41,48 +41,60 @@ def check_walls(stl, work, z, inner):
                 assert inside(plan, p) == solid, (z, p, solid)
 
 
+def outer_slope(plan_at, angles=(0, 90, 180, 270)):
+    """接合部の外面: 4.2mmから壁3mmへ30度で戻る。plan_at(t) は張り出しの端から t 離れた断面。"""
+    for t, r in [(1.04, 4.2 - 1.04 * math.tan(math.radians(30))), (2.2, 3)]:
+        plan = plan_at(t)
+        material(plan, 50, r - 0.05, True, angles)
+        material(plan, 50, r + 0.05, False, angles)
+
+
 def check_tongue(stl, work, joint, angles=(0, 90, 180, 270)):
-    """下段の上端: 接合面 joint から内側1.4mmの舌が12mm立ち、各壁中央に爪がある。"""
-    for z, r in [(joint - 0.1, 2.9), (joint - 0.1, 0.1)]:
-        material(section(stl, work, "z", z), 50, r, True, angles)
+    """下段の上端: 外面を4.2mmへ張り出し、接合面 joint から内側2.05mmの舌が12mm立ち、各壁中央に爪がある。"""
+    plan = section(stl, work, "z", joint - 0.1)
+    material(plan, 50, 0.1, True, angles)
+    material(plan, 50, 4.1, True, angles)
+    material(plan, 50, 4.3, False, angles)
+    outer_slope(lambda t: section(stl, work, "z", joint - t), angles)
     for z in [joint + 0.5, joint + 11.9]:
         plan = section(stl, work, "z", z)
         material(plan, 50, 0.1, True, angles)
-        material(plan, 50, 1.3, True, angles)
-        material(plan, 50, 1.5, False, angles)
-        material(plan, 50, 2.9, False, angles)
+        material(plan, 50, 2.0, True, angles)
+        material(plan, 50, 2.1, False, angles)
     # 爪: 幅20、下面は接合面+4で外へ1.2mm、上へ6mmで舌へ戻る斜面。
-    material(section(stl, work, "z", joint + 3.9), 0, 1.5, False, angles)
+    material(section(stl, work, "z", joint + 3.9), 0, 2.15, False, angles)
     plan = section(stl, work, "z", joint + 4.1)
-    material(plan, 0, 2.5, True, angles)
-    material(plan, 9.9, 2.5, True, angles)
-    material(plan, 10.1, 2.5, False, angles)
-    material(plan, 0, 2.7, False, angles)
+    material(plan, 0, 3.15, True, angles)
+    material(plan, 9.9, 3.15, True, angles)
+    material(plan, 10.1, 3.15, False, angles)
+    material(plan, 0, 3.35, False, angles)
     plan = section(stl, work, "z", joint + 7)
-    material(plan, 0, 1.95, True, angles)
-    material(plan, 0, 2.05, False, angles)
+    material(plan, 0, 2.6, True, angles)
+    material(plan, 0, 2.7, False, angles)
 
 
-def check_skirt(stl, work):
-    """上段の下端: 外側1.4mmのスカートが舌を受け、窓が爪を通し、45度で全厚へ戻る。"""
+def check_skirt(stl, work, height):
+    """上段の下端: 外側2.05mmのスカートが舌を0.1mm離して受け、窓が爪を通し、外面は30度で壁へ戻る。"""
+    def plan(z):  # 使用時の高さ z。上段は上下逆に印刷する。
+        return section(stl, work, "z", height - z)
     for z in [0.5, 3.5, 11]:
-        plan = section(stl, work, "z", z)
-        material(plan, 50, 1.7, True)
-        material(plan, 50, 2.9, True)
-        material(plan, 50, 1.5, False)
-        material(plan, 50, 0.1, False)
+        p = plan(z)
+        material(p, 50, 2.2, True)
+        material(p, 50, 4.1, True)
+        material(p, 50, 4.3, False)
+        material(p, 50, 2.1, False)
+        material(p, 50, 0.1, False)
     for z in [4, 10.2]:
-        plan = section(stl, work, "z", z)
-        material(plan, 0, 2.3, False)
-        material(plan, 10.4, 2.3, False)
-        material(plan, 10.6, 2.3, True)
+        p = plan(z)
+        material(p, 0, 3.2, False)
+        material(p, 10.4, 3.2, False)
+        material(p, 10.6, 3.2, True)
     for z in [3.7, 10.5]:
-        material(section(stl, work, "z", z), 0, 2.3, True)
-    material(section(stl, work, "z", 12.1), 50, 1.5, False)
-    plan = section(stl, work, "z", 13)
-    material(plan, 50, 0.9, True)
-    material(plan, 50, 0.7, False)
-    material(section(stl, work, "z", 13.9), 50, 0.05, True)
+        material(plan(z), 0, 3.2, True)
+    # 舌の上端12mmの上に0.1mmの隙間。その上は肩なしで全厚。
+    material(plan(12.05), 50, 1, False)
+    material(plan(12.15), 50, 0.1, True)
+    outer_slope(lambda t: plan(12.1 + t))
 
 
 with tempfile.TemporaryDirectory(prefix="trash-can-test-") as temp:
@@ -98,17 +110,20 @@ with tempfile.TemporaryDirectory(prefix="trash-can-test-") as temp:
 
     # 内高さ480、床4を足して484。底段250 (接合面238)、上段246で、ともにP1Sの256以下。
     assert not (DIR / "middle_ring.scad").exists(), "two rings only"
-    near(bounds(closed_mesh(stl["bottom_ring"])), (-123, 123, -123, 123, 0, 250))
-    near(bounds(closed_mesh(stl["top_ring"])), (-123, 123, -123, 123, 0, 246))
+    near(bounds(closed_mesh(stl["bottom_ring"])), (-124.2, 124.2, -124.2, 124.2, 0, 250))
+    near(bounds(closed_mesh(stl["top_ring"])), (-124.2, 124.2, -124.2, 124.2, 0, 246))
     near(bounds(closed_mesh(stl["lid"])), (-126.5, 126.5, -126.5, 126.5, 0, 78))
     near(bounds(closed_mesh(work / "short_top.stl"))[4:], (0, 166))
     near(bounds(read_vertices(work / "assembly.stl"))[4:], (0, 487))
 
     check_walls(stl["top_ring"], work, 100, (-120, 120, -120, 120))
-    check_skirt(stl["top_ring"], work)
+    check_skirt(stl["top_ring"], work, 246)
     check_walls(stl["bottom_ring"], work, 100, None)
     check_tongue(stl["bottom_ring"], work, 238)
-    material(section(stl["top_ring"], work, "z", 245.9), 50, 0.1, True)
+    # 上段は上端を下に印刷する。ベッド側は全厚の壁。
+    plan = section(stl["top_ring"], work, "z", 0.1)
+    material(plan, 50, 0.1, True)
+    material(plan, 50, 3.1, False)
 
     # 床: 厚4mmの一枚板が外周まで塞ぎ、その上は空く。
     bottom = stl["bottom_ring"]
@@ -155,9 +170,10 @@ with tempfile.TemporaryDirectory(prefix="trash-can-test-") as temp:
     for d, solid in [(13.4, False), (13.6, True), (16.4, True), (16.6, False)]:
         assert inside(plan, (-110 - d / math.sqrt(2), -110 - d / math.sqrt(2))) == solid, (d, solid)
 
-    for define in ["bottom_ring_height=257", "pocket_height=247", "pocket_width=221", "inner_height=500", "bag_length=550", "pocket_u_depth=69"]:
+    for define in ["bottom_ring_height=257", "pocket_height=247", "pocket_width=221", "inner_height=500", "bag_length=550", "pocket_u_depth=69",
+                   "joint_wall=2.9", "snap_depth=2.2"]:
         result = subprocess.run(["openscad", "-o", str(work / "invalid.stl"), "-D", define, str(DIR / "bottom_ring.scad")],
                                 capture_output=True, text=True)
         assert "ERROR: Assertion" in result.stderr, (define, result.stderr)
 
-print("Trash can: 4 mm floor, 480 mm inside in two rings, snap lap joints, 240 mm pockets with U cut and lid OK")
+print("Trash can: 4 mm floor, 480 mm inside in two rings, 4.2 mm snap lap joints, 240 mm pockets with U cut and lid OK")

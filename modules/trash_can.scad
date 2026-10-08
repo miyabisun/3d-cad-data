@@ -16,10 +16,12 @@ floor_thickness = 4;
 height = floor_thickness + inner_height;
 
 // Lap joint: the lower ring's inner tongue enters the upper ring's outer skirt.
+// The outer face bulges to joint_wall around the joint so each half stays thick.
 bottom_ring_height = 250; // Including the tongue.
 lap = 12;
-lap_gap = 0.2;
-tongue = 1.4;
+joint_wall = 4.2; // Tongue, gap and skirt side by side.
+lap_gap = 0.1;    // Beside and above the tongue.
+bulge_angle = 30; // Outer face overhang from vertical, as both rings print.
 snap_width = 20;
 snap_depth = 1.2;
 snap_bottom = 4; // Above the joint plane.
@@ -38,7 +40,10 @@ hole_size = 200;
 hole_radius = 20;
 
 half = inner_size / 2;
+tongue = (joint_wall - lap_gap) / 2;
 skirt_void = tongue + lap_gap;
+skirt = lap + lap_gap;
+bulge_rise = (joint_wall - wall) / tan(bulge_angle);
 joint1 = bottom_ring_height - lap;
 top_ring_height = height - joint1;
 lid_inner = wall + lid_clearance;
@@ -50,7 +55,7 @@ assert(inner_size + 2 * (lid_inner + wall) <= printer_size, "lid exceeds printer
 assert(pocket_width <= inner_size - 2 * inner_radius, "pocket must fit the flat wall");
 assert(floor_thickness + pocket_height <= bottom_ring_height, "pocket must fit the bottom ring");
 assert(pocket_u_width / 2 <= pocket_u_depth && pocket_u_depth < pocket_height);
-assert(tongue + lap_gap < wall && snap_depth < wall - tongue);
+assert(joint_wall >= wall && lap_gap < snap_depth && tongue + snap_depth < joint_wall);
 assert(snap_bottom + snap_ramp + 0.4 < lap && snap_width + 1 < pocket_width);
 
 // Offset d from the inner wall face.
@@ -64,25 +69,6 @@ module rounded_square(size, radius) {
 
 module slab(z, d) {
   translate([0, 0, z]) linear_extrude(eps) outline(d);
-}
-
-module walls(z0, z1, skirt) {
-  difference() {
-    translate([0, 0, z0]) linear_extrude(z1 - z0) outline(wall);
-    translate([0, 0, z0 - eps]) linear_extrude(z1 - z0 + 2 * eps) outline(0);
-    if (skirt) {
-      translate([0, 0, z0 - eps]) linear_extrude(lap + lap_gap + eps) outline(skirt_void);
-      // 45 degree shoulder so the full wall prints without an overhang.
-      hull() {
-        slab(z0 + lap + lap_gap - eps, skirt_void);
-        slab(z0 + lap + lap_gap + skirt_void - eps, 0);
-      }
-      for (a = [0:90:270])
-        rotate(a)
-          translate([-snap_width / 2 - 0.5, -half - wall - eps, z0 + snap_bottom - 0.2])
-            cube([snap_width + 1, wall - tongue + eps, snap_ramp + 0.6]);
-    }
-  }
 }
 
 module tongue(z) {
@@ -116,14 +102,38 @@ module pockets() {
 }
 
 module bottom_ring() {
-  walls(0, joint1, false);
-  linear_extrude(floor_thickness) outline(wall);
+  difference() {
+    union() {
+      linear_extrude(joint1) outline(wall);
+      hull() {
+        slab(joint1 - bulge_rise, wall);
+        slab(joint1 - eps, joint_wall);
+      }
+    }
+    translate([0, 0, floor_thickness]) linear_extrude(joint1) outline(0);
+  }
   tongue(joint1);
   pockets();
 }
 
+// Print orientation: the rim on the bed, the skirt on top.
 module top_ring() {
-  translate([0, 0, -joint1]) walls(joint1, height, true);
+  translate([0, 0, top_ring_height]) mirror([0, 0, 1]) difference() {
+    union() {
+      linear_extrude(top_ring_height) outline(wall);
+      linear_extrude(skirt) outline(joint_wall);
+      hull() {
+        slab(skirt - eps, joint_wall);
+        slab(skirt + bulge_rise - eps, wall);
+      }
+    }
+    translate([0, 0, -eps]) linear_extrude(top_ring_height + 2 * eps) outline(0);
+    translate([0, 0, -eps]) linear_extrude(skirt + eps) outline(skirt_void);
+    for (a = [0:90:270])
+      rotate(a)
+        translate([-snap_width / 2 - 0.5, -half - joint_wall - eps, snap_bottom - 0.2])
+          cube([snap_width + 1, joint_wall - skirt_void + 2 * eps, snap_ramp + 0.6]);
+  }
 }
 
 // Print orientation: top plate on the bed.
