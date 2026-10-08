@@ -99,13 +99,19 @@ def check_skirt(stl, work, height):
     outer_slope(lambda t: plan(12.1 + t))
 
 
-def overhangs(stl):
-    """印刷の向きで下を向き、鉛直から45度より寝た面の高さ。ベッド (z=0) は除く。"""
-    vertices, levels = read_vertices(stl), set()
+def facets(stl):
+    """(三角形, 法線の長さ0以上のベクトル) を float32 の STL 座標のまま返す。"""
+    vertices = read_vertices(stl)
     for i in range(0, len(vertices), 3):
         p, q, r = vertices[i:i + 3]
         u, v = [b - a for a, b in zip(p, q)], [b - a for a, b in zip(p, r)]
-        n = (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
+        yield (p, q, r), (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
+
+
+def overhangs(stl):
+    """印刷の向きで下を向き、鉛直から45度より寝た面の高さ。ベッド (z=0) は除く。"""
+    levels = set()
+    for (p, q, r), n in facets(stl):
         length = math.hypot(*n)
         if length > 1e-6 and n[2] / length < -0.75 and max(p[2], q[2], r[2]) > 0.01:
             levels.add(round(max(p[2], q[2], r[2]), 1))
@@ -137,6 +143,10 @@ with tempfile.TemporaryDirectory(prefix="trash-can-test-") as temp:
     near(bounds(read_vertices(work / "assembly.stl"))[4:], (0, 487))
 
     near(bounds(read_vertices(work / "clash.stl")), (300, 301, 0, 1, 0, 1))
+    # OrcaServer は float32 で面積0の三角形を含むモデルを不正として取り込まない。
+    for name in parts:
+        flat = [t for t, n in facets(stl[name]) if n == (0, 0, 0)]
+        assert not flat, (name, len(flat), flat[:2])
     # 空中へ出る面は無い。上段の窓の爪側の辺 (使用時の接合面+3.7) だけが幅21mmのブリッジ。
     assert overhangs(stl["bottom_ring"]) == set(), overhangs(stl["bottom_ring"])
     assert overhangs(stl["top_ring"]) == {242.3}, overhangs(stl["top_ring"])

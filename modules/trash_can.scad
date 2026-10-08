@@ -82,11 +82,11 @@ module tongue(z) {
     outline(tongue);
     outline(0);
   }
-  // Catch underneath, ramp on top.
+  // Catch underneath, ramp on top. The ends sink eps into the tongue: ends on its face leave zero-area slivers.
   for (a = [0:90:270])
     rotate(a) hull() {
       for (h = [snap_bottom, snap_top - eps])
-        translate([-snap_width / 2, -half - tongue, z + h]) cube([snap_width, 0.5, eps]);
+        translate([-snap_width / 2, -half - tongue + eps, z + h]) cube([snap_width, 0.5, eps]);
       translate([-snap_width / 2, -half - tongue - snap_depth, z + snap_bottom + snap_rise])
         cube([snap_width, snap_depth + 0.5, eps]);
     }
