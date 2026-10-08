@@ -13,6 +13,7 @@
 | モニターアーム       | [エルゴトロン取付用ホルダー](assets/ergotron/README.md)                                                                                                                     |
 | ゲームコントローラー | [レバーレス筐体・ボタン収納](assets/leverless/README.md)                                                                                                                    |
 | 室内の取付・補修     | [ライトスタンド](assets/work-room/README.md)、[ドア用治具](assets/work-room/door/README.md)、[排水ホース接続](assets/laundry/README.md)                                     |
+| 日用品               | [30Lゴミ袋用ゴミ箱](assets/trash-can/README.md)                                                                                                                             |
 
 ## STLを作る
 
