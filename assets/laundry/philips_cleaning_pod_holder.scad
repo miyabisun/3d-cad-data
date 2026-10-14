@@ -5,7 +5,6 @@ pod_width = 100;
 pod_depth = 100;
 pod_corner_radius = 50;
 pod_clearance = 0.5;
-retaining_height = 135; // Nominal QCP10 height: wall the whole pod so it cannot tip.
 floor_thickness = 8;
 wall_thickness = 3;
 rib_width = 10;
@@ -17,6 +16,8 @@ slot_clearance = 0.4; // Total allowance, not per side.
 slot_length = 60;
 slot_depth = 45;
 hook_thickness = 6;
+// Wall height above the floor; the default is flush with the hook top.
+retaining_height = slot_depth + hook_thickness - floor_thickness;
 
 inner_width = pod_width + 2 * pod_clearance;
 inner_depth = pod_depth + 2 * pod_clearance;
