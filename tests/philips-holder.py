@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""洗浄ポッド受けと下向きの棚スリットをproduction STLから測る。"""
+"""洗浄ポッドを全高で囲う受けと下向きの棚スリットをproduction STLから測る。"""
 
 from pathlib import Path
 import math
@@ -14,19 +14,19 @@ SOURCE = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "assets/la
 
 with tempfile.TemporaryDirectory(prefix="philips-holder-test-") as temp:
     work = Path(temp)
-    # 円形の初期値、実測合わせの角丸長方形、角丸なし・補正なし。
+    # 円形の初期値 (受け壁はポッド公称高135)、実測合わせの低い角丸長方形、角丸なし・補正なし。
     for name, defines, w, d, gap, length, depth, floor, height in [
-        ("default", [], 101, 101, 3.4, 60, 45, 8, 28),
+        ("default", [], 101, 101, 3.4, 60, 45, 8, 143),
         ("adjusted", ["pod_width=104", "pod_depth=96", "pod_corner_radius=12",
                       "pod_clearance=0.7", "shelf_thickness=3.2", "slot_clearance=0.6",
                       "slot_length=54", "slot_depth=38", "floor_thickness=9", "retaining_height=24"],
          105.4, 97.4, 3.8, 54, 38, 9, 33),
         ("square", ["pod_corner_radius=0", "pod_clearance=0", "slot_clearance=0"],
-         100, 100, 3, 60, 45, 8, 28),
+         100, 100, 3, 60, 45, 8, 143),
     ]:
         stl = work / f"{name}.stl"
         render(SOURCE, stl, defines, binary=True)
-        near(bounds(closed_mesh(stl)), (-w / 2 - 3, w / 2 + 3, -9 - gap, d + 6, 0, depth + 6))
+        near(bounds(closed_mesh(stl)), (-w / 2 - 3, w / 2 + 3, -9 - gap, d + 6, 0, max(height, depth + 6)))
 
         # フック両端まで、受けとの隙間を全高で埋める（内部を補集合で検査）。
         if name == "default":
@@ -42,7 +42,8 @@ with tempfile.TemporaryDirectory(prefix="philips-holder-test-") as temp:
             inset = max(0, 1 - z)
             loop_at(plan, (-length / 2 + inset, length / 2 - inset, -9 - gap + inset, -3 - gap))
             assert inside(plan, (0, -2.9)), "front leg missing"
-        loop_at(section(stl, work, "z", depth - 0.1), (-length / 2, length / 2, -3, 3))
+        if height < depth:
+            loop_at(section(stl, work, "z", depth - 0.1), (-length / 2, length / 2, -3, 3))
         side = section(stl, work, "y", -3 - gap / 2)
         loop_at(side, (-length / 2, length / 2, depth, depth + 6))
         empty_rect(side, (-length / 2, length / 2, -0.1, depth))
@@ -82,7 +83,10 @@ with tempfile.TemporaryDirectory(prefix="philips-holder-test-") as temp:
             xmin, xmax, _, ymax = bounds([p for loop in plan for p in loop])
             near((xmin, xmax, ymax), (-w / 2 - 3 + inset, w / 2 + 3 - inset, d + 6 - inset))
         for z, inset in [(depth + 5.1, 0.1), (depth + 5.5, 0.5), (depth + 5.9, 0.9)]:
-            loop_at(section(stl, work, "z", z), (-length / 2 + inset, length / 2 - inset, -9 - gap + inset, 3 - inset))
+            if height < depth:
+                loop_at(section(stl, work, "z", z), (-length / 2 + inset, length / 2 - inset, -9 - gap + inset, 3 - inset))
+            else:  # 背の高い受け壁へフックが合流し、棚の内側だけ面取りが残る。
+                loop_at(section(stl, work, "z", z), (-w / 2 - 3, w / 2 + 3, -9 - gap + inset, d + 6))
         vertical = section(stl, work, "y", d / 2 + 3)
         empty_rect(vertical, (-w / 2, w / 2, floor, height + 0.1))
         assert inside(vertical, (0, floor - 0.1))
@@ -93,4 +97,4 @@ with tempfile.TemporaryDirectory(prefix="philips-holder-test-") as temp:
         result = subprocess.run(["openscad", "-o", str(work / "invalid.stl"), "-D", define, str(SOURCE)], capture_output=True, text=True)
         assert "ERROR: Assertion" in result.stderr, (define, result.stderr)
 
-print("Philips holder: full-width joint, eight 10 mm spokes, C1 edges, slot, fit and closed mesh OK")
+print("Philips holder: full-height wall, full-width joint, eight 10 mm spokes, C1 edges, slot, fit and closed mesh OK")
