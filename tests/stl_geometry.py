@@ -108,6 +108,25 @@ def closed_mesh(stl):
     return vertices
 
 
+def facets(stl):
+    """(三角形, 法線の長さ0以上のベクトル) を float32 の STL 座標のまま返す。"""
+    vertices = read_vertices(stl)
+    for i in range(0, len(vertices), 3):
+        p, q, r = vertices[i:i + 3]
+        u, v = [b - a for a, b in zip(p, q)], [b - a for a, b in zip(p, r)]
+        yield (p, q, r), (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
+
+
+def overhangs(stl):
+    """印刷の向きで下を向き、鉛直から45度より寝た面の高さ。ベッド (z=0) は除く。"""
+    levels = set()
+    for (p, q, r), n in facets(stl):
+        length = math.hypot(*n)
+        if length > 1e-6 and n[2] / length < -0.75 and max(p[2], q[2], r[2]) > 0.01:
+            levels.add(round(max(p[2], q[2], r[2]), 1))
+    return levels
+
+
 @functools.lru_cache(maxsize=8)
 def _triangles(path, stamp, k):
     # 軸 k の最小座標で並べ、平面より下に頂点を持つ三角形を bisect で切り出す

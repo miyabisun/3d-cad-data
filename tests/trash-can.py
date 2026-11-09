@@ -6,7 +6,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-from stl_geometry import bounds, closed_mesh, empty_rect, inside, loop_at, near, read_vertices, render_many, section
+from stl_geometry import bounds, closed_mesh, empty_rect, facets, inside, loop_at, near, overhangs, read_vertices, render_many, section
 
 ROOT = Path(__file__).resolve().parents[1]
 DIR = ROOT / "assets/trash-can"
@@ -98,25 +98,6 @@ def check_skirt(stl, work, height):
     material(plan(12.05), 50, 1, False)
     material(plan(12.15), 50, 0.1, True)
     outer_slope(lambda t: plan(12.1 + t))
-
-
-def facets(stl):
-    """(三角形, 法線の長さ0以上のベクトル) を float32 の STL 座標のまま返す。"""
-    vertices = read_vertices(stl)
-    for i in range(0, len(vertices), 3):
-        p, q, r = vertices[i:i + 3]
-        u, v = [b - a for a, b in zip(p, q)], [b - a for a, b in zip(p, r)]
-        yield (p, q, r), (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
-
-
-def overhangs(stl):
-    """印刷の向きで下を向き、鉛直から45度より寝た面の高さ。ベッド (z=0) は除く。"""
-    levels = set()
-    for (p, q, r), n in facets(stl):
-        length = math.hypot(*n)
-        if length > 1e-6 and n[2] / length < -0.75 and max(p[2], q[2], r[2]) > 0.01:
-            levels.add(round(max(p[2], q[2], r[2]), 1))
-    return levels
 
 
 with tempfile.TemporaryDirectory(prefix="trash-can-test-") as temp:
