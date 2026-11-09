@@ -358,7 +358,7 @@ L字アングルへ組み付ける段の設計情報（実測はデジタルノ�
 ラックの剛性を高めるため、オープンフレームケースのスライドレールをやめた。
 サイズの違う新しいオープンフレームケース（横430・奥240・高さ12.5mm）を、
 30cm材4本と3Dプリント部品の枠で受ける。実装は`modules/shelf_frame.scad`と
-`assets/steel-rack/500x400/shelf_frame_*.scad`、検証は`tests/shelf-frame.py`。
+`assets/steel-rack/500x400/shelf_frame/`、検証は`tests/shelf-frame.py`。
 
 ### userの構成指定
 

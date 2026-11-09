@@ -118,7 +118,7 @@ L字コーナーブラケット（小）。片側が短い非対称形状。
 - 印刷向き: ブロック底面をビルドプレートへ置く（M4軸が水平になり、六角穴は
   自然に flat-up。柱もブロックと同じ z=0 から立ち上がって接地する）
 
-## shelf_frame_*.scad（30cm材のケース棚）
+## shelf_frame/（30cm材のケース棚）
 
 スライドレールに代えて、30cm材（北島カラーアングル30型）4本と樹脂部品で
 柱どうしを結ぶ枠を組み、その内側でオープンフレームケース（430×240）を
@@ -135,12 +135,12 @@ L字コーナーブラケット（小）。片側が短い非対称形状。
 
   | ファイル | 使う場所 | 個数 |
   |---|---|---|
-  | `shelf_frame_corner_l.scad` | 手前左・奥右の角 | 2 |
-  | `shelf_frame_corner_r.scad` | 手前右・奥左の角 | 2 |
-  | `shelf_frame_brace_l.scad` | 手前左・奥右の筋交い | 2 |
-  | `shelf_frame_brace_r.scad` | 手前右・奥左の筋交い | 2 |
-  | `shelf_frame_mid_front.scad` | 手前・奥の材の中央 | 2 |
-  | `shelf_frame_mid_side.scad` | 左右の材の中央 | 2 |
+  | `shelf_frame/corner_l.scad` | 手前左・奥右の角 | 2 |
+  | `shelf_frame/corner_r.scad` | 手前右・奥左の角 | 2 |
+  | `shelf_frame/brace_l.scad` | 手前左・奥右の筋交い | 2 |
+  | `shelf_frame/brace_r.scad` | 手前右・奥左の筋交い | 2 |
+  | `shelf_frame/mid_front.scad` | 手前・奥の材の中央 | 2 |
+  | `shelf_frame/mid_side.scad` | 左右の材の中央 | 2 |
 
 - **角**（外形149×99×30）: 柱の2面へ外からM6を1本ずつ（Z=15）。30cm材の縦面の
   1番目の長穴へ、両端に当てる2本（長穴の中心±12、Z=17.4）。柱と材の間の隙間

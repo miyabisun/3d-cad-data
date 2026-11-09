@@ -12,7 +12,7 @@ import tempfile
 from stl_geometry import bounds, closed_mesh, empty_rect, inside, loop_at, near, overhangs, render, render_many, section
 
 ROOT = Path(__file__).resolve().parents[1]
-DIR = ROOT / "assets/steel-rack/500x400"
+DIR = ROOT / "assets/steel-rack/500x400/shelf_frame"
 
 # 30cm材の実測: 長穴30×7、穴間20、6個。縁は自由端から外(縦)面9.1・下面7.7。
 OUTER_SLOT_Z = 30 - 9.1 - 3.5  # 17.4
@@ -122,15 +122,15 @@ def check(work, stls):
         render(source, output, binary=True)
         return output
 
-    corner = use_stl("shelf_frame_corner_l", use_corner)
-    brace = use_stl("shelf_frame_brace_l", use_flat)
-    mid_front = use_stl("shelf_frame_mid_front", use_flat)
-    mid_side = use_stl("shelf_frame_mid_side", use_flat)
+    corner = use_stl("corner_l", use_corner)
+    brace = use_stl("brace_l", use_flat)
+    mid_front = use_stl("mid_front", use_flat)
+    mid_side = use_stl("mid_side", use_flat)
 
     # 印刷向き: 角は上面を、ほかは土台の下面をビルドプレートへ置く。
-    near(bounds(closed_mesh(stls["shelf_frame_corner_l"])), (0, 149, -99, 0, 0, 30))
+    near(bounds(closed_mesh(stls["corner_l"])), (0, 149, -99, 0, 0, 30))
     near(bounds(closed_mesh(corner)), (0, 149, 0, 99, 0, 30))
-    near(bounds(closed_mesh(stls["shelf_frame_brace_l"]))[4:], (0, 28))
+    near(bounds(closed_mesh(stls["brace_l"]))[4:], (0, 28))
     near(bounds(closed_mesh(brace)), (2.3, 198.2, 2.3, 148.2, 2, 30))
     near(bounds(closed_mesh(mid_front)), (225.8, 274.2, 2.3, 102, 2, 30))
     near(bounds(closed_mesh(mid_side)), (2.3, 57, 175.8, 224.2, 2, 30))
@@ -138,8 +138,8 @@ def check(work, stls):
     # 印刷向きで下を向き45度より寝た面は、角の水平M6の通し穴とナット溝の天井 (flat-upの短いブリッジ) だけ。
     # 柱へのM6は使用時Z=15、30cm材へのM6はZ=17.4。上下反転した印刷では、通し穴 (AF6.4) の上端が
     # 18.2・15.8、ナット溝 (AF10.4) の受けの底が20.2・17.8になる。
-    assert overhangs(stls["shelf_frame_corner_l"]) == {15.8, 17.8, 18.2, 20.2}, overhangs(stls["shelf_frame_corner_l"])
-    for name in ["shelf_frame_brace_l", "shelf_frame_mid_front", "shelf_frame_mid_side"]:
+    assert overhangs(stls["corner_l"]) == {15.8, 17.8, 18.2, 20.2}, overhangs(stls["corner_l"])
+    for name in ["brace_l", "mid_front", "mid_side"]:
         assert overhangs(stls[name]) == set(), (name, overhangs(stls[name]))
 
     # 角: 上面はL字の全面 (印刷時の接地面)。内隅R10・柱の角R2。
@@ -199,7 +199,7 @@ def check(work, stls):
     no_collision(shanks, env)  # ボルト軸は長穴の中を通る
 
     # 右用は左用の鏡像。
-    for name in ["shelf_frame_corner", "shelf_frame_brace"]:
+    for name in ["corner", "brace"]:
         mirrored = work / f"{name}-mirror.scad"
         mirrored.write_text(f'mirror([1,0,0]) import("{stls[name + "_r"]}");\n')
         output = work / f"{name}-mirror.stl"
@@ -212,8 +212,8 @@ def check(work, stls):
             assert len(a) == len(b) and all(abs(u - v) < 0.03 for p, q in zip(a, b) for u, v in zip(p, q)), (name, z)
 
 
-names = ["shelf_frame_corner_l", "shelf_frame_corner_r", "shelf_frame_brace_l", "shelf_frame_brace_r",
-         "shelf_frame_mid_front", "shelf_frame_mid_side"]
+names = ["corner_l", "corner_r", "brace_l", "brace_r",
+         "mid_front", "mid_side"]
 with tempfile.TemporaryDirectory(prefix="shelf-frame-") as temp:
     work = Path(temp)
     for name in names:
