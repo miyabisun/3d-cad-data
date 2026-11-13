@@ -142,19 +142,22 @@ def check(work, stls):
     for name in ["brace_l", "mid_front", "mid_side"]:
         assert overhangs(stls[name]) == set(), (name, overhangs(stls[name]))
 
-    # 角: 上面はL字の全面 (印刷時の接地面)。内隅R10・柱の角R2。
+    # 角: 上面はL字の全面 (印刷時の接地面)。腕は幅20、内隅R10・柱の角R2。
     top = section(corner, work, "z", 29.9)
     outline = loop_at(top, (0, 149, 0, 99))
-    for cx, cy, r, select in [(40, 40, 10, lambda x, y: 30.01 < x < 39.99 and 30.01 < y < 39.99),
+    for cx, cy, r, select in [(30, 30, 10, lambda x, y: 20.01 < x < 29.99 and 20.01 < y < 29.99),
                               (2, 2, 2, lambda x, y: x < 1.99 and y < 1.99)]:
         arc = [(x, y) for x, y in outline if select(x, y)]
         assert len(arc) > 5, "corner radius is missing"
         assert all(abs(math.hypot(x - cx, y - cy) - r) < 0.03 for x, y in arc)
-    # 角の断面: 隙間を埋める区間は30角、30cm材に入る腕は縦面2・下面2.3を逃がし、曲げRを45°で落とす。
-    loop_at(section(corner, work, "x", 60), (0, 30, 0, 30))
-    arm = section(corner, work, "x", 120)
-    loop_at(arm, (2, 30, 2.3, 30))
-    assert not inside(arm, (2.5, 3.5)) and inside(arm, (2.5, 5.5)) and inside(arm, (5.5, 2.6))
+    # 角の断面: 腕は幅20×高さ30。柱の内面から20に収め、左右の柱間に460を空ける
+    # (ケースの横から金具をネジ止めする余地)。隙間を埋める区間は20×30、30cm材に入る腕は
+    # 縦面2・下面2.3を逃がし、曲げRを45°で落とす。
+    for axis, gap, inner in [("x", 60, 120), ("y", 40, 90)]:
+        loop_at(section(corner, work, axis, gap), (0, 20, 0, 30))
+        arm = section(corner, work, axis, inner)
+        loop_at(arm, (2, 20, 2.3, 30))
+        assert not inside(arm, (2.5, 3.5)) and inside(arm, (2.5, 5.5)) and inside(arm, (5.5, 2.6))
     # 柱へのM6: 通しAF6.4 (flat-up) と、上へ抜けるナット溝 (AF10.4)。
     for axis in ["y", "x"]:
         loops = section(corner, work, axis, 1)
@@ -171,6 +174,10 @@ def check(work, stls):
         loops = section(corner, work, axis, 9.3)
         for c in [slots[0] - 12, slots[0] + 12]:
             empty_rect(loops, (c - 5.19, c + 5.19, OUTER_SLOT_Z, 30.01))
+        # 先端の逃げは腕の内面まで抜けない。
+        loops = section(corner, work, axis, 19)
+        for c in [slots[0] - 12, slots[0] + 12]:
+            assert inside(loops, (c, OUTER_SLOT_Z)), "bolt relief breaks through the 20 mm arm"
 
     # 筋交い: 下面の2番目の長穴の両端へ2本ずつ、柱はケースの角から2mm内側。
     for part, holes, post in [

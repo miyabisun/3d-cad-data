@@ -39,6 +39,7 @@ side_clear = 0.3; // 下面に置く部品と縦面との隙間
 bend = 3;         // 曲げ内Rの逃げ（45度）
 corner_r = 2;
 fillet_r = 10;
+arm_w = 20; // 角の腕の幅。柱間に460を空け、ケースの横から金具を留める余地を残す
 
 base_t = 10; // 筋交い・辺の支えの土台
 base_top = angle_t + base_t;
@@ -129,9 +130,9 @@ corner_footprint()
 {
     offset(r = corner_r, $fn = 64) offset(delta = -corner_r) union()
     {
-        square([ arm_end[0], angle ]);
-        square([ angle, arm_end[1] ]);
-        translate([ angle, angle ]) difference()
+        square([ arm_end[0], arm_w ]);
+        square([ arm_w, arm_end[1] ]);
+        translate([ arm_w, arm_w ]) difference()
         {
             square(fillet_r);
             translate([ fillet_r, fillet_r ]) circle(r = fillet_r, $fn = 64);
@@ -139,12 +140,13 @@ corner_footprint()
     }
 }
 
-// 角: 柱の2面へM6各1本、30cm材の縦面の1番目の長穴へ両端に当てるM6を2本ずつ。
+// 角: 幅20×高さ30の腕をL字に組み、柱の2面へM6各1本、
+// 30cm材の縦面の1番目の長穴へ両端に当てるM6を2本ずつ。
 // 使用時の向き。印刷は上面をビルドプレートへ置く（shelf_frame_corner_print）
 module
 shelf_frame_corner()
 {
-    assert(gap_end[1] > angle + fillet_r, "corner gap is too short");
+    assert(gap_end[1] > arm_w + fillet_r, "corner gap is too short");
     difference()
     {
         linear_extrude(angle) corner_footprint();
@@ -194,7 +196,7 @@ pad_x_2d(x0, x1)
 }
 
 // 筋交い: 手前の材と左の材の下面、2番目の長穴へ両端に当てるM6を2本ずつ。
-// 角の腕の内端から1mm離して30度で渡し、ケースの角を柱で受ける
+// 角の腕の端で30cm材の内縁にあたる点から1mm離して30度で渡し、ケースの角を柱で受ける
 corner_post = case_min + [ post_inset, post_inset ]; // [37, 82]
 c1 = [ arm_end[0], angle ];
 c2 = [ angle, arm_end[1] ];
